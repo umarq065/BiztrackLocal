@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   SidebarProvider,
   Sidebar,
@@ -11,7 +12,6 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -28,22 +28,23 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "../ui/button";
 
 const navItems = [
-  { href: "#", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "#", icon: DollarSign, label: "Incomes" },
-  { href: "#", icon: Users, label: "Clients" },
-  { href: "#", icon: ShoppingCart, label: "Orders" },
-  { href: "#", icon: CreditCard, label: "Expenses" },
-  { href: "#", icon: BookText, label: "Daily Summary" },
-  { href: "#", icon: Notebook, label: "Business Notes" },
-  { href: "#", icon: Swords, label: "Competitors" },
-  { href: "#", icon: UserCircle, label: "Business Profile" },
-  { href: "#", icon: Calendar, label: "Yearly Stats" },
+  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/incomes", icon: DollarSign, label: "Incomes" },
+  { href: "/clients", icon: Users, label: "Clients" },
+  { href: "/orders", icon: ShoppingCart, label: "Orders" },
+  { href: "/expenses", icon: CreditCard, label: "Expenses" },
+  { href: "/daily-summary", icon: BookText, label: "Daily Summary" },
+  { href: "/business-notes", icon: Notebook, label: "Business Notes" },
+  { href: "/competitors", icon: Swords, label: "Competitors" },
+  { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
+  { href: "/yearly-stats", icon: Calendar, label: "Yearly Stats" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  
   return (
     <SidebarProvider>
       <Sidebar>
@@ -62,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
                   href={item.href}
-                  isActive={item.label === "Dashboard"}
+                  isActive={pathname === item.href}
                   tooltip={{
                     children: item.label,
                   }}
