@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SidebarProvider,
@@ -62,14 +63,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => (
               <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
-                  href={item.href}
+                  asChild
                   isActive={pathname === item.href}
                   tooltip={{
                     children: item.label,
                   }}
                 >
-                  <item.icon />
-                  <span>{item.label}</span>
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -79,15 +82,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
              <SidebarMenuItem>
-                <SidebarMenuButton href="#">
+                <SidebarMenuButton asChild>
+                  <Link href="#">
                     <HelpCircle />
                     <span>Help & Support</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton href="#">
+                <SidebarMenuButton asChild>
+                  <Link href="#">
                     <Settings />
                     <span>Settings</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
