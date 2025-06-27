@@ -17,6 +17,10 @@ import {
   Repeat,
   UserPlus,
   TrendingUp,
+  Goal,
+  Calendar,
+  XCircle,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +33,10 @@ const iconMap: { [key: string]: LucideIcon } = {
     Repeat,
     UserPlus,
     TrendingUp,
+    Goal,
+    Calendar,
+    XCircle,
+    Star,
 };
 
 export default function StatCard({

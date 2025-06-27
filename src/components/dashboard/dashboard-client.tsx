@@ -33,7 +33,7 @@ export function DashboardClient({
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        {stats.slice(0, 4).map((stat) => (
+        {stats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
@@ -60,11 +60,6 @@ export function DashboardClient({
             <IncomeChart data={incomeBySource} />
           </CardContent>
         </Card>
-      </div>
-       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        {stats.slice(4).map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
