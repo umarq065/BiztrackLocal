@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -21,6 +21,8 @@ import StatCard from "@/components/dashboard/stat-card";
 import GigAnalyticsChart from "@/components/gigs/analytics-chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import type { DateRange } from "react-day-picker";
+import { DateFilter } from "@/components/dashboard/date-filter";
 
 // Mock data for a single gig. In a real app, you'd fetch this.
 const gigData = {
@@ -121,6 +123,11 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
     orders: true,
   });
 
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(gigData.analyticsData[0].date),
+    to: new Date(gigData.analyticsData[gigData.analyticsData.length - 1].date),
+  });
+
   const handleMetricToggle = (metric: keyof typeof chartConfig) => {
     setActiveMetrics((prev) => ({
       ...prev,
@@ -128,12 +135,28 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
     }));
   };
 
+  const filteredAnalyticsData = useMemo(() => {
+    return gigData.analyticsData.filter(item => {
+        const itemDate = new Date(item.date);
+        if (date?.from && itemDate < date.from) return false;
+        if (date?.to) {
+            const toDateEnd = new Date(date.to);
+            toDateEnd.setHours(23, 59, 59, 999);
+            if (itemDate > toDateEnd) return false;
+        }
+        return true;
+    });
+  }, [date]);
+
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
           Gig Analytics: <span className="text-primary">{gigData.name}</span>
         </h1>
+        <div className="ml-auto">
+            <DateFilter date={date} setDate={setDate} />
+        </div>
       </div>
        <CardDescription>From Income Source: {gigData.source}</CardDescription>
 
@@ -152,7 +175,7 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <CardTitle>Impressions, Clicks, Messages & Orders</CardTitle>
-                        <CardDescription>Performance over the last 30 days.</CardDescription>
+                        <CardDescription>Performance over the selected period.</CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                         {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).map((metric) => (
@@ -175,7 +198,7 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
                 </div>
             </CardHeader>
             <CardContent>
-                <GigAnalyticsChart data={gigData.analyticsData} activeMetrics={activeMetrics} />
+                <GigAnalyticsChart data={filteredAnalyticsData} activeMetrics={activeMetrics} />
             </CardContent>
         </Card>
          <Card>
