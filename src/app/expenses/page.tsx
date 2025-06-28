@@ -71,6 +71,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ExpenseChart = lazy(() => import("@/components/expenses/expense-chart"));
+const ExpenseTrendChart = lazy(() => import("@/components/expenses/expense-trend-chart"));
+
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: "An expense date is required." }),
@@ -90,16 +92,33 @@ interface Expense {
 }
 
 const initialExpenses: Expense[] = [
-    { id: "1", date: "2024-05-01", type: "Figma Subscription", amount: 49.99, category: "Software" },
-    { id: "2", date: "2024-05-05", type: "New Monitors", amount: 125.50, category: "Office Supplies" },
-    { id: "3", date: "2024-05-10", type: "Google Ads", amount: 500.00, category: "Marketing" },
-    { id: "4", date: "2024-05-15", type: "Vercel Hosting", amount: 75.00, category: "Cloud Hosting" },
-    { id: "5", date: "2024-05-20", type: "Contractor John", amount: 1200.00, category: "Freelancer Payment" },
-    { id: "6", date: "2024-04-15", type: "Stationery", amount: 80.00, category: "Office Supplies" },
-    { id: "7", date: "2024-04-25", type: "Flight to Conference", amount: 350.00, category: "Travel" },
-    { id: "8", date: "2023-12-20", type: "Contractor Jane", amount: 1500.00, category: "Freelancer Payment" },
-    { id: "9", date: "2023-12-05", type: "AWS Bill", amount: 75.00, category: "Cloud Hosting" },
-    { id: "10", date: "2022-01-10", type: "Adobe Creative Cloud", amount: 49.99, category: "Software" },
+  // May 2024
+  { id: "1", date: "2024-05-01", type: "Figma Subscription", amount: 49.99, category: "Software" },
+  { id: "2", date: "2024-05-05", type: "New Monitors", amount: 125.50, category: "Office Supplies" },
+  { id: "3", date: "2024-05-10", type: "Google Ads", amount: 500.00, category: "Marketing" },
+  { id: "4", date: "2024-05-15", type: "Vercel Hosting", amount: 75.00, category: "Cloud Hosting" },
+  { id: "5", date: "2024-05-20", type: "Contractor John", amount: 1200.00, category: "Freelancer Payment" },
+  { id: "11", date: "2024-05-25", type: "Lunch with client", amount: 85.00, category: "Travel" },
+  { id: "12", date: "2024-05-28", type: "Stock Photos", amount: 99.00, category: "Software" },
+
+  // April 2024
+  { id: "6", date: "2024-04-15", type: "Stationery", amount: 80.00, category: "Office Supplies" },
+  { id: "7", date: "2024-04-25", type: "Flight to Conference", amount: 350.00, category: "Travel" },
+  { id: "13", date: "2024-04-01", type: "Figma Subscription", amount: 49.99, category: "Software" },
+  { id: "14", date: "2024-04-10", type: "LinkedIn Ads", amount: 450.00, category: "Marketing" },
+  { id: "15", date: "2024-04-20", type: "Contractor Sarah", amount: 1100.00, category: "Freelancer Payment" },
+  { id: "16", date: "2024-04-28", type: "New Keyboard", amount: 150.00, category: "Office Supplies" },
+
+  // March 2024
+  { id: "17", date: "2024-03-01", type: "Figma Subscription", amount: 49.99, category: "Software" },
+  { id: "18", date: "2024-03-12", type: "Webinar Software", amount: 200.00, category: "Software" },
+  { id: "19", date: "2024-03-18", type: "Facebook Ads", amount: 300.00, category: "Marketing" },
+  { id: "20", date: "2024-03-25", type: "Contractor Mike", amount: 950.00, category: "Freelancer Payment" },
+  
+  // Old data
+  { id: "8", date: "2023-12-20", type: "Contractor Jane", amount: 1500.00, category: "Freelancer Payment" },
+  { id: "9", date: "2023-12-05", type: "AWS Bill", amount: 75.00, category: "Cloud Hosting" },
+  { id: "10", date: "2022-01-10", type: "Adobe Creative Cloud", amount: 49.99, category: "Software" },
 ];
 
 
@@ -111,12 +130,12 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const [date, setDate] = useState<DateRange | undefined>();
   const [filterCategory, setFilterCategory] = useState('all');
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
-    setDate({
-      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      to: new Date(),
-    });
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    setDate({ from, to: today });
   }, []);
 
   const [expenseCategories, setExpenseCategories] = useState([
@@ -180,7 +199,7 @@ export default function ExpensesPage() {
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
       if (!expense.date) return false;
-      const expenseDate = new Date(expense.date);
+      const expenseDate = new Date(expense.date.replace(/-/g, "/"));
       
       const from = date?.from;
       const to = date?.to;
@@ -230,6 +249,68 @@ export default function ExpensesPage() {
       fill: COLORS[index % COLORS.length],
     }));
   }, [filteredExpenses]);
+
+   const { expenseTrendData, previousExpenseTrendData } = useMemo(() => {
+    const aggregateByDay = (expenseList: Expense[]) => {
+      if (!expenseList.length) return [];
+      
+      const dailyTotals = expenseList.reduce((acc, expense) => {
+        const date = expense.date;
+        acc[date] = (acc[date] || 0) + expense.amount;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return Object.entries(dailyTotals).map(([date, amount]) => ({
+        date,
+        amount,
+      })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    };
+    
+    const getFullDateRange = (start: Date, end: Date) => {
+      const dates = [];
+      let currentDate = new Date(start);
+      while(currentDate <= end) {
+        dates.push(format(currentDate, 'yyyy-MM-dd'));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return dates;
+    }
+
+    const fillMissingDates = (dailyData: {date: string, amount: number}[], dateRange: string[]) => {
+      const dataMap = new Map(dailyData.map(d => [d.date, d.amount]));
+      return dateRange.map(date => ({
+        date,
+        amount: dataMap.get(date) || 0,
+      }));
+    };
+    
+    if (!date?.from || !date?.to) {
+      return { expenseTrendData: [], previousExpenseTrendData: [] };
+    }
+
+    const currentRange = getFullDateRange(date.from, date.to);
+    const aggregatedCurrent = aggregateByDay(filteredExpenses);
+    const trendData = fillMissingDates(aggregatedCurrent, currentRange);
+
+    let prevTrendData: {date: string, amount: number}[] = [];
+    const duration = date.to.getTime() - date.from.getTime();
+    const prevTo = new Date(date.from.getTime() - 1);
+    const prevFrom = new Date(prevTo.getTime() - duration);
+
+    const previousPeriodExpenses = expenses.filter(expense => {
+        const expenseDate = new Date(expense.date.replace(/-/g, '/'));
+        if (expenseDate < prevFrom) return false;
+        if (expenseDate > prevTo) return false;
+        return true;
+    });
+
+    const prevRange = getFullDateRange(prevFrom, prevTo);
+    const aggregatedPrevious = aggregateByDay(previousPeriodExpenses);
+    prevTrendData = fillMissingDates(aggregatedPrevious, prevRange);
+
+    return { expenseTrendData: trendData, previousExpenseTrendData: prevTrendData };
+
+  }, [date, expenses, filteredExpenses]);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -452,6 +533,14 @@ export default function ExpensesPage() {
             </Table>
             </CardContent>
         </Card>
+        <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+            <ExpenseTrendChart
+                data={expenseTrendData}
+                previousData={previousExpenseTrendData}
+                showComparison={showComparison}
+                onShowComparisonChange={setShowComparison}
+            />
+        </Suspense>
         <div className="grid gap-4 md:grid-cols-3">
             <Card>
                 <CardHeader>
