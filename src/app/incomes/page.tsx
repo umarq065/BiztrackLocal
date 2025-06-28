@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -73,6 +74,7 @@ interface Gig {
   id: string;
   name: string;
   date: string;
+  messages?: number;
 }
 
 interface IncomeSource {
@@ -86,33 +88,33 @@ const initialIncomeSources: IncomeSource[] = [
     id: "1",
     name: "Web Design",
     gigs: [
-      { id: "g1", name: "Acme Corp Redesign", date: "2023-01-15" },
-      { id: "g2", name: "Startup Landing Page", date: "2023-01-25" },
-      { id: "g3", name: "E-commerce Site for 'ShopEasy'", date: "2023-02-05" },
+      { id: "g1", name: "Acme Corp Redesign", date: "2023-01-15", messages: 125 },
+      { id: "g2", name: "Startup Landing Page", date: "2023-01-25", messages: 52 },
+      { id: "g3", name: "E-commerce Site for 'ShopEasy'", date: "2023-02-05", messages: 210 },
     ],
   },
   {
     id: "2",
     name: "Consulting",
-    gigs: [{ id: "g4", name: "Q1 Strategy Session", date: "2023-01-20" }],
+    gigs: [{ id: "g4", name: "Q1 Strategy Session", date: "2023-01-20", messages: 30 }],
   },
   {
     id: "3",
     name: "Logo Design",
     gigs: [
-      { id: "g5", name: "Brand Identity for 'Innovate'", date: "2023-02-01" },
+      { id: "g5", name: "Brand Identity for 'Innovate'", date: "2023-02-01", messages: 15 },
     ],
   },
   {
     id: "4",
     name: "SEO Services",
-    gigs: [{ id: "g6", name: "Monthly SEO Retainer", date: "2023-02-10" }],
+    gigs: [{ id: "g6", name: "Monthly SEO Retainer", date: "2023-02-10", messages: 88 }],
   },
   {
     id: "5",
     name: "Maintenance",
     gigs: [
-      { id: "g7", name: "Website Support Package", date: "2023-02-15" },
+      { id: "g7", name: "Website Support Package", date: "2023-02-15", messages: 5 },
     ],
   },
 ];
@@ -135,6 +137,13 @@ const formSchema = z.object({
     .min(1, { message: "You must add at least one gig." }),
 });
 
+const addGigFormSchema = z.object({
+    name: z.string().min(2, { message: "Gig name must be at least 2 characters." }),
+    date: z.date({ required_error: "A date for the gig is required." }),
+    messages: z.coerce.number().int().min(0).optional(),
+});
+type AddGigFormValues = z.infer<typeof addGigFormSchema>;
+
 export default function IncomesPage() {
   const [incomeSources, setIncomeSources] =
     useState<IncomeSource[]>(initialIncomeSources);
@@ -146,6 +155,9 @@ export default function IncomesPage() {
   const [isMergeConfirmOpen, setIsMergeConfirmOpen] = useState(false);
   const [gigsForMergeConfirmation, setGigsForMergeConfirmation] = useState<Gig[]>([]);
   const [mainGigId, setMainGigId] = useState<string | null>(null);
+
+  const [addGigDialogOpen, setAddGigDialogOpen] = useState(false);
+  const [addingToSourceId, setAddingToSourceId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -160,6 +172,15 @@ export default function IncomesPage() {
     name: "gigs",
   });
 
+  const addGigForm = useForm<AddGigFormValues>({
+    resolver: zodResolver(addGigFormSchema),
+    defaultValues: {
+      name: "",
+      date: new Date(),
+      messages: 0,
+    },
+  });
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     const newSource: IncomeSource = {
       id: `source-${Date.now()}`,
@@ -168,6 +189,7 @@ export default function IncomesPage() {
         id: `g-${Date.now()}-${index}`,
         name: gig.name,
         date: format(gig.date, "yyyy-MM-dd"),
+        messages: 0,
       })),
     };
 
@@ -180,6 +202,33 @@ export default function IncomesPage() {
     form.reset();
     form.setValue("gigs", [{ name: "", date: new Date() }]);
     setOpen(false);
+  }
+
+  function onAddGigSubmit(values: AddGigFormValues) {
+    if (!addingToSourceId) return;
+
+    const newGig: Gig = {
+      id: `g-${Date.now()}`,
+      name: values.name,
+      date: format(values.date, "yyyy-MM-dd"),
+      messages: values.messages,
+    };
+
+    setIncomeSources(prevSources => 
+      prevSources.map(source => {
+        if (source.id === addingToSourceId) {
+          return { ...source, gigs: [newGig, ...source.gigs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) };
+        }
+        return source;
+      })
+    );
+    
+    toast({
+      title: "Gig Added",
+      description: `Added "${values.name}" to the income source.`,
+    });
+    addGigForm.reset({ name: "", date: new Date(), messages: 0 });
+    setAddGigDialogOpen(false);
   }
 
   const handleCancelMerge = () => {
@@ -380,7 +429,7 @@ export default function IncomesPage() {
         <CardHeader>
           <CardTitle>Manage Your Income Sources</CardTitle>
           <CardDescription>
-            Here you can add, edit, or delete your income sources.
+            Here you can add, edit, or delete your income sources and their gigs.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -398,7 +447,7 @@ export default function IncomesPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="flex justify-end mb-4">
+                  <div className="flex justify-end gap-2 mb-4">
                     {mergingSourceId === source.id ? (
                       <div className="flex gap-2">
                         <Button variant="outline" onClick={handleCancelMerge}>Cancel Merge</Button>
@@ -414,6 +463,14 @@ export default function IncomesPage() {
                         Merge Gigs
                       </Button>
                     )}
+                     <Button variant="outline" onClick={() => {
+                        setAddingToSourceId(source.id);
+                        addGigForm.reset();
+                        setAddGigDialogOpen(true);
+                      }}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Gig
+                    </Button>
                   </div>
                   <Table>
                     <TableHeader>
@@ -431,6 +488,7 @@ export default function IncomesPage() {
                         )}
                         <TableHead>Gig Name</TableHead>
                         <TableHead>Date Added</TableHead>
+                        <TableHead>Messages</TableHead>
                         <TableHead>
                           <span className="sr-only">Actions</span>
                         </TableHead>
@@ -457,6 +515,9 @@ export default function IncomesPage() {
                           </TableCell>
                           <TableCell>
                             {format(new Date(gig.date), "PPP")}
+                          </TableCell>
+                          <TableCell>
+                            {gig.messages ?? <span className="text-muted-foreground">N/A</span>}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -514,8 +575,93 @@ export default function IncomesPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <Dialog open={addGigDialogOpen} onOpenChange={setAddGigDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>Add New Gig</DialogTitle>
+                <DialogDescription>
+                    Fill in the details for the new gig below.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...addGigForm}>
+                <form onSubmit={addGigForm.handleSubmit(onAddGigSubmit)} className="space-y-6 pt-4">
+                    <FormField
+                        control={addGigForm.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Gig Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g., New Project" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                          control={addGigForm.control}
+                          name="date"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                              <FormLabel>Date</FormLabel>
+                              <Popover>
+                                  <PopoverTrigger asChild>
+                                  <FormControl>
+                                      <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                          "pl-3 text-left font-normal",
+                                          !field.value && "text-muted-foreground"
+                                      )}
+                                      >
+                                      {field.value ? (
+                                          format(field.value, "PPP")
+                                      ) : (
+                                          <span>Pick a date</span>
+                                      )}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                      </Button>
+                                  </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                      mode="single"
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      initialFocus
+                                  />
+                                  </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <FormField
+                        control={addGigForm.control}
+                        name="messages"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>No. of Messages</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="e.g., 25" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                      />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Add Gig</Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
-
-    
 }
