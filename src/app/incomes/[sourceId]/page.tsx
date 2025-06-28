@@ -55,9 +55,13 @@ const chartConfig = {
   clicks: { label: "Clicks", color: "hsl(var(--chart-2))" },
   messages: { label: "Messages", color: "hsl(var(--chart-3))" },
   orders: { label: "Orders", color: "hsl(var(--chart-4))" },
+  prevImpressions: { label: "Prev. Impressions", color: "hsl(var(--chart-1))" },
+  prevClicks: { label: "Prev. Clicks", color: "hsl(var(--chart-2))" },
+  prevMessages: { label: "Prev. Messages", color: "hsl(var(--chart-3))" },
+  prevOrders: { label: "Prev. Orders", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig;
 
-const ChartComponent = ({ data, config, activeMetrics, yAxisLabel }: { data: any[], config: ChartConfig, activeMetrics: Record<string, boolean>, yAxisLabel?: string }) => {
+const ChartComponent = ({ data, config, activeMetrics, yAxisLabel, showComparison }: { data: any[], config: ChartConfig, activeMetrics: Record<string, boolean>, yAxisLabel?: string, showComparison: boolean }) => {
     if (!data || data.length === 0) {
         return (
             <div className="flex h-[300px] w-full items-center justify-center">
@@ -79,9 +83,17 @@ const ChartComponent = ({ data, config, activeMetrics, yAxisLabel }: { data: any
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} label={yAxisLabel} />
                 <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                 {activeMetrics.impressions && <Line dataKey="impressions" type="natural" stroke="var(--color-impressions)" strokeWidth={2} dot={false} />}
+                {showComparison && activeMetrics.impressions && <Line dataKey="prevImpressions" type="natural" stroke="var(--color-impressions)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+                
                 {activeMetrics.clicks && <Line dataKey="clicks" type="natural" stroke="var(--color-clicks)" strokeWidth={2} dot={false} />}
+                {showComparison && activeMetrics.clicks && <Line dataKey="prevClicks" type="natural" stroke="var(--color-clicks)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+                
                 {activeMetrics.orders && <Line dataKey="orders" type="natural" stroke="var(--color-orders)" strokeWidth={2} dot={false} />}
+                {showComparison && activeMetrics.orders && <Line dataKey="prevOrders" type="natural" stroke="var(--color-orders)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+                
                 {activeMetrics.messages && <Line dataKey="messages" type="natural" stroke="var(--color-messages)" strokeWidth={2} dot={false} />}
+                {showComparison && activeMetrics.messages && <Line dataKey="prevMessages" type="natural" stroke="var(--color-messages)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+
             </LineChart>
         </ChartContainer>
     );
@@ -100,6 +112,8 @@ export default function SourceAnalyticsPage({
     orders: true,
     messages: true,
   });
+  const [showComparison, setShowComparison] = useState(false);
+
 
   if (!source) {
     notFound();
@@ -131,7 +145,7 @@ export default function SourceAnalyticsPage({
 
 
   const {
-    combinedChartData,
+    chartDataForRender,
     sourceStats,
   } = useMemo(() => {
     const calculateMetricsForPeriod = (periodFrom?: Date, periodTo?: Date) => {
@@ -186,7 +200,7 @@ export default function SourceAnalyticsPage({
 
     const currentPeriodMetrics = calculateMetricsForPeriod(date?.from, date?.to);
 
-    let prevPeriodMetrics = { impressions: 0, clicks: 0, orders: 0, sourceMessages: 0 };
+    let prevPeriodMetrics = { impressions: 0, clicks: 0, orders: 0, sourceMessages: 0, aggregatedAnalytics: [], aggregatedMessages: [] };
     if (date?.from && date.to) {
         const duration = date.to.getTime() - date.from.getTime();
         const prevTo = new Date(date.from.getTime() - 1);
@@ -256,9 +270,30 @@ export default function SourceAnalyticsPage({
         .map(([date, data]) => ({ date, ...data }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    const prevCombinedMap = new Map<string, { impressions?: number; clicks?: number; orders?: number; messages?: number }>();
+    prevPeriodMetrics.aggregatedAnalytics.forEach(item => {
+        prevCombinedMap.set(item.date, { ...prevCombinedMap.get(item.date), impressions: item.impressions, clicks: item.clicks, orders: item.orders });
+    });
+    prevPeriodMetrics.aggregatedMessages.forEach(item => {
+        prevCombinedMap.set(item.date, { ...prevCombinedMap.get(item.date), messages: item.messages });
+    });
+    const prevCombinedChartData = Array.from(prevCombinedMap.entries())
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const finalChartDataForRender = finalCombinedChartData.map((current, index) => {
+        const prev = prevCombinedChartData[index];
+        return {
+            ...current,
+            prevImpressions: prev?.impressions,
+            prevClicks: prev?.clicks,
+            prevOrders: prev?.orders,
+            prevMessages: prev?.messages,
+        }
+    });
 
     return {
-      combinedChartData: finalCombinedChartData,
+      chartDataForRender: finalChartDataForRender,
       sourceStats: finalSourceStats,
     };
   }, [source, date]);
@@ -298,7 +333,7 @@ export default function SourceAnalyticsPage({
                         <CardDescription>Impressions, clicks, orders, and messages from this source.</CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).map((metric) => (
+                        {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).filter(k => !k.startsWith('prev')).map((metric) => (
                             <div key={metric} className="flex items-center gap-2">
                                 <Checkbox
                                     id={`metric-${metric}`}
@@ -314,15 +349,20 @@ export default function SourceAnalyticsPage({
                                 </Label>
                             </div>
                         ))}
+                         <div className="flex items-center gap-2">
+                            <Checkbox id="show-comparison" checked={showComparison} onCheckedChange={(c) => setShowComparison(!!c)} />
+                            <Label htmlFor="show-comparison">Compare</Label>
+                        </div>
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="pl-2">
                 <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
                    <ChartComponent 
-                     data={combinedChartData} 
+                     data={chartDataForRender} 
                      config={chartConfig}
                      activeMetrics={activeMetrics}
+                     showComparison={showComparison}
                    />
                 </Suspense>
             </CardContent>
