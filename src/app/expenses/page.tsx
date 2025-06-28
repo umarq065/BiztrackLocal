@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, lazy, Suspense } from "react";
@@ -151,6 +150,7 @@ export default function ExpensesPage() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showComparison, setShowComparison] = useState(false);
   const [chartView, setChartView] = useState("daily");
+  const [chartType, setChartType] = useState('line');
 
   useEffect(() => {
     const today = new Date();
@@ -778,6 +778,8 @@ export default function ExpensesPage() {
                 onShowComparisonChange={setShowComparison}
                 chartView={chartView}
                 onChartViewChange={setChartView}
+                chartType={chartType}
+                onChartTypeChange={setChartType}
             />
         </Suspense>
 
