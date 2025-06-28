@@ -70,7 +70,6 @@ const gigData = {
               <ArrowUp className="inline h-3 w-3" />)
             </span>
           </span>
-          <span className="text-muted-foreground/50">|</span>
           <span>
             NB: 10
             <span className="ml-1 inline-flex items-center text-red-600">
