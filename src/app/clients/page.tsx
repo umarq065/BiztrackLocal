@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,12 @@ export default function ClientsPage() {
     const filterSource = searchParams.get('source') || "all";
     const sortParam = searchParams.get('sort');
 
+    const [localSearch, setLocalSearch] = useState(searchQuery);
+
+    useEffect(() => {
+      setLocalSearch(searchQuery);
+    }, [searchQuery]);
+
     const sortConfig = useMemo(() => {
         if (!sortParam) return { key: null, direction: 'ascending' as const };
         const [key, direction] = sortParam.split('_');
@@ -52,8 +58,20 @@ export default function ClientsPage() {
         [searchParams]
     );
 
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        if (localSearch !== searchQuery) {
+          router.push(`${pathname}?${createQueryString({ q: localSearch || null })}`);
+        }
+      }, 300);
+
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [localSearch, searchQuery, router, pathname, createQueryString]);
+
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        router.push(`${pathname}?${createQueryString({ q: e.target.value || null })}`);
+        setLocalSearch(e.target.value);
     };
     
     const handleFilterChange = (value: string) => {
@@ -138,7 +156,7 @@ export default function ClientsPage() {
                     type="search"
                     placeholder="Search clients..."
                     className="pl-8 sm:w-[200px] md:w-[250px]"
-                    value={searchQuery}
+                    value={localSearch}
                     onChange={handleSearchChange}
                 />
             </div>
