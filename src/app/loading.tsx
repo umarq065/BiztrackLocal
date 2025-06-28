@@ -5,7 +5,7 @@ import NProgress from 'nprogress';
 
 export default function Loading() {
   useEffect(() => {
-    NProgress.configure({ showSpinner: false });
+    NProgress.configure({ showSpinner: true });
     NProgress.start();
 
     return () => {
