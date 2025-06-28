@@ -1,6 +1,7 @@
 
 "use client";
 
+import { lazy, Suspense } from "react";
 import NProgressLink from "@/components/layout/nprogress-link";
 import { notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,8 +24,10 @@ import {
 import StatCard from "@/components/dashboard/stat-card";
 import { Facebook, Twitter, Linkedin, Github, Globe, DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft } from "lucide-react";
 import type { Stat } from "@/lib/placeholder-data";
-import ClientOrderHistoryChart from "@/components/clients/client-order-history-chart";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ClientOrderHistoryChart = lazy(() => import("@/components/clients/client-order-history-chart"));
 
 
 // Mock data - in a real app, this would be fetched from a database
@@ -220,7 +223,9 @@ export default function ClientDetailsPage({ params }: { params: { clientId: stri
       </div>
 
       <section>
-        <ClientOrderHistoryChart data={clientOrders} />
+        <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
+          <ClientOrderHistoryChart data={clientOrders} />
+        </Suspense>
       </section>
 
     </main>

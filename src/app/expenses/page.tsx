@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -68,7 +68,9 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import ExpenseChart from "@/components/expenses/expense-chart";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ExpenseChart = lazy(() => import("@/components/expenses/expense-chart"));
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: "An expense date is required." }),
@@ -466,13 +468,15 @@ export default function ExpensesPage() {
                     <CardDescription>A breakdown of your expenses for the selected period.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {filteredExpenses.length > 0 ? (
-                    <ExpenseChart data={expensesByCategory} />
-                  ) : (
-                    <div className="flex h-[300px] w-full items-center justify-center">
-                        <p className="text-muted-foreground">No expense data to display chart.</p>
-                    </div>
-                  )}
+                  <Suspense fallback={<div className="h-[300px] w-full"><Skeleton className="h-full w-full" /></div>}>
+                    {filteredExpenses.length > 0 ? (
+                      <ExpenseChart data={expensesByCategory} />
+                    ) : (
+                      <div className="flex h-[300px] w-full items-center justify-center">
+                          <p className="text-muted-foreground">No expense data to display chart.</p>
+                      </div>
+                    )}
+                  </Suspense>
                 </CardContent>
             </Card>
         </div>

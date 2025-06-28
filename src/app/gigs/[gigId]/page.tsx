@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import {
   Card,
@@ -19,11 +19,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import StatCard from "@/components/dashboard/stat-card";
-import GigAnalyticsChart from "@/components/gigs/analytics-chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const GigAnalyticsChart = lazy(() => import("@/components/gigs/analytics-chart"));
 
 // Mock data for a single gig. In a real app, you'd fetch this.
 const gigData = {
@@ -230,7 +232,9 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
                 </div>
             </CardHeader>
             <CardContent>
+              <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
                 <GigAnalyticsChart data={filteredAnalyticsData} activeMetrics={activeMetrics} />
+              </Suspense>
             </CardContent>
         </Card>
          <Card>
