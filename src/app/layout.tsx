@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/layout/theme-provider";
+import { NProgressProvider } from "@/components/layout/nprogress-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({
@@ -30,8 +31,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppShell>{children}</AppShell>
-          <Toaster />
+          <NProgressProvider>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </NProgressProvider>
         </ThemeProvider>
       </body>
     </html>

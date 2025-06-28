@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SidebarProvider,
@@ -30,6 +29,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
+import NProgressLink from "./nprogress-link";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -71,10 +71,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     children: item.label,
                   }}
                 >
-                  <Link href={item.href} passHref>
+                  <NProgressLink href={item.href} passHref>
                     <item.icon />
                     <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </Link>
+                  </NProgressLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -85,10 +85,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={{children: 'Settings'}}>
-                  <Link href="#" passHref>
+                  <NProgressLink href="#" passHref>
                     <Settings />
                     <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                  </Link>
+                  </NProgressLink>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

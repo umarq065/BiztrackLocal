@@ -1,7 +1,7 @@
 
 "use client";
 
-import Link from "next/link";
+import NProgressLink from "@/components/layout/nprogress-link";
 import { notFound } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -148,12 +148,12 @@ export default function ClientDetailsPage({ params }: { params: { clientId: stri
                 </div>
             </div>
         </div>
-        <Link href="/clients" passHref>
+        <NProgressLink href="/clients" passHref>
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-        </Link>
+        </NProgressLink>
       </div>
       
       <section>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import NProgressLink from "@/components/layout/nprogress-link";
 import { MoreHorizontal, Edit, Trash2, Globe, Facebook, Twitter, Linkedin, Github } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export function ClientsTable({ clients, requestSort, getSortIndicator }: Clients
                         {clients.length > 0 ? (clients.map((client) => (
                             <TableRow key={client.id}>
                                 <TableCell>
-                                    <Link href={`/clients/${client.id}`} className="flex items-center gap-3">
+                                    <NProgressLink href={`/clients/${client.id}`} className="flex items-center gap-3">
                                         <Avatar className="h-10 w-10">
                                             <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
                                             <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
@@ -88,7 +88,7 @@ export function ClientsTable({ clients, requestSort, getSortIndicator }: Clients
                                             <div className="font-medium hover:underline">{client.name || client.username}</div>
                                             <div className="text-sm text-muted-foreground">@{client.username}</div>
                                         </div>
-                                    </Link>
+                                    </NProgressLink>
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>{client.clientType}</Badge>
