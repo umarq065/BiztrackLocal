@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, MoreHorizontal, Star, ArrowUpDown } from "lucide-react";
+import { CalendarIcon, MoreHorizontal, Star, ArrowUpDown, Edit, Trash2 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,16 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     Form,
     FormControl,
@@ -156,8 +166,10 @@ const StarDisplay = ({ rating }: { rating?: number }) => {
 
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>(initialOrders);
-    const [open, setOpen] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingOrder, setEditingOrder] = useState<Order | null>(null);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+    const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
     const { toast } = useToast();
     
     const router = useRouter();
@@ -250,14 +262,34 @@ export default function OrdersPage() {
     }, [selectedSource]);
 
     useEffect(() => {
-        form.resetField("gig", { defaultValue: "" });
+        if (selectedSource) {
+            form.resetField("gig", { defaultValue: "" });
+        }
     }, [selectedSource, form]);
 
-    const handleOpenChange = (isOpen: boolean) => {
-        if (isOpen) {
+    const handleOpenDialog = (order: Order | null = null) => {
+        if (order) {
+            setEditingOrder(order);
+            const predefinedReasons = order.cancellationReasons?.filter(r => cancellationReasonsList.includes(r)) || [];
+            const customReason = order.cancellationReasons?.find(r => !cancellationReasonsList.includes(r)) || '';
+
+            form.reset({
+                id: order.id,
+                username: order.clientUsername,
+                date: new Date(order.date),
+                amount: order.amount,
+                source: order.source,
+                gig: order.gig,
+                rating: order.rating,
+                isCancelled: order.status === 'Cancelled',
+                cancellationReasons: predefinedReasons,
+                customCancellationReason: customReason,
+            });
+        } else {
+            setEditingOrder(null);
             form.reset({
                 date: new Date(),
-                id: "",
+                id: `ORD${Math.floor(Math.random() * 1000)}`,
                 username: "",
                 amount: undefined,
                 source: "",
@@ -268,7 +300,7 @@ export default function OrdersPage() {
                 customCancellationReason: "",
             });
         }
-        setOpen(isOpen);
+        setDialogOpen(true);
     };
 
     function onSubmit(values: OrderFormValues) {
@@ -294,12 +326,22 @@ export default function OrdersPage() {
             status: values.isCancelled ? 'Cancelled' : 'Completed',
             cancellationReasons: finalCancellationReasons,
         };
-        setOrders([newOrder, ...orders]);
-        toast({
-            title: "Order Added",
-            description: `Order ${newOrder.id} has been successfully created.`,
-        });
-        setOpen(false);
+
+        if (editingOrder) {
+            setOrders(orders.map(o => o.id === editingOrder.id ? newOrder : o));
+            toast({
+                title: "Order Updated",
+                description: `Order ${newOrder.id} has been successfully updated.`,
+            });
+        } else {
+            setOrders([newOrder, ...orders]);
+            toast({
+                title: "Order Added",
+                description: `Order ${newOrder.id} has been successfully created.`,
+            });
+        }
+        setDialogOpen(false);
+        setEditingOrder(null);
     }
     
     function onCancelSubmit(values: CancelOrderFormValues) {
@@ -327,6 +369,16 @@ export default function OrdersPage() {
         setOrderToCancel(null);
         cancelForm.reset();
     }
+
+    const handleDeleteOrder = () => {
+        if (!orderToDelete) return;
+        setOrders(orders.filter(o => o.id !== orderToDelete.id));
+        toast({
+            title: "Order Deleted",
+            description: `Order ${orderToDelete.id} has been removed.`,
+        });
+        setOrderToDelete(null);
+    };
 
     const requestSort = (key: keyof Order) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -399,15 +451,148 @@ export default function OrdersPage() {
         </h1>
         <div className="ml-auto flex items-center gap-2">
             <DateFilter date={date} setDate={setDate} />
-            <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                <Button>Add New Order</Button>
-            </DialogTrigger>
+            <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
+        </div>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Manage Orders</CardTitle>
+          <CardDescription>
+            A sortable list of all your recent orders.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('date')}>
+                        Date {getSortIndicator('date')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('id')}>
+                        Order ID {getSortIndicator('id')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('clientUsername')}>
+                        Client {getSortIndicator('clientUsername')}
+                    </Button>
+                </TableHead>
+                <TableHead className="text-right">
+                    <Button variant="ghost" onClick={() => requestSort('amount')}>
+                        Amount {getSortIndicator('amount')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('source')}>
+                        Source {getSortIndicator('source')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('gig')}>
+                        Gig {getSortIndicator('gig')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('rating')}>
+                        Rating {getSortIndicator('rating')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('status')}>
+                        Status {getSortIndicator('status')}
+                    </Button>
+                </TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedOrders.length > 0 ? (
+                sortedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                    <TableCell>{order.date}</TableCell>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
+                    <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                    <TableCell>
+                        <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="inline-block max-w-[120px] truncate">
+                            {order.source}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{order.source}</p>
+                        </TooltipContent>
+                        </Tooltip>
+                    </TableCell>
+                    <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
+                    <TableCell>
+                        <StarDisplay rating={order.rating} />
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
+                        {order.status}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenDialog(order); }}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                            </DropdownMenuItem>
+                            {order.status !== 'Cancelled' && (
+                                <DropdownMenuItem
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        cancelForm.reset();
+                                        setOrderToCancel(order);
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    Mark as Cancelled
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive" 
+                                onClick={(e) => { e.stopPropagation(); setOrderToDelete(order); }}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                        No orders found for the selected period.
+                    </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Add New Order</DialogTitle>
+                    <DialogTitle>{editingOrder ? 'Edit Order' : 'Add New Order'}</DialogTitle>
                     <DialogDescription>
-                        Fill in the details below to create a new order.
+                        Fill in the details below to {editingOrder ? 'update the' : 'create a new'} order.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -459,7 +644,7 @@ export default function OrdersPage() {
                                     <FormItem>
                                         <FormLabel>Order ID</FormLabel>
                                         <FormControl>
-                                        <Input placeholder="e.g., ORD006" {...field} />
+                                        <Input placeholder="e.g., ORD006" {...field} disabled={!!editingOrder} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -501,7 +686,7 @@ export default function OrdersPage() {
                                     render={({ field }) => (
                                         <FormItem>
                                         <FormLabel>Source*</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select an income source" />
@@ -660,136 +845,12 @@ export default function OrdersPage() {
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary">Cancel</Button>
                             </DialogClose>
-                            <Button type="submit">Add Order</Button>
+                            <Button type="submit">{editingOrder ? 'Save Changes' : 'Add Order'}</Button>
                         </DialogFooter>
                     </form>
                 </Form>
             </DialogContent>
-            </Dialog>
-        </div>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Orders</CardTitle>
-          <CardDescription>
-            A sortable list of all your recent orders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('date')}>
-                        Date {getSortIndicator('date')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('id')}>
-                        Order ID {getSortIndicator('id')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('clientUsername')}>
-                        Client {getSortIndicator('clientUsername')}
-                    </Button>
-                </TableHead>
-                <TableHead className="text-right">
-                    <Button variant="ghost" onClick={() => requestSort('amount')}>
-                        Amount {getSortIndicator('amount')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                     <Button variant="ghost" onClick={() => requestSort('source')}>
-                        Source {getSortIndicator('source')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('gig')}>
-                        Gig {getSortIndicator('gig')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('rating')}>
-                        Rating {getSortIndicator('rating')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('status')}>
-                        Status {getSortIndicator('status')}
-                    </Button>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedOrders.length > 0 ? (
-                sortedOrders.map((order) => (
-                    <TableRow key={order.id}>
-                    <TableCell>{order.date}</TableCell>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
-                    <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="inline-block max-w-[120px] truncate">
-                            {order.source}
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{order.source}</p>
-                        </TooltipContent>
-                        </Tooltip>
-                    </TableCell>
-                    <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
-                    <TableCell>
-                        <StarDisplay rating={order.rating} />
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
-                        {order.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            {order.status !== 'Cancelled' && (
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        cancelForm.reset();
-                                        setOrderToCancel(order);
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    Mark as Cancelled
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                        No orders found for the selected period.
-                    </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      </Dialog>
 
       <Dialog open={!!orderToCancel} onOpenChange={(isOpen) => { if (!isOpen) setOrderToCancel(null); }}>
         <DialogContent>
@@ -860,7 +921,24 @@ export default function OrdersPage() {
             </form>
             </Form>
         </DialogContent>
-        </Dialog>
+      </Dialog>
+
+      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the order {orderToDelete?.id}.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOrder} className={buttonVariants({ variant: "destructive" })}>
+                Delete
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
