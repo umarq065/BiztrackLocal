@@ -63,13 +63,13 @@ const gigData = {
       changeType: "increase" as const,
       description: (
         <>
-          Repeat buyer: 20
+          RB: 20
           <span className="ml-1 inline-flex items-center text-green-600">
             (40%
             <ArrowUp className="inline h-3 w-3" />)
           </span>
           <span className="mx-1">|</span>
-          New Buyer: 10
+          NB: 10
           <span className="ml-1 inline-flex items-center text-red-600">
             (50%
             <ArrowDown className="inline h-3 w-3" />)
