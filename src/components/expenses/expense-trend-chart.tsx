@@ -19,6 +19,14 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format } from "date-fns";
 
 interface ExpenseTrendData {
   date: string;
@@ -30,6 +38,8 @@ interface ExpenseTrendChartProps {
   previousData: ExpenseTrendData[];
   showComparison: boolean;
   onShowComparisonChange: (checked: boolean) => void;
+  chartView: string;
+  onChartViewChange: (view: string) => void;
 }
 
 const chartConfig = {
@@ -43,7 +53,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export default function ExpenseTrendChart({ data, previousData, showComparison, onShowComparisonChange }: ExpenseTrendChartProps) {
+export default function ExpenseTrendChart({ data, previousData, showComparison, onShowComparisonChange, chartView, onChartViewChange }: ExpenseTrendChartProps) {
   
   const chartData = useMemo(() => {
     return data.map((current, index) => ({
@@ -53,11 +63,63 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
     }));
   }, [data, previousData]);
 
+  const tickFormatter = (value: string) => {
+    try {
+        switch (chartView) {
+            case 'weekly':
+                return `W/C ${format(new Date(value.replace(/-/g, '/')), "MMM d")}`;
+            case 'monthly':
+                const [year, month] = value.split('-');
+                return format(new Date(Number(year), Number(month)), "MMM yyyy");
+            case 'quarterly':
+                return value;
+            case 'yearly':
+                return value;
+            default: // daily
+                return format(new Date(value.replace(/-/g, '/')), "MMM d");
+        }
+    } catch (e) {
+        return value;
+    }
+  };
+
   if (!chartData || chartData.length === 0) {
     return (
-        <div className="flex h-[400px] w-full items-center justify-center rounded-lg border">
-            <p className="text-muted-foreground">No expense data to display for the selected period.</p>
-        </div>
+        <Card>
+            <CardHeader>
+                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <CardTitle>Expense Trend</CardTitle>
+                        <CardDescription>
+                        A summary of your expenses for the selected period.
+                        </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Select value={chartView} onValueChange={onChartViewChange}>
+                            <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Select view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="quarterly">Quarterly</SelectItem>
+                                <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="compare-expenses" checked={showComparison} onCheckedChange={(checked) => onShowComparisonChange(!!checked)} />
+                            <Label htmlFor="compare-expenses" className="text-sm font-normal">Compare</Label>
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="flex h-[300px] w-full items-center justify-center rounded-lg border">
+                    <p className="text-muted-foreground">No expense data to display for the selected period.</p>
+                </div>
+            </CardContent>
+        </Card>
     );
   }
 
@@ -71,9 +133,23 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                   A summary of your expenses for the selected period.
                 </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-                <Checkbox id="compare-expenses" checked={showComparison} onCheckedChange={(checked) => onShowComparisonChange(!!checked)} />
-                <Label htmlFor="compare-expenses" className="text-sm font-normal">Compare to Previous Period</Label>
+            <div className="flex items-center gap-4">
+                <Select value={chartView} onValueChange={onChartViewChange}>
+                    <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select view" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                </Select>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="compare-expenses" checked={showComparison} onCheckedChange={(checked) => onShowComparisonChange(!!checked)} />
+                    <Label htmlFor="compare-expenses" className="text-sm font-normal">Compare</Label>
+                </div>
             </div>
         </div>
       </CardHeader>
@@ -95,13 +171,7 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => {
-                const date = new Date(value.replace(/-/g, '/'));
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
-              }}
+              tickFormatter={tickFormatter}
             />
             <YAxis
               tickLine={false}

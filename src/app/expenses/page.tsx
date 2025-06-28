@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, getQuarter, getYear, startOfWeek } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -150,6 +150,7 @@ export default function ExpensesPage() {
   const [date, setDate] = useState<DateRange | undefined>();
   const [filterCategory, setFilterCategory] = useState('all');
   const [showComparison, setShowComparison] = useState(false);
+  const [chartView, setChartView] = useState("daily");
 
   useEffect(() => {
     const today = new Date();
@@ -429,66 +430,73 @@ export default function ExpensesPage() {
   }, [filteredExpenses]);
 
    const { expenseTrendData, previousExpenseTrendData } = useMemo(() => {
-    const aggregateByDay = (expenseList: Expense[]) => {
-      if (!expenseList.length) return [];
-      
-      const dailyTotals = expenseList.reduce((acc, expense) => {
-        const date = expense.date;
-        acc[date] = (acc[date] || 0) + expense.amount;
-        return acc;
-      }, {} as Record<string, number>);
+        const getAggregatedData = (expensesToAggregate: Expense[], view: string) => {
+            if (!expensesToAggregate.length) return [];
+            
+            const totals = expensesToAggregate.reduce((acc, { date, amount }) => {
+                const expenseDate = new Date(date.replace(/-/g, "/"));
+                let key = "";
 
-      return Object.entries(dailyTotals).map(([date, amount]) => ({
-        date,
-        amount,
-      })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    };
-    
-    const getFullDateRange = (start: Date, end: Date) => {
-      const dates = [];
-      let currentDate = new Date(start);
-      while(currentDate <= end) {
-        dates.push(format(currentDate, 'yyyy-MM-dd'));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      return dates;
-    }
+                switch(view) {
+                    case 'weekly':
+                        key = format(startOfWeek(expenseDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                        break;
+                    case 'monthly':
+                        key = format(expenseDate, 'yyyy-MM-01');
+                        break;
+                    case 'quarterly':
+                        key = `${getYear(expenseDate)}-Q${getQuarter(expenseDate)}`;
+                        break;
+                    case 'yearly':
+                        key = format(expenseDate, 'yyyy');
+                        break;
+                    default: // daily
+                        key = format(expenseDate, 'yyyy-MM-dd');
+                }
+                
+                if (key) {
+                    acc[key] = (acc[key] || 0) + amount;
+                }
+                return acc;
+            }, {} as Record<string, number>);
 
-    const fillMissingDates = (dailyData: {date: string, amount: number}[], dateRange: string[]) => {
-      const dataMap = new Map(dailyData.map(d => [d.date, d.amount]));
-      return dateRange.map(date => ({
-        date,
-        amount: dataMap.get(date) || 0,
-      }));
-    };
-    
-    if (!date?.from || !date?.to) {
-      return { expenseTrendData: [], previousExpenseTrendData: [] };
-    }
+            return Object.entries(totals)
+                .map(([date, amount]) => ({ date, amount }))
+                .sort((a,b) => {
+                    if (view === 'quarterly') {
+                        const [yearA, quarterA] = a.date.split('-Q');
+                        const [yearB, quarterB] = b.date.split('-Q');
+                        if (yearA !== yearB) return Number(yearA) - Number(yearB);
+                        return Number(quarterA) - Number(quarterB);
+                    }
+                    if (view === 'yearly') return Number(a.date) - Number(b.date);
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
+                });
+        };
 
-    const currentRange = getFullDateRange(date.from, date.to);
-    const aggregatedCurrent = aggregateByDay(filteredExpenses);
-    const trendData = fillMissingDates(aggregatedCurrent, currentRange);
+        if (!date?.from || !date?.to) {
+          return { expenseTrendData: [], previousExpenseTrendData: [] };
+        }
 
-    let prevTrendData: {date: string, amount: number}[] = [];
-    const duration = date.to.getTime() - date.from.getTime();
-    const prevTo = new Date(date.from.getTime() - 1);
-    const prevFrom = new Date(prevTo.getTime() - duration);
+        const trendData = getAggregatedData(filteredExpenses, chartView);
+        
+        const { from: prevFrom, to: prevTo } = (() => {
+            const duration = date.to.getTime() - date.from.getTime();
+            const to = new Date(date.from.getTime() - 1);
+            const from = new Date(to.getTime() - duration);
+            return { from, to };
+        })();
+        
+        const previousPeriodExpenses = expenses.filter(expense => {
+            const expenseDate = new Date(expense.date.replace(/-/g, '/'));
+            return expenseDate >= prevFrom && expenseDate <= prevTo;
+        });
 
-    const previousPeriodExpenses = expenses.filter(expense => {
-        const expenseDate = new Date(expense.date.replace(/-/g, '/'));
-        if (expenseDate < prevFrom) return false;
-        if (expenseDate > prevTo) return false;
-        return true;
-    });
+        const prevTrendData = getAggregatedData(previousPeriodExpenses, chartView);
 
-    const prevRange = getFullDateRange(prevFrom, prevTo);
-    const aggregatedPrevious = aggregateByDay(previousPeriodExpenses);
-    prevTrendData = fillMissingDates(aggregatedPrevious, prevRange);
+        return { expenseTrendData: trendData, previousExpenseTrendData: prevTrendData };
 
-    return { expenseTrendData: trendData, previousExpenseTrendData: prevTrendData };
-
-  }, [date, expenses, filteredExpenses]);
+  }, [date, expenses, filteredExpenses, chartView]);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -738,7 +746,7 @@ export default function ExpensesPage() {
             />
             <StatCard
                 icon="TrendingUp"
-                title="MoM Expense Growth"
+                title="Period-over-Period Growth"
                 value={momExpenseGrowth ? (
                     <div className={cn("flex items-center", momExpenseGrowth.type === 'increase' ? 'text-red-600' : 'text-green-600')}>
                         {momExpenseGrowth.type === 'increase' ? <ArrowUp className="h-6 w-6 mr-1" /> : <ArrowDown className="h-6 w-6 mr-1" />}
@@ -761,6 +769,17 @@ export default function ExpensesPage() {
                 description="of total spending in period is recurring"
             />
         </div>
+
+        <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+            <ExpenseTrendChart
+                data={expenseTrendData}
+                previousData={previousExpenseTrendData}
+                showComparison={showComparison}
+                onShowComparisonChange={setShowComparison}
+                chartView={chartView}
+                onChartViewChange={setChartView}
+            />
+        </Suspense>
 
         <Card>
             <CardHeader>
@@ -818,14 +837,6 @@ export default function ExpensesPage() {
             </Table>
             </CardContent>
         </Card>
-        <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-            <ExpenseTrendChart
-                data={expenseTrendData}
-                previousData={previousExpenseTrendData}
-                showComparison={showComparison}
-                onShowComparisonChange={setShowComparison}
-            />
-        </Suspense>
         <div className="grid gap-4 md:grid-cols-1">
             <Card>
                 <CardHeader>
