@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { type TopClient } from "@/lib/placeholder-data";
+import { DateFilter } from './date-filter';
 
 interface TopClientsChartProps {
     data: TopClient[];
@@ -26,10 +27,15 @@ export default function TopClientsChart({ data, totalRevenue }: TopClientsChartP
   return (
     <Card>
       <CardHeader>
-          <CardTitle>Top 5 Clients</CardTitle>
-          <CardDescription>
-            Your most valuable clients for the selected period.
-          </CardDescription>
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="grid gap-1">
+            <CardTitle>Top 5 Clients</CardTitle>
+            <CardDescription>
+              Your most valuable clients for the selected period.
+            </CardDescription>
+          </div>
+          <DateFilter />
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
