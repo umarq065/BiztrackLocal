@@ -12,8 +12,7 @@ import {
 import {
   ChartContainer,
   ChartTooltipContent,
-  ChartTooltip,
-  ChartConfig,
+  type ChartConfig,
 } from "@/components/ui/chart";
 
 interface AnalyticsData {
@@ -22,11 +21,16 @@ interface AnalyticsData {
   clicks: number;
   messages: number;
   orders: number;
+  prevImpressions?: number;
+  prevClicks?: number;
+  prevMessages?: number;
+  prevOrders?: number;
 }
 
 interface GigAnalyticsChartProps {
   data: AnalyticsData[];
   activeMetrics: Record<string, boolean>;
+  showComparison: boolean;
 }
 
 const chartConfig = {
@@ -46,9 +50,32 @@ const chartConfig = {
     label: "Orders",
     color: "hsl(var(--chart-4))",
   },
+  prevImpressions: {
+    label: "Prev. Impressions",
+    color: "hsl(var(--chart-1))",
+  },
+  prevClicks: {
+    label: "Prev. Clicks",
+    color: "hsl(var(--chart-2))",
+  },
+  prevMessages: {
+    label: "Prev. Messages",
+    color: "hsl(var(--chart-3))",
+  },
+  prevOrders: {
+    label: "Prev. Orders",
+    color: "hsl(var(--chart-4))",
+  },
 } satisfies ChartConfig;
 
-export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsChartProps) {
+export default function GigAnalyticsChart({ data, activeMetrics, showComparison }: GigAnalyticsChartProps) {
+  if (!data || data.length === 0) {
+      return (
+          <div className="flex h-[300px] w-full items-center justify-center">
+              <p className="text-muted-foreground">No data to display chart for the selected period.</p>
+          </div>
+      );
+  }
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <LineChart
@@ -69,7 +96,9 @@ export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsC
           tickMargin={8}
           tickFormatter={(value) => {
             const date = new Date(value);
-            return date.toLocaleDateString("en-US", {
+            // add a day to account for timezone issues with date parsing
+            const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
+            return adjustedDate.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             });
@@ -93,6 +122,8 @@ export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsC
             dot={false}
             />
         )}
+        {showComparison && activeMetrics.impressions && <Line dataKey="prevImpressions" type="natural" stroke="var(--color-impressions)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+        
         {activeMetrics.clicks && (
             <Line
             dataKey="clicks"
@@ -102,6 +133,8 @@ export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsC
             dot={false}
             />
         )}
+        {showComparison && activeMetrics.clicks && <Line dataKey="prevClicks" type="natural" stroke="var(--color-clicks)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+
         {activeMetrics.messages && (
             <Line
             dataKey="messages"
@@ -111,6 +144,8 @@ export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsC
             dot={false}
             />
         )}
+        {showComparison && activeMetrics.messages && <Line dataKey="prevMessages" type="natural" stroke="var(--color-messages)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
+
         {activeMetrics.orders && (
             <Line
             dataKey="orders"
@@ -120,6 +155,7 @@ export default function GigAnalyticsChart({ data, activeMetrics }: GigAnalyticsC
             dot={false}
             />
         )}
+        {showComparison && activeMetrics.orders && <Line dataKey="prevOrders" type="natural" stroke="var(--color-orders)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
       </LineChart>
     </ChartContainer>
   );

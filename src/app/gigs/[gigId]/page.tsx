@@ -26,6 +26,7 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { Skeleton } from "@/components/ui/skeleton";
 import NProgressLink from "@/components/layout/nprogress-link";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 const GigAnalyticsChart = lazy(() => import("@/components/gigs/analytics-chart"));
 
@@ -115,6 +116,14 @@ const gigData = {
     { date: "2024-05-20", impressions: 700, clicks: 60, messages: 25, orders: 9 },
     { date: "2024-05-25", impressions: 820, clicks: 75, messages: 30, orders: 12 },
   ],
+  prevAnalyticsData: [
+    { date: "2024-04-01", impressions: 280, clicks: 18, messages: 4, orders: 1 },
+    { date: "2024-04-05", impressions: 420, clicks: 30, messages: 8, orders: 3 },
+    { date: "2024-04-10", impressions: 580, clicks: 48, messages: 12, orders: 5 },
+    { date: "2024-04-15", impressions: 520, clicks: 40, messages: 18, orders: 5 },
+    { date: "2024-04-20", impressions: 650, clicks: 55, messages: 22, orders: 7 },
+    { date: "2024-04-25", impressions: 780, clicks: 70, messages: 28, orders: 10 },
+  ],
   mergeHistory: [
     {
       date: "2023-03-10",
@@ -130,22 +139,14 @@ const gigData = {
 };
 
 const chartConfig = {
-    impressions: {
-      label: "Impressions",
-      color: "hsl(var(--chart-1))",
-    },
-    clicks: {
-      label: "Clicks",
-      color: "hsl(var(--chart-2))",
-    },
-    messages: {
-      label: "Messages",
-      color: "hsl(var(--chart-3))",
-    },
-    orders: {
-      label: "Orders",
-      color: "hsl(var(--chart-4))",
-    },
+    impressions: { label: "Impressions", color: "hsl(var(--chart-1))" },
+    clicks: { label: "Clicks", color: "hsl(var(--chart-2))" },
+    messages: { label: "Messages", color: "hsl(var(--chart-3))" },
+    orders: { label: "Orders", color: "hsl(var(--chart-4))" },
+    prevImpressions: { label: "Prev. Impressions", color: "hsl(var(--chart-1))" },
+    prevClicks: { label: "Prev. Clicks", color: "hsl(var(--chart-2))" },
+    prevMessages: { label: "Prev. Messages", color: "hsl(var(--chart-3))" },
+    prevOrders: { label: "Prev. Orders", color: "hsl(var(--chart-4))" },
   } as const;
 
 
@@ -158,6 +159,7 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
     messages: true,
     orders: true,
   });
+  const [showComparison, setShowComparison] = useState(false);
 
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(gigData.analyticsData[0].date),
@@ -171,17 +173,40 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
     }));
   };
 
-  const filteredAnalyticsData = useMemo(() => {
-    return gigData.analyticsData.filter(item => {
-        const itemDate = new Date(item.date);
-        if (date?.from && itemDate < date.from) return false;
-        if (date?.to) {
-            const toDateEnd = new Date(date.to);
+  const chartDataForRender = useMemo(() => {
+    const filterDataByPeriod = (dataToFilter: typeof gigData.analyticsData, periodFrom?: Date, periodTo?: Date) => {
+        if (!periodFrom || !periodTo) return [];
+        return dataToFilter.filter(item => {
+            const itemDate = new Date(item.date);
+            if (itemDate < periodFrom) return false;
+            const toDateEnd = new Date(periodTo);
             toDateEnd.setHours(23, 59, 59, 999);
             if (itemDate > toDateEnd) return false;
+            return true;
+        });
+    }
+
+    const currentPeriodData = filterDataByPeriod(gigData.analyticsData, date?.from, date?.to);
+
+    let prevPeriodData: typeof gigData.analyticsData = [];
+    if (date?.from && date.to) {
+        const duration = date.to.getTime() - date.from.getTime();
+        const prevTo = new Date(date.from.getTime() - 1);
+        const prevFrom = new Date(prevTo.getTime() - duration);
+        prevPeriodData = filterDataByPeriod(gigData.prevAnalyticsData, prevFrom, prevTo);
+    }
+    
+    return currentPeriodData.map((current, index) => {
+        const prev = prevPeriodData[index];
+        return {
+            ...current,
+            prevImpressions: prev?.impressions,
+            prevClicks: prev?.clicks,
+            prevMessages: prev?.messages,
+            prevOrders: prev?.orders,
         }
-        return true;
     });
+
   }, [date]);
 
   return (
@@ -220,28 +245,32 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
                         <CardDescription>Performance over the selected period.</CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).map((metric) => (
+                        {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).filter(k => !k.startsWith('prev')).map((metric) => (
                             <div key={metric} className="flex items-center gap-2">
                                 <Checkbox
                                     id={`metric-${metric}`}
-                                    checked={activeMetrics[metric]}
-                                    onCheckedChange={() => handleMetricToggle(metric)}
+                                    checked={activeMetrics[metric as keyof typeof activeMetrics]}
+                                    onCheckedChange={() => handleMetricToggle(metric as keyof typeof activeMetrics)}
                                     style={{
-                                        '--chart-color': chartConfig[metric].color,
+                                        '--chart-color': chartConfig[metric as keyof typeof chartConfig].color,
                                     } as React.CSSProperties}
                                     className="data-[state=checked]:bg-[var(--chart-color)] data-[state=checked]:border-[var(--chart-color)] border-muted-foreground"
                                 />
                                 <Label htmlFor={`metric-${metric}`} className="capitalize">
-                                    {chartConfig[metric].label}
+                                    {chartConfig[metric as keyof typeof chartConfig].label}
                                 </Label>
                             </div>
                         ))}
+                         <div className="flex items-center gap-2">
+                            <Checkbox id="show-comparison" checked={showComparison} onCheckedChange={(c) => setShowComparison(!!c)} />
+                            <Label htmlFor="show-comparison">Compare</Label>
+                        </div>
                     </div>
                 </div>
             </CardHeader>
             <CardContent>
               <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                <GigAnalyticsChart data={filteredAnalyticsData} activeMetrics={activeMetrics} />
+                <GigAnalyticsChart data={chartDataForRender} activeMetrics={activeMetrics} showComparison={showComparison} />
               </Suspense>
             </CardContent>
         </Card>
@@ -262,14 +291,14 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
                     </TableHeader>
                     <TableBody>
                          <TableRow>
-                            <TableCell>{gigData.creationDate}</TableCell>
+                            <TableCell>{format(new Date(gigData.creationDate), "PPP")}</TableCell>
                             <TableCell>
                                 <Badge variant="secondary">Gig Created</Badge>
                             </TableCell>
                         </TableRow>
                         {gigData.mergeHistory.map((event, index) => (
                             <TableRow key={index}>
-                                <TableCell>{event.date}</TableCell>
+                                <TableCell>{format(new Date(event.date), "PPP")}</TableCell>
                                 <TableCell>
                                     <div className="font-medium">{event.action}</div>
                                     <div className="text-sm text-muted-foreground">Source: {event.mergedGig}</div>
