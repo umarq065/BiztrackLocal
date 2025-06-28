@@ -37,9 +37,9 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
         averageDailyRevenue: 1507.73,
         requiredDailyRevenue: 1625.6,
         // Chart data would be base64 encoded images in a real scenario
-        incomeVsExpenseChart: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         dailyRevenueTrendGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         netProfitGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        incomeBySourceChart: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         competitorOrderCount: 10500,
         additionalNotes: "Launched a new marketing campaign this month."
       };

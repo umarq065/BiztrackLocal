@@ -18,6 +18,7 @@ import AiInsights from "./ai-insights";
 import TopClientsChart from "./top-clients-chart";
 import { DateFilter } from "./date-filter";
 import type { DateRange } from "react-day-picker";
+import IncomeChart from "./income-chart";
 
 export function DashboardClient({
   stats: initialStats,
@@ -26,6 +27,7 @@ export function DashboardClient({
   recentOrders,
   aiInsights,
   topClients,
+  incomeBySource,
 }: DashboardData) {
   const [stats, setStats] = useState<Stat[]>(initialStats);
   const [date, setDate] = useState<DateRange | undefined>();
@@ -174,8 +176,19 @@ export function DashboardClient({
         </Card>
         <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
       </div>
-      <div className="grid gap-4 md:gap-8">
-         <AiInsights initialInsights={aiInsights} />
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Income by Source</CardTitle>
+            <CardDescription>
+              A breakdown of your income sources for the selected period.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <IncomeChart data={incomeBySource} />
+          </CardContent>
+        </Card>
+        <AiInsights initialInsights={aiInsights} />
       </div>
     </main>
   );

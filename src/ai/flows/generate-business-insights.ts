@@ -30,11 +30,11 @@ const GenerateBusinessInsightsInputSchema = z.object({
   requiredDailyRevenue: z.number().describe(
     'The required daily revenue to meet the monthly target.'
   ),
-  incomeVsExpenseChart: z.string().describe('A data URI representing the income vs expense chart.'),
   dailyRevenueTrendGraph: z
     .string()
     .describe('A data URI representing the daily revenue trend graph.'),
   netProfitGraph: z.string().describe('A data URI representing the net profit graph.'),
+  incomeBySourceChart: z.string().describe('A data URI representing the income by source chart.'),
   competitorOrderCount: z
     .number()
     .describe('The average order count of competitors for the selected period.'),
@@ -79,9 +79,9 @@ Required Daily Revenue: {{{requiredDailyRevenue}}}
 Competitor Order Count: {{{competitorOrderCount}}}
 
 Charts:
-Income vs Expense Chart: {{media url=incomeVsExpenseChart}}
 Daily Revenue Trend Graph: {{media url=dailyRevenueTrendGraph}}
 Net Profit Graph: {{media url=netProfitGraph}}
+Income by Source Chart: {{media url=incomeBySourceChart}}
 
 Additional Notes: {{{additionalNotes}}}
 

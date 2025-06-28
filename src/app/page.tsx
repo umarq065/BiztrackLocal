@@ -16,6 +16,7 @@ export default function DashboardPage() {
     recentOrders,
     aiInsights,
     topClients,
+    incomeBySource,
   } = dashboardData;
   return (
     <DashboardClient
@@ -25,6 +26,7 @@ export default function DashboardPage() {
       recentOrders={recentOrders}
       aiInsights={aiInsights}
       topClients={topClients}
+      incomeBySource={incomeBySource}
     />
   );
 }

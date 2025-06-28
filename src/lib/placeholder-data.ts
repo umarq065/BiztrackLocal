@@ -29,6 +29,11 @@ export interface TopClient {
   amount: number;
 }
 
+export interface IncomeBySource {
+  source: string;
+  amount: number;
+}
+
 export interface DashboardData {
   stats: Stat[];
   revenueByDay: RevenueByDay[];
@@ -36,6 +41,7 @@ export interface DashboardData {
   recentOrders: RecentOrder[];
   aiInsights: string;
   topClients: TopClient[];
+  incomeBySource: IncomeBySource[];
 }
 
 export const dashboardData: DashboardData = {
@@ -246,6 +252,13 @@ export const dashboardData: DashboardData = {
     { name: "Olivia Martin", amount: 2800 },
     { name: "Emma Brown", amount: 2500 },
     { name: "Ava Jones", amount: 1900 },
+  ],
+  incomeBySource: [
+    { source: "Web Design", amount: 15231.89 },
+    { source: "Consulting", amount: 12500.00 },
+    { source: "Logo Design", amount: 8000.00 },
+    { source: "SEO Services", amount: 7500.00 },
+    { source: "Maintenance", amount: 2000.00 },
   ],
   aiInsights:
     "Your revenue is trending positively. Consider offering tiered packages for Consulting to increase average order value. Client acquisition is strong, but focus on strategies to improve the repeat client rate, such as loyalty discounts or follow-up services.",
