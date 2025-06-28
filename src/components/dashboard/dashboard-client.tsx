@@ -29,26 +29,52 @@ export function DashboardClient({
 }: DashboardData) {
   const [stats, setStats] = useState<Stat[]>(initialStats);
   const [date, setDate] = useState<DateRange | undefined>();
+  const [targetMonth, setTargetMonth] = useState("June");
+  const [targetYear, setTargetYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     const today = new Date();
     const from = new Date(today.getFullYear(), today.getMonth(), 1);
     setDate({ from: from, to: today });
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonthName = monthNames[today.getMonth()];
+    const currentYear = today.getFullYear();
+
+    setTargetMonth(currentMonthName);
+    setTargetYear(currentYear);
+    
+    setStats(prevStats => {
+        const newStats = [...prevStats];
+        const targetIndex = newStats.findIndex(
+            (s) => s.title === "Target for June"
+        );
+        if (targetIndex !== -1) {
+            newStats[targetIndex].title = `Target for ${currentMonthName}`;
+            newStats[targetIndex].description = `Revenue goal for ${currentMonthName} ${currentYear}`;
+        }
+        return newStats;
+    });
+
   }, []);
 
-  const handleSetTarget = (newTarget: number) => {
+  const handleSetTarget = (newTarget: number, month: string, year: number) => {
+    setTargetMonth(month);
+    setTargetYear(year);
     setStats((prevStats) => {
       const newStats = [...prevStats];
       const targetIndex = newStats.findIndex(
-        (s) => s.title === "Target for June"
+        (s) => s.title.startsWith("Target for")
       );
       if (targetIndex !== -1) {
         newStats[targetIndex] = {
           ...newStats[targetIndex],
+          title: `Target for ${month}`,
           value: `$${newTarget.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}`,
+          description: `Revenue goal for ${month} ${year}`
         };
       }
       return newStats;
@@ -56,7 +82,7 @@ export function DashboardClient({
   };
 
   const currentTarget = parseFloat(
-    stats.find((s) => s.title === "Target for June")?.value.replace(/[^0-9.-]+/g, "") || "0"
+    stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
   const financialStats = stats.filter((s) =>
@@ -65,12 +91,11 @@ export function DashboardClient({
 
   const performanceStats = stats.filter((s) =>
     [
-      "Target for June",
       "Performance vs Target",
       "Avg Daily Revenue (ADR)",
       "Req. Daily Revenue (RDR)",
       "Days Left in Month",
-    ].includes(s.title)
+    ].includes(s.title) || s.title.startsWith("Target for")
   );
 
   const customerAndOrderStats = stats.filter((s) =>
@@ -98,6 +123,8 @@ export function DashboardClient({
           <SetTargetDialog
             currentTarget={currentTarget}
             onSetTarget={handleSetTarget}
+            targetMonth={targetMonth}
+            targetYear={targetYear}
           />
         </div>
       </div>

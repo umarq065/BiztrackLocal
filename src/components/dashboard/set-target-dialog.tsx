@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,33 +15,44 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SetTargetDialogProps {
   currentTarget: number;
-  onSetTarget: (newTarget: number) => void;
+  onSetTarget: (newTarget: number, month: string, year: number) => void;
+  targetMonth: string;
+  targetYear: number;
 }
 
 export function SetTargetDialog({
   currentTarget,
   onSetTarget,
+  targetMonth,
+  targetYear,
 }: SetTargetDialogProps) {
-  const [target, setTarget] = useState(
-    currentTarget > 0 ? currentTarget.toString() : ""
-  );
+  const [target, setTarget] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState(0);
   const [open, setOpen] = useState(false);
+
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i);
+
+  useEffect(() => {
+    if (open) {
+      setTarget(currentTarget > 0 ? currentTarget.toString() : "");
+      setMonth(targetMonth);
+      setYear(targetYear);
+    }
+  }, [open, currentTarget, targetMonth, targetYear]);
 
   const handleSave = () => {
     const newTarget = parseFloat(target);
-    if (!isNaN(newTarget)) {
-      onSetTarget(newTarget);
-      setOpen(false); // Close dialog on save
+    if (!isNaN(newTarget) && month && year) {
+      onSetTarget(newTarget, month, year);
+      setOpen(false);
     }
   };
-
-  // Update internal state if the prop changes
-  useState(() => {
-    setTarget(currentTarget > 0 ? currentTarget.toString() : "");
-  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -57,6 +68,32 @@ export function SetTargetDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="month" className="text-right">
+              Month
+            </Label>
+            <Select value={month} onValueChange={setMonth}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="year" className="text-right">
+              Year
+            </Label>
+            <Select value={String(year)} onValueChange={(val) => setYear(Number(val))}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="target" className="text-right">
               Target
