@@ -72,35 +72,31 @@ export default function StatCard({
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {progressValue !== undefined ? (
-          <>
-            <p className="text-xs text-muted-foreground">{description}</p>
-            <Progress value={progressValue} className="mt-2 h-2" />
-          </>
-        ) : (
-          <div className="text-xs text-muted-foreground">
-            <div className="flex items-center">
-              {change && (
-                  <span
-                  className={cn(
-                      "flex items-center gap-1",
-                      changeType === "increase"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  )}
-                  >
-                  {changeType === "increase" ? (
-                      <ArrowUp className="h-3 w-3" />
-                  ) : (
-                      <ArrowDown className="h-3 w-3" />
-                  )}
-                  {change}
-                  </span>
-              )}
-              {typeof description === "string" && <span className="ml-1">{description}</span>}
-            </div>
-            {typeof description !== "string" && <div className="mt-1">{description}</div>}
+        <div className="text-xs text-muted-foreground mt-1">
+          <div className="flex items-center">
+            {change && (
+                <span
+                className={cn(
+                    "flex items-center gap-1",
+                    changeType === "increase"
+                    ? "text-green-600"
+                    : "text-red-600"
+                )}
+                >
+                {changeType === "increase" ? (
+                    <ArrowUp className="h-3 w-3" />
+                ) : (
+                    <ArrowDown className="h-3 w-3" />
+                )}
+                {change}
+                </span>
+            )}
+            {typeof description === "string" && <span className="ml-1">{description}</span>}
           </div>
+          {typeof description !== "string" && <div className="mt-1">{description}</div>}
+        </div>
+        {progressValue !== undefined && (
+          <Progress value={progressValue} className="mt-2 h-2" />
         )}
       </CardContent>
     </Card>
