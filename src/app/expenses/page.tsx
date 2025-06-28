@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, lazy, Suspense } from "react";
@@ -6,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, getQuarter, getYear, startOfWeek } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarIcon, MoreHorizontal, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -151,6 +152,9 @@ export default function ExpensesPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [chartView, setChartView] = useState("daily");
   const [chartType, setChartType] = useState('line');
+  const [editingCategory, setEditingCategory] = useState<{ oldName: string; newName: string } | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+
 
   useEffect(() => {
     const today = new Date();
@@ -260,6 +264,48 @@ export default function ExpensesPage() {
             description: newCategory.trim() ? "Category already exists." : "Category name cannot be empty.",
         });
     }
+  };
+
+  const handleUpdateCategory = () => {
+    if (!editingCategory) return;
+    const { oldName, newName } = editingCategory;
+    const trimmedNewName = newName.trim();
+
+    if (!trimmedNewName) {
+        toast({ variant: "destructive", title: "Error", description: "Category name cannot be empty." });
+        return;
+    }
+
+    if (trimmedNewName.toLowerCase() !== oldName.toLowerCase() && expenseCategories.some(cat => cat.toLowerCase() === trimmedNewName.toLowerCase())) {
+        toast({ variant: "destructive", title: "Error", description: "Category name already exists." });
+        return;
+    }
+
+    setExpenseCategories(expenseCategories.map(cat => cat === oldName ? trimmedNewName : cat).sort());
+    setExpenses(expenses.map(exp => exp.category === oldName ? { ...exp, category: trimmedNewName } : exp));
+    
+    toast({ title: "Category Updated", description: `"${oldName}" was renamed to "${trimmedNewName}".` });
+    setEditingCategory(null);
+  };
+
+  const handleDeleteCategory = () => {
+      if (!deletingCategory) return;
+      
+      const isCategoryInUse = expenses.some(exp => exp.category === deletingCategory);
+      
+      if (isCategoryInUse) {
+          toast({
+              variant: "destructive",
+              title: "Cannot Delete Category",
+              description: `"${deletingCategory}" is in use by one or more expenses.`,
+          });
+          setDeletingCategory(null);
+          return;
+      }
+      
+      setExpenseCategories(expenseCategories.filter(cat => cat !== deletingCategory));
+      toast({ title: "Category Deleted", description: `"${deletingCategory}" has been removed.` });
+      setDeletingCategory(null);
   };
 
   const filteredExpenses = useMemo(() => {
@@ -524,7 +570,7 @@ export default function ExpensesPage() {
                 <DialogHeader>
                     <DialogTitle>Manage Expense Categories</DialogTitle>
                     <DialogDescription>
-                        Add new expense categories to suit your business needs.
+                        Add, edit, or delete expense categories to suit your business needs.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleAddCategory} className="space-y-4 pt-4">
@@ -533,21 +579,57 @@ export default function ExpensesPage() {
                             value={newCategory} 
                             onChange={(e) => setNewCategory(e.target.value)}
                             placeholder="New category name"
+                            disabled={!!editingCategory}
                         />
-                        <Button type="submit">Add</Button>
+                        <Button type="submit" disabled={!!editingCategory}>Add</Button>
                     </div>
                 </form>
                 <div className="space-y-2">
                     <p className="text-sm font-medium">Existing Categories:</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="max-h-60 space-y-1 overflow-y-auto pr-2">
                         {expenseCategories.map(cat => (
-                            <Badge key={cat} variant="secondary">{cat}</Badge>
+                            <div key={cat} className="group flex h-12 items-center justify-between rounded-md border p-2">
+                                {editingCategory?.oldName === cat ? (
+                                    <div className="flex w-full items-center gap-2">
+                                        <Input
+                                            value={editingCategory.newName}
+                                            onChange={(e) => setEditingCategory({ ...editingCategory, newName: e.target.value })}
+                                            className="h-8"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleUpdateCategory();
+                                                }
+                                                if (e.key === 'Escape') setEditingCategory(null);
+                                            }}
+                                        />
+                                        <Button size="sm" onClick={handleUpdateCategory} className="h-8">Save</Button>
+                                        <Button size="sm" variant="ghost" onClick={() => setEditingCategory(null)} className="h-8">Cancel</Button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span className="text-sm">{cat}</span>
+                                        <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                                                setNewCategory(""); // Clear new category input
+                                                setEditingCategory({ oldName: cat, newName: cat });
+                                            }}>
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeletingCategory(cat)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         ))}
                     </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="secondary">Close</Button>
+                        <Button type="button" variant="secondary" onClick={() => setEditingCategory(null)}>Close</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
@@ -870,6 +952,22 @@ export default function ExpensesPage() {
             <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setDeletingExpense(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteExpense} className={buttonVariants({ variant: "destructive" })}>
+                Delete
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deletingCategory} onOpenChange={(open) => !open && setDeletingCategory(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this category?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This will permanently delete the category "{deletingCategory}". This action cannot be undone if the category is not in use.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingCategory(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCategory} className={buttonVariants({ variant: "destructive" })}>
                 Delete
             </AlertDialogAction>
             </AlertDialogFooter>
