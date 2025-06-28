@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isSameDay } from "date-fns";
 import { CalendarIcon, Edit, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
@@ -20,6 +20,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -47,6 +48,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DailySummary {
   id: number;
@@ -109,6 +111,11 @@ export default function DailySummaryPage() {
   const [editingSummary, setEditingSummary] = useState<DailySummary | null>(null);
   const [deletingSummary, setDeletingSummary] = useState<DailySummary | null>(null);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const form = useForm<SummaryFormValues>({
     resolver: zodResolver(summaryFormSchema),
@@ -189,22 +196,26 @@ export default function DailySummaryPage() {
       
       <Card>
         <CardContent className="p-2 md:p-6">
-          <Calendar
-            mode="single"
-            className="w-full rounded-md summary-calendar"
-            modifiers={modifiers}
-            modifiersClassNames={modifiersClassNames}
-            components={{
-              DayContent: (props) => (
-                <DayWithSummary 
-                  date={props.date} 
-                  summaries={summaries} 
-                  onEdit={handleOpenDialog}
-                  onDelete={setDeletingSummary}
-                />
-              )
-            }}
-          />
+          {!isClient ? (
+            <Skeleton className="h-[432px] w-full" />
+          ) : (
+            <Calendar
+              mode="single"
+              className="w-full rounded-md summary-calendar"
+              modifiers={modifiers}
+              modifiersClassNames={modifiersClassNames}
+              components={{
+                DayContent: (props) => (
+                  <DayWithSummary 
+                    date={props.date} 
+                    summaries={summaries} 
+                    onEdit={handleOpenDialog}
+                    onDelete={setDeletingSummary}
+                  />
+                )
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 
