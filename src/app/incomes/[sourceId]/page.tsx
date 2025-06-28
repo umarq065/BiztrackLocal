@@ -8,6 +8,7 @@ import {
   Eye,
   MousePointerClick,
   MessageSquare,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Card,
@@ -47,13 +48,11 @@ import {
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 
-const performanceChartConfig = {
+const chartConfig = {
   impressions: { label: "Impressions", color: "hsl(var(--chart-1))" },
   clicks: { label: "Clicks", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
-
-const messagesChartConfig = {
   messages: { label: "Messages", color: "hsl(var(--chart-3))" },
+  orders: { label: "Orders", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig;
 
 const ChartComponent = ({ data, config, lines, yAxisLabel }: { data: any[], config: ChartConfig, lines: {key: string, color: string}[], yAxisLabel?: string }) => {
@@ -116,13 +115,12 @@ export default function SourceAnalyticsPage({
 
 
   const {
-    aggregatedAnalytics,
-    aggregatedMessages,
+    combinedChartData,
     sourceStats,
   } = useMemo(() => {
     const calculateMetricsForPeriod = (periodFrom?: Date, periodTo?: Date) => {
         if (!periodFrom || !periodTo) {
-            return { impressions: 0, clicks: 0, sourceMessages: 0, aggregatedAnalytics: [], aggregatedMessages: [] };
+            return { impressions: 0, clicks: 0, orders: 0, sourceMessages: 0, aggregatedAnalytics: [], aggregatedMessages: [] };
         }
         
         const isDateInRange = (itemDate: Date) => {
@@ -133,14 +131,15 @@ export default function SourceAnalyticsPage({
             return true;
         }
 
-        const analyticsMap = new Map<string, { impressions: number; clicks: number }>();
+        const analyticsMap = new Map<string, { impressions: number; clicks: number; orders: number }>();
         source.gigs.flatMap(gig => gig.analytics ?? [])
             .filter(analytic => isDateInRange(new Date(analytic.date)))
             .forEach(analytic => {
-                const existing = analyticsMap.get(analytic.date) || { impressions: 0, clicks: 0 };
+                const existing = analyticsMap.get(analytic.date) || { impressions: 0, clicks: 0, orders: 0 };
                 analyticsMap.set(analytic.date, {
                     impressions: existing.impressions + analytic.impressions,
                     clicks: existing.clicks + analytic.clicks,
+                    orders: existing.orders + (analytic.orders || 0),
                 });
             });
         const aggregatedAnalyticsData = Array.from(analyticsMap.entries())
@@ -149,6 +148,7 @@ export default function SourceAnalyticsPage({
         
         const impressions = aggregatedAnalyticsData.reduce((acc, curr) => acc + curr.impressions, 0);
         const clicks = aggregatedAnalyticsData.reduce((acc, curr) => acc + curr.clicks, 0);
+        const orders = aggregatedAnalyticsData.reduce((acc, curr) => acc + (curr.orders || 0), 0);
 
         const messagesMap = new Map<string, { messages: number }>();
         (source.dataPoints ?? [])
@@ -165,12 +165,12 @@ export default function SourceAnalyticsPage({
 
         const sourceMessages = aggregatedMessagesData.reduce((acc, curr) => acc + curr.messages, 0);
         
-        return { impressions, clicks, sourceMessages, aggregatedAnalytics: aggregatedAnalyticsData, aggregatedMessages: aggregatedMessagesData };
+        return { impressions, clicks, orders, sourceMessages, aggregatedAnalytics: aggregatedAnalyticsData, aggregatedMessages: aggregatedMessagesData };
     };
 
     const currentPeriodMetrics = calculateMetricsForPeriod(date?.from, date?.to);
 
-    let prevPeriodMetrics = { impressions: 0, clicks: 0, sourceMessages: 0 };
+    let prevPeriodMetrics = { impressions: 0, clicks: 0, orders: 0, sourceMessages: 0 };
     if (date?.from && date.to) {
         const duration = date.to.getTime() - date.from.getTime();
         const prevTo = new Date(date.from.getTime() - 1);
@@ -196,10 +196,8 @@ export default function SourceAnalyticsPage({
     const impressionsChange = calculateChange(currentPeriodMetrics.impressions, prevPeriodMetrics.impressions);
     const clicksChange = calculateChange(currentPeriodMetrics.clicks, prevPeriodMetrics.clicks);
     const messagesChange = calculateChange(currentPeriodMetrics.sourceMessages, prevPeriodMetrics.sourceMessages);
+    const ordersChange = calculateChange(currentPeriodMetrics.orders, prevPeriodMetrics.orders);
     
-    const totalMessagesFromGigs = source.gigs.reduce((acc, gig) => acc + (gig.messages || 0), 0);
-    const totalMessages = currentPeriodMetrics.sourceMessages + totalMessagesFromGigs;
-
     const finalSourceStats = [
       { 
         icon: "Eye", 
@@ -215,6 +213,13 @@ export default function SourceAnalyticsPage({
         description: "vs. previous period",
         ...clicksChange
       },
+       { 
+        icon: "ShoppingCart", 
+        title: "Total Orders", 
+        value: currentPeriodMetrics.orders.toLocaleString(), 
+        description: "vs. previous period",
+        ...ordersChange
+      },
       { 
         icon: "MessageSquare", 
         title: "Source Messages", 
@@ -223,10 +228,21 @@ export default function SourceAnalyticsPage({
         ...messagesChange
       },
     ];
+    
+    const combinedMap = new Map<string, { impressions?: number; clicks?: number; orders?: number; messages?: number }>();
+    currentPeriodMetrics.aggregatedAnalytics.forEach(item => {
+        combinedMap.set(item.date, { ...combinedMap.get(item.date), impressions: item.impressions, clicks: item.clicks, orders: item.orders });
+    });
+    currentPeriodMetrics.aggregatedMessages.forEach(item => {
+        combinedMap.set(item.date, { ...combinedMap.get(item.date), messages: item.messages });
+    });
+    const finalCombinedChartData = Array.from(combinedMap.entries())
+        .map(([date, data]) => ({ date, ...data }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
 
     return {
-      aggregatedAnalytics: currentPeriodMetrics.aggregatedAnalytics,
-      aggregatedMessages: currentPeriodMetrics.aggregatedMessages,
+      combinedChartData: finalCombinedChartData,
       sourceStats: finalSourceStats,
     };
   }, [source, date]);
@@ -250,43 +266,28 @@ export default function SourceAnalyticsPage({
 
       <section>
         <h2 className="mb-4 text-xl font-semibold">Overall Performance</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {sourceStats.map((stat) => (
             <StatCard key={stat.title} {...stat} />
           ))}
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Card>
             <CardHeader>
-                <CardTitle>Aggregated Gig Performance</CardTitle>
-                <CardDescription>Impressions and Clicks from all gigs in this source.</CardDescription>
+                <CardTitle>Source Performance</CardTitle>
+                <CardDescription>Impressions, clicks, orders, and messages from this source.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
                    <ChartComponent 
-                     data={aggregatedAnalytics} 
-                     config={performanceChartConfig}
+                     data={combinedChartData} 
+                     config={chartConfig}
                      lines={[
                          { key: "impressions", color: "var(--color-impressions)" },
                          { key: "clicks", color: "var(--color-clicks)" },
-                     ]}
-                   />
-                </Suspense>
-            </CardContent>
-        </Card>
-         <Card>
-            <CardHeader>
-                <CardTitle>Source Messages</CardTitle>
-                <CardDescription>Messages received directly for this source.</CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-                <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                   <ChartComponent 
-                     data={aggregatedMessages} 
-                     config={messagesChartConfig}
-                     lines={[
+                         { key: "orders", color: "var(--color-orders)" },
                          { key: "messages", color: "var(--color-messages)" },
                      ]}
                    />
