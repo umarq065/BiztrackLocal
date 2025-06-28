@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 interface RevenueChartProps {
   data: RevenueByDay[];
   previousData: RevenueByDay[];
+  dailyTarget?: number;
 }
 
 const chartConfig = {
@@ -39,6 +40,10 @@ const chartConfig = {
     label: "Previous Period",
     color: "hsl(var(--chart-2))",
   },
+  target: {
+    label: "Daily Target",
+    color: "hsl(var(--chart-4))",
+  }
 } satisfies ChartConfig;
 
 const CustomDot = (props: any) => {
@@ -91,15 +96,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 
-export default function RevenueChart({ data, previousData }: RevenueChartProps) {
+export default function RevenueChart({ data, previousData, dailyTarget }: RevenueChartProps) {
   const [showComparison, setShowComparison] = useState(false);
+  const [showTarget, setShowTarget] = useState(true);
   
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
       ...current,
       previousRevenue: previousData[index]?.revenue ?? null,
+      target: dailyTarget,
     }));
-  }, [data, previousData]);
+  }, [data, previousData, dailyTarget]);
   
   return (
     <>
@@ -111,9 +118,15 @@ export default function RevenueChart({ data, previousData }: RevenueChartProps) 
                   A summary of your revenue for the selected period.
                 </CardDescription>
             </div>
-            <div className="flex items-center space-x-2 pt-1">
-                <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
-                <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="show-target" checked={showTarget} onCheckedChange={(checked) => setShowTarget(!!checked)} />
+                    <Label htmlFor="show-target" className="text-sm font-normal">Show Daily Target</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
+                    <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
+                </div>
             </div>
         </div>
       </CardHeader>
@@ -168,6 +181,16 @@ export default function RevenueChart({ data, previousData }: RevenueChartProps) 
                     stroke="var(--color-previousRevenue)"
                     strokeWidth={2}
                     strokeDasharray="3 3"
+                    dot={false}
+                />
+            )}
+            {showTarget && dailyTarget !== undefined && (
+                <Line
+                    dataKey="target"
+                    type="monotone"
+                    stroke="var(--color-target)"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
                     dot={false}
                 />
             )}

@@ -19,6 +19,7 @@ import TopClientsChart from "./top-clients-chart";
 import { DateFilter } from "./date-filter";
 import type { DateRange } from "react-day-picker";
 import IncomeChart from "./income-chart";
+import { differenceInDays } from "date-fns";
 
 export function DashboardClient({
   stats: initialStats,
@@ -87,6 +88,9 @@ export function DashboardClient({
     stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
+  const daysInPeriod = date?.from && date?.to ? differenceInDays(date.to, date.from) + 1 : revenueByDay.length || 1;
+  const dailyTarget = currentTarget > 0 && daysInPeriod > 0 ? currentTarget / daysInPeriod : undefined;
+
   const financialStats = stats.filter((s) =>
     ["Total Revenue", "Total Expenses", "Net Profit"].includes(s.title)
   );
@@ -159,7 +163,7 @@ export function DashboardClient({
 
       <div className="grid gap-4 md:gap-8">
         <Card>
-           <RevenueChart data={revenueByDay} previousData={previousRevenueByDay} />
+           <RevenueChart data={revenueByDay} previousData={previousRevenueByDay} dailyTarget={dailyTarget} />
         </Card>
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
