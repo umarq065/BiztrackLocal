@@ -109,15 +109,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <span className="font-semibold text-sm">John Doe</span>
                     <span className="text-xs text-muted-foreground">john.doe@example.com</span>
                 </div>
+                <div className="ml-auto">
+                    <ThemeToggle />
+                </div>
               </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="fixed top-4 right-4 z-50">
-          <ThemeToggle />
-        </div>
         <div className="p-2 md:hidden">
           <SidebarTrigger />
         </div>
