@@ -6,6 +6,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MoreHorizontal, PlusCircle, Trash2, Facebook, Twitter, Linkedin, Github, Globe, Edit, ArrowUpDown } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -436,16 +437,16 @@ export default function ClientsPage() {
                       {sortedClients.map((client) => (
                           <TableRow key={client.id}>
                               <TableCell>
-                                <div className="flex items-center gap-3">
+                                <Link href={`/clients/${client.id}`} className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10">
                                         <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
                                         <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <div className="font-medium">{client.name || client.username}</div>
+                                        <div className="font-medium hover:underline">{client.name || client.username}</div>
                                         <div className="text-sm text-muted-foreground">@{client.username}</div>
                                     </div>
-                                </div>
+                                </Link>
                               </TableCell>
                               <TableCell>
                                 <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>{client.clientType}</Badge>
@@ -506,3 +507,4 @@ export default function ClientsPage() {
   );
 
     
+
