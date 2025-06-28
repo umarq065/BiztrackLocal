@@ -72,6 +72,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  TooltipProvider,
 } from "@/components/ui/tooltip";
 
 interface Gig {
@@ -200,6 +201,12 @@ export default function IncomesPage() {
   const [isAddGigDataDialogOpen, setIsAddGigDataDialogOpen] = useState(false);
   const [updatingGigInfo, setUpdatingGigInfo] = useState<{sourceId: string; gigId: string} | null>(null);
 
+  const [gigToDelete, setGigToDelete] = useState<Gig | null>(null);
+  const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(0);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -247,7 +254,6 @@ export default function IncomesPage() {
         id: `g-${Date.now()}-${index}`,
         name: gig.name,
         date: format(gig.date, "yyyy-MM-dd"),
-        messages: 0,
         analytics: [],
       })),
       dataPoints: [],
@@ -405,6 +411,42 @@ export default function IncomesPage() {
     setSelectedGigs(newSelectedGigs);
   };
 
+  const openDeleteDialog = (gig: Gig, sourceId: string) => {
+    setGigToDelete(gig);
+    setDeleteSourceId(sourceId);
+    setDeleteStep(1);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setIsDeleteConfirmOpen(false);
+    setTimeout(() => {
+        setGigToDelete(null);
+        setDeleteSourceId(null);
+        setDeleteStep(0);
+        setDeleteConfirmInput("");
+    }, 300);
+  };
+
+  const handleDeleteGig = () => {
+      if (!gigToDelete || !deleteSourceId || deleteConfirmInput !== gigToDelete.name) return;
+
+      setIncomeSources(prevSources => 
+          prevSources.map(source => {
+              if (source.id === deleteSourceId) {
+                  return { ...source, gigs: source.gigs.filter(g => g.id !== gigToDelete.id) };
+              }
+              return source;
+          })
+      );
+      
+      toast({
+          title: "Gig Deleted",
+          description: `"${gigToDelete.name}" has been permanently removed.`,
+      });
+
+      closeDeleteDialog();
+  };
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -606,118 +648,152 @@ export default function IncomesPage() {
                         Add Gig
                     </Button>
                   </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {mergingSourceId === source.id && (
-                           <TableHead className="w-12">
-                             <Checkbox
+                  <TooltipProvider>
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            {mergingSourceId === source.id && (
+                            <TableHead className="w-12">
+                                <Checkbox
                                 onCheckedChange={(checked) => handleSelectAllGigs(source.gigs)(!!checked)}
                                 checked={
                                     source.gigs.length > 0 && source.gigs.every((gig) => selectedGigs[gig.id])
                                 }
                                 aria-label="Select all gigs for this source"
-                             />
-                           </TableHead>
-                        )}
-                        <TableHead>Gig Name</TableHead>
-                        <TableHead>Date Added</TableHead>
-                        <TableHead>Messages</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {source.gigs.map((gig) => (
-                        <TableRow key={gig.id}>
-                          {mergingSourceId === source.id && (
-                              <TableCell>
-                                <Checkbox
-                                    onCheckedChange={(checked) => {
-                                        setSelectedGigs(prev => ({...prev, [gig.id]: !!checked}));
-                                    }}
-                                    checked={!!selectedGigs[gig.id]}
-                                    aria-label={`Select gig ${gig.name}`}
                                 />
-                              </TableCell>
-                          )}
-                          <TableCell className="font-medium">
-                            <NProgressLink href={`/gigs/${gig.id}`} className="hover:underline">
-                                {gig.name}
-                            </NProgressLink>
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(gig.date), "PPP")}
-                          </TableCell>
-                          <TableCell>
-                            {gig.messages ?? <span className="text-muted-foreground">N/A</span>}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => {
-                                      setUpdatingGigInfo({
-                                        sourceId: source.id,
-                                        gigId: gig.id,
-                                      });
-                                      addGigDataForm.reset();
-                                      setIsAddGigDataDialogOpen(true);
-                                    }}
-                                  >
-                                    <BarChart className="h-4 w-4" />
-                                    <span className="sr-only">Add Data</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Add Performance Data</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit Gig</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Edit Gig</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete Gig</span>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Delete Gig</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </TableCell>
+                            </TableHead>
+                            )}
+                            <TableHead>Gig Name</TableHead>
+                            <TableHead>Date Added</TableHead>
+                            <TableHead>Messages</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                        </TableHeader>
+                        <TableBody>
+                        {source.gigs.map((gig) => (
+                            <TableRow key={gig.id}>
+                            {mergingSourceId === source.id && (
+                                <TableCell>
+                                    <Checkbox
+                                        onCheckedChange={(checked) => {
+                                            setSelectedGigs(prev => ({...prev, [gig.id]: !!checked}));
+                                        }}
+                                        checked={!!selectedGigs[gig.id]}
+                                        aria-label={`Select gig ${gig.name}`}
+                                    />
+                                </TableCell>
+                            )}
+                            <TableCell className="font-medium">
+                                <NProgressLink href={`/gigs/${gig.id}`} className="hover:underline">
+                                    {gig.name}
+                                </NProgressLink>
+                            </TableCell>
+                            <TableCell>
+                                {format(new Date(gig.date), "PPP")}
+                            </TableCell>
+                            <TableCell>
+                                {gig.messages ?? <span className="text-muted-foreground">N/A</span>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => {
+                                        setUpdatingGigInfo({
+                                            sourceId: source.id,
+                                            gigId: gig.id,
+                                        });
+                                        addGigDataForm.reset();
+                                        setIsAddGigDataDialogOpen(true);
+                                        }}
+                                    >
+                                        <BarChart className="h-4 w-4" />
+                                        <span className="sr-only">Add Data</span>
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>Add Performance Data</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                        <span className="sr-only">Edit Gig</span>
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>Edit Gig</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={() => openDeleteDialog(gig, source.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete Gig</span>
+                                    </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>Delete Gig</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                </div>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                  </TooltipProvider>
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         </CardContent>
       </Card>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+                <DialogTitle>
+                    {deleteStep === 1 && "Are you sure?"}
+                    {deleteStep === 2 && "This action is permanent"}
+                    {deleteStep === 3 && "Final Confirmation"}
+                </DialogTitle>
+                <DialogDescription>
+                    {deleteStep === 1 && `You are about to delete the gig "${gigToDelete?.name}". This cannot be undone.`}
+                    {deleteStep === 2 && `All data for "${gigToDelete?.name}" will be permanently removed. This is your second warning.`}
+                    {deleteStep === 3 && <>To confirm, please type <strong className="text-foreground">{gigToDelete?.name}</strong> below.</>}
+                </DialogDescription>
+            </DialogHeader>
+            {deleteStep === 3 && (
+                <Input
+                    value={deleteConfirmInput}
+                    onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                    placeholder="Type gig name to confirm"
+                    autoFocus
+                />
+            )}
+            <DialogFooter>
+                <Button variant="outline" onClick={closeDeleteDialog}>Cancel</Button>
+                {deleteStep === 1 && <Button onClick={() => setDeleteStep(2)}>Continue</Button>}
+                {deleteStep === 2 && <Button variant="destructive" onClick={() => setDeleteStep(3)}>I Understand, Delete</Button>}
+                {deleteStep === 3 && <Button variant="destructive" disabled={deleteConfirmInput !== gigToDelete?.name} onClick={handleDeleteGig}>Delete Permanently</Button>}
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isMergeConfirmOpen} onOpenChange={setIsMergeConfirmOpen}>
         <DialogContent>
