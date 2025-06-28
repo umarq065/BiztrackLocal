@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -136,18 +137,13 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(orderFormSchema),
         defaultValues: {
             orderId: "",
             clientUsername: "",
-            date: new Date(),
+            date: undefined,
             amount: 0,
             source: "",
             gig: "",
@@ -155,6 +151,21 @@ export default function OrdersPage() {
             isCancelled: false,
         },
     });
+
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                orderId: `ORD${String(orders.length + 6).padStart(3, '0')}`,
+                clientUsername: "",
+                date: new Date(),
+                amount: 0,
+                source: "",
+                gig: "",
+                rating: undefined,
+                isCancelled: false,
+            });
+        }
+    }, [open, form, orders.length]);
 
     function onSubmit(values: OrderFormValues) {
         const newOrder: Order = {
@@ -227,7 +238,7 @@ export default function OrdersPage() {
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                                 >
-                                                {isClient && field.value ? (
+                                                {field.value ? (
                                                     format(field.value, "PPP")
                                                 ) : (
                                                     <span>Pick a date</span>
