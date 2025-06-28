@@ -76,6 +76,8 @@ export function DashboardClient({
       "All-Time Total Buyers",
     ].includes(s.title)
   );
+  
+  const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
@@ -156,14 +158,17 @@ export function DashboardClient({
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Clients</CardTitle>
-            <CardDescription>
-              Your most valuable clients this month.
-            </CardDescription>
+           <CardHeader className="flex flex-row items-start justify-between">
+            <div className="space-y-1.5">
+              <CardTitle>Top 5 Clients</CardTitle>
+              <CardDescription>
+                Your most valuable clients this month.
+              </CardDescription>
+            </div>
+            <DateFilter />
           </CardHeader>
           <CardContent>
-            <TopClientsChart data={topClients} />
+            <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
           </CardContent>
         </Card>
       </div>

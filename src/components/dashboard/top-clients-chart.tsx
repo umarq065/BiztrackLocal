@@ -6,6 +6,7 @@ import { type TopClient } from "@/lib/placeholder-data";
 
 interface TopClientsChartProps {
     data: TopClient[];
+    totalRevenue: number;
 }
 
 const chartConfig = {
@@ -15,13 +16,18 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export default function TopClientsChart({ data }: TopClientsChartProps) {
+export default function TopClientsChart({ data, totalRevenue }: TopClientsChartProps) {
+    const formatter = (value: number) => {
+        const percentage = totalRevenue > 0 ? ((value / totalRevenue) * 100).toFixed(1) : 0;
+        return `$${value.toLocaleString()} (${percentage}%)`;
+    };
+
     return (
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <BarChart
                 data={data}
                 layout="vertical"
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 5, right: 100, left: 20, bottom: 5 }}
                 accessibilityLayer
             >
                 <CartesianGrid horizontal={false} />
@@ -45,7 +51,7 @@ export default function TopClientsChart({ data }: TopClientsChartProps) {
                         position="right"
                         offset={8}
                         className="fill-foreground"
-                        formatter={(value: number) => `$${value.toLocaleString()}`}
+                        formatter={formatter}
                     />
                 </Bar>
             </BarChart>

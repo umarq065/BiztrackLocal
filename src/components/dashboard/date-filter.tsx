@@ -7,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "../ui/button";
 
 export function DateFilter() {
   const years = Array.from({ length: 10 }, (_, i) => 2021 + i);
@@ -47,7 +46,6 @@ export function DateFilter() {
           ))}
         </SelectContent>
       </Select>
-       <Button>Filter</Button>
     </div>
   );
 }
