@@ -124,12 +124,7 @@ const StarDisplay = ({ rating }: { rating?: number }) => {
 export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [open, setOpen] = useState(false);
-    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(orderFormSchema),
@@ -142,7 +137,7 @@ export default function OrdersPage() {
         if (isOpen) {
             form.reset({
                 date: new Date(),
-                id: "",
+                id: `ORD${(orders.length + 1).toString().padStart(3, '0')}`,
                 username: "",
                 amount: undefined,
                 source: "",
@@ -170,10 +165,6 @@ export default function OrdersPage() {
         });
         setOpen(false);
     }
-
-  if (!isClient) {
-    return null;
-  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
