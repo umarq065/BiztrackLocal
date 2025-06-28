@@ -1,10 +1,11 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MoreHorizontal, PlusCircle, Trash2, Facebook, Twitter, Linkedin, Github, Globe, Edit } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Facebook, Twitter, Linkedin, Github, Globe, Edit, ArrowUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +14,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,17 +114,11 @@ const SocialIcon = ({ platform }: { platform: string }) => {
     return <Icon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />;
 }
 
-const ClientStat = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="flex flex-col">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <span className="font-semibold">{value}</span>
-    </div>
-);
-
-
 export default function ClientsPage() {
     const [clients, setClients] = useState<Client[]>(initialClients);
     const [open, setOpen] = useState(false);
+    const [filterSource, setFilterSource] = useState('all');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Client | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
     const { toast } = useToast();
 
     const form = useForm<ClientFormValues>({
@@ -153,6 +155,55 @@ export default function ClientsPage() {
         form.reset();
         setOpen(false);
     }
+    
+    const requestSort = (key: keyof Client) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIndicator = (key: keyof Client) => {
+        if (sortConfig.key === key) {
+            return <ArrowUpDown className="ml-2 h-4 w-4" />;
+        }
+        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    };
+
+    const filteredClients = useMemo(() => {
+        if (filterSource === 'all') {
+            return clients;
+        }
+        return clients.filter(client => client.source.toLowerCase().replace(/\s+/g, '-') === filterSource);
+    }, [clients, filterSource]);
+
+    const sortedClients = useMemo(() => {
+        let sortableItems = [...filteredClients];
+        if (sortConfig.key) {
+            const key = sortConfig.key;
+            sortableItems.sort((a, b) => {
+                let aValue: any, bValue: any;
+
+                if (key === 'name') {
+                    aValue = a.name || a.username;
+                    bValue = b.name || b.username;
+                } else {
+                    aValue = a[key];
+                    bValue = b[key];
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [filteredClients, sortConfig]);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -161,13 +212,13 @@ export default function ClientsPage() {
           Clients
         </h1>
         <div className="ml-auto flex items-center gap-2">
-          <Select>
+          <Select value={filterSource} onValueChange={setFilterSource}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by source" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sources</SelectItem>
-              {incomeSources.map(source => <SelectItem key={source} value={source.toLowerCase().replace(' ', '-')}>{source}</SelectItem>)}
+              {incomeSources.map(source => <SelectItem key={source} value={source.toLowerCase().replace(/\s+/g, '-')}>{source}</SelectItem>)}
             </SelectContent>
           </Select>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -328,57 +379,114 @@ export default function ClientsPage() {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {clients.map((client) => (
-            <Card key={client.id} className="flex flex-col">
-                <CardHeader>
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-12 w-12">
-                                <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
-                                <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <CardTitle className="text-xl">{client.name || client.username}</CardTitle>
-                                <CardDescription>@{client.username}</CardDescription>
-                            </div>
-                        </div>
-                         <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>
-                            {client.clientType}
-                        </Badge>
-                    </div>
-                </CardHeader>
-                <CardContent className="flex-grow space-y-6">
-                    {client.socialLinks && client.socialLinks.length > 0 && (
-                        <div className="flex items-center gap-3">
-                            {client.socialLinks.map(link => (
-                                <a key={`${link.platform}-${link.url}`} href={link.url} target="_blank" rel="noopener noreferrer">
-                                    <SocialIcon platform={link.platform} />
-                                </a>
-                            ))}
-                        </div>
-                    )}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-6">
-                        <ClientStat label="Income Source" value={client.source} />
-                        <ClientStat label="Client Since" value={client.clientSince} />
-                        <ClientStat label="Last Order" value={client.lastOrder} />
-                        <ClientStat label="Total Orders" value={client.totalOrders} />
-                        <ClientStat label="Total Earning" value={`$${client.totalEarning.toLocaleString()}`} />
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-end gap-2 bg-muted/30 p-4">
-                    <Button variant="outline" size="sm">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button variant="destructive" size="sm">
-                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                    </Button>
-                </CardFooter>
-            </Card>
-        ))}
-      </div>
+      <Card>
+          <CardHeader>
+              <CardTitle>Client List</CardTitle>
+              <CardDescription>A sortable list of all your clients.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>
+                            <Button variant="ghost" onClick={() => requestSort('name')}>
+                                Client {getSortIndicator('name')}
+                            </Button>
+                          </TableHead>
+                          <TableHead>
+                            <Button variant="ghost" onClick={() => requestSort('clientType')}>
+                                Type {getSortIndicator('clientType')}
+                            </Button>
+                           </TableHead>
+                          <TableHead>
+                             <Button variant="ghost" onClick={() => requestSort('source')}>
+                                Source {getSortIndicator('source')}
+                            </Button>
+                          </TableHead>
+                          <TableHead className="text-right">
+                             <Button variant="ghost" onClick={() => requestSort('totalEarning')}>
+                                Earning {getSortIndicator('totalEarning')}
+                            </Button>
+                           </TableHead>
+                          <TableHead className="text-right">
+                             <Button variant="ghost" onClick={() => requestSort('totalOrders')}>
+                                Orders {getSortIndicator('totalOrders')}
+                            </Button>
+                           </TableHead>
+                          <TableHead>
+                            <Button variant="ghost" onClick={() => requestSort('clientSince')}>
+                                Client Since {getSortIndicator('clientSince')}
+                            </Button>
+                           </TableHead>
+                          <TableHead>
+                             <Button variant="ghost" onClick={() => requestSort('lastOrder')}>
+                                Last Order {getSortIndicator('lastOrder')}
+                            </Button>
+                           </TableHead>
+                          <TableHead>Social</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {sortedClients.map((client) => (
+                          <TableRow key={client.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
+                                        <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-medium">{client.name || client.username}</div>
+                                        <div className="text-sm text-muted-foreground">@{client.username}</div>
+                                    </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>{client.clientType}</Badge>
+                              </TableCell>
+                              <TableCell>{client.source}</TableCell>
+                              <TableCell className="text-right">${client.totalEarning.toLocaleString()}</TableCell>
+                              <TableCell className="text-right">{client.totalOrders}</TableCell>
+                              <TableCell>{client.clientSince}</TableCell>
+                              <TableCell>{client.lastOrder}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {client.socialLinks?.map((link, i) => (
+                                    <a key={i} href={link.url} target="_blank" rel="noreferrer noopener" aria-label={link.platform}>
+                                        <SocialIcon platform={link.platform} />
+                                    </a>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                  <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                              <span className="sr-only">Toggle menu</span>
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                          <DropdownMenuItem>
+                                              <Edit className="mr-2 h-4 w-4" />
+                                              Edit
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem className="text-destructive">
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              Delete
+                                          </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+          </CardContent>
+      </Card>
     </main>
   );
-}
+
+    
