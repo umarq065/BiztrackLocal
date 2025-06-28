@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -65,8 +64,9 @@ const socialLinkSchema = z.object({
 });
 
 const clientFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Invalid email address." }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters." }),
+  name: z.string().optional(),
+  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   source: z.string().min(1, { message: "Income source is required." }),
   socialLinks: z.array(socialLinkSchema).optional(),
 });
@@ -75,18 +75,19 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 interface Client {
     id: string;
-    name: string;
-    email: string;
+    username: string;
+    name?: string;
+    email?: string;
     source: string;
     socialLinks?: { platform: string; url: string }[];
 }
 
 const initialClients: Client[] = [
-  { id: "1", name: "Olivia Martin", email: "olivia.martin@email.com", source: "Web Design" },
-  { id: "2", name: "Jackson Lee", email: "jackson.lee@email.com", source: "Consulting" },
-  { id: "3", name: "Isabella Nguyen", email: "isabella.nguyen@email.com", source: "Logo Design" },
-  { id: "4", name: "William Kim", email: "will@email.com", source: "Web Design" },
-  { id: "5", name: "Sofia Davis", email: "sofia.davis@email.com", source: "SEO Services" },
+  { id: "1", name: "Olivia Martin", username: "olivia.m", email: "olivia.martin@email.com", source: "Web Design" },
+  { id: "2", name: "Jackson Lee", username: "jackson.l", email: "jackson.lee@email.com", source: "Consulting" },
+  { id: "3", name: "Isabella Nguyen", username: "isabella.n", email: "isabella.nguyen@email.com", source: "Logo Design" },
+  { id: "4", name: "William Kim", username: "will.k", email: "will@email.com", source: "Web Design" },
+  { id: "5", name: "Sofia Davis", username: "sofia.d", email: "sofia.davis@email.com", source: "SEO Services" },
 ];
 
 const incomeSources = ["Web Design", "Consulting", "Logo Design", "SEO Services", "Maintenance"];
@@ -106,6 +107,7 @@ export default function ClientsPage() {
     const form = useForm<ClientFormValues>({
         resolver: zodResolver(clientFormSchema),
         defaultValues: {
+            username: "",
             name: "",
             email: "",
             source: "",
@@ -126,7 +128,7 @@ export default function ClientsPage() {
         setClients([newClient, ...clients]);
         toast({
             title: "Client Added",
-            description: `${values.name} has been added to your client list.`,
+            description: `${values.name || values.username} has been added to your client list.`,
         });
         form.reset();
         setOpen(false);
@@ -164,12 +166,12 @@ export default function ClientsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="name"
+                                name="username"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Client Name</FormLabel>
+                                    <FormLabel>Username</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., John Doe" {...field} />
+                                        <Input placeholder="e.g., johndoe99" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
@@ -177,18 +179,31 @@ export default function ClientsPage() {
                             />
                             <FormField
                                 control={form.control}
-                                name="email"
+                                name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Email</FormLabel>
+                                    <FormLabel>Client Name (Optional)</FormLabel>
                                     <FormControl>
-                                        <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                                        <Input placeholder="e.g., John Doe" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormField
                             control={form.control}
                             name="source"
@@ -316,12 +331,12 @@ export default function ClientsPage() {
                   <TableCell>
                     <div className="flex items-center gap-4">
                       <Avatar className="hidden h-9 w-9 sm:flex">
-                        <AvatarImage src={`https://placehold.co/100x100.png?text=${client.name.charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
-                        <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
+                        <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="grid gap-1">
-                        <p className="text-sm font-medium leading-none">{client.name}</p>
-                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                        <p className="text-sm font-medium leading-none">{client.name || client.username}</p>
+                        <p className="text-sm text-muted-foreground">{client.email || `@${client.username}`}</p>
                       </div>
                     </div>
                   </TableCell>
