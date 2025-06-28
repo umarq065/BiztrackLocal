@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,16 +9,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { type DashboardData, type Stat } from "@/lib/placeholder-data";
-import { SetTargetDialog } from "./set-target-dialog";
-import StatCard from "./stat-card";
 import RevenueChart from "./revenue-chart";
 import RecentOrders from "./recent-orders";
 import AiInsights from "./ai-insights";
 import TopClientsChart from "./top-clients-chart";
-import { DateFilter } from "./date-filter";
 import type { DateRange } from "react-day-picker";
 import IncomeChart from "./income-chart";
-import { differenceInDays } from "date-fns";
+import { DashboardHeader } from "./dashboard-header";
+import { StatsGrid } from "./stats-grid";
 
 export function DashboardClient({
   stats: initialStats,
@@ -88,8 +85,10 @@ export function DashboardClient({
     stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
-  const daysInPeriod = date?.from && date?.to ? differenceInDays(date.to, date.from) + 1 : revenueByDay.length || 1;
-  const dailyTarget = currentTarget > 0 && daysInPeriod > 0 ? currentTarget / daysInPeriod : undefined;
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthIndex = monthNames.indexOf(targetMonth);
+  const daysInMonth = monthIndex !== -1 ? new Date(targetYear, monthIndex + 1, 0).getDate() : 30;
+  const dailyTarget = currentTarget > 0 ? currentTarget / daysInMonth : undefined;
 
   const financialStats = stats.filter((s) =>
     ["Total Revenue", "Total Expenses", "Net Profit"].includes(s.title)
@@ -119,47 +118,32 @@ export function DashboardClient({
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center">
-        <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Dashboard
-        </h1>
-        <div className="ml-auto flex items-center gap-2">
-          <DateFilter date={date} setDate={setDate} />
-          <SetTargetDialog
-            currentTarget={currentTarget}
-            onSetTarget={handleSetTarget}
-            targetMonth={targetMonth}
-            targetYear={targetYear}
-          />
-        </div>
-      </div>
+      <DashboardHeader 
+        date={date}
+        setDate={setDate}
+        currentTarget={currentTarget}
+        onSetTarget={handleSetTarget}
+        targetMonth={targetMonth}
+        targetYear={targetYear}
+      />
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Financial Overview</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {financialStats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-      </section>
+      <StatsGrid 
+        title="Financial Overview"
+        stats={financialStats}
+        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+      />
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Performance vs. Goals</h2>
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-          {performanceStats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-      </section>
+      <StatsGrid 
+        title="Performance vs. Goals"
+        stats={performanceStats}
+        gridClassName="grid gap-4 md:grid-cols-3 lg:grid-cols-5"
+      />
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Customer & Order Metrics</h2>
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {customerAndOrderStats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-      </section>
+      <StatsGrid 
+        title="Customer & Order Metrics"
+        stats={customerAndOrderStats}
+        gridClassName="grid gap-4 md:grid-cols-3 lg:grid-cols-4"
+      />
 
       <div className="grid gap-4 md:gap-8">
         <Card>
