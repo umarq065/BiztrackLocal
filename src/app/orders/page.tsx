@@ -1,10 +1,12 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { CalendarIcon, MoreHorizontal, Star, ArrowUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -67,6 +69,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DateFilter } from "@/components/dashboard/date-filter";
 
 
 interface Order {
@@ -126,7 +129,16 @@ export default function OrdersPage() {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const [sortConfig, setSortConfig] = useState<{ key: keyof Order | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
+    const [date, setDate] = useState<DateRange | undefined>();
 
+    useEffect(() => {
+        const today = new Date();
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        setDate({
+          from: startOfYear,
+          to: today,
+        });
+    }, []);
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(orderFormSchema),
@@ -190,8 +202,32 @@ export default function OrdersPage() {
         return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
     };
 
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            if (!order.date) return false;
+            const orderDate = new Date(order.date);
+
+            const from = date?.from;
+            const to = date?.to;
+
+            if (from && orderDate < from) {
+                return false;
+            }
+
+            if (to) {
+                const toDateEnd = new Date(to);
+                toDateEnd.setHours(23, 59, 59, 999);
+                if (orderDate > toDateEnd) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    }, [date, orders]);
+
     const sortedOrders = useMemo(() => {
-        let sortableItems = [...orders];
+        let sortableItems = [...filteredOrders];
         if (sortConfig.key) {
             const key = sortConfig.key;
             sortableItems.sort((a, b) => {
@@ -211,7 +247,7 @@ export default function OrdersPage() {
             });
         }
         return sortableItems;
-    }, [orders, sortConfig]);
+    }, [filteredOrders, sortConfig]);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -219,7 +255,8 @@ export default function OrdersPage() {
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
           Orders
         </h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+            <DateFilter date={date} setDate={setDate} />
             <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button>Add New Order</Button>
@@ -238,7 +275,7 @@ export default function OrdersPage() {
                                 control={form.control}
                                 name="date"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
+                                    <FormItem className="flex flex-col justify-end">
                                         <FormLabel>Order Date*</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
@@ -447,51 +484,59 @@ export default function OrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>{order.date}</TableCell>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
-                  <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-block max-w-[120px] truncate">
-                          {order.source}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{order.source}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
-                  <TableCell>
-                    <StarDisplay rating={order.rating} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Mark as Cancelled</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+              {sortedOrders.length > 0 ? (
+                sortedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                    <TableCell>{order.date}</TableCell>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
+                    <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                    <TableCell>
+                        <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="inline-block max-w-[120px] truncate">
+                            {order.source}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{order.source}</p>
+                        </TooltipContent>
+                        </Tooltip>
+                    </TableCell>
+                    <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
+                    <TableCell>
+                        <StarDisplay rating={order.rating} />
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
+                        {order.status}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>View Details</DropdownMenuItem>
+                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                            <DropdownMenuItem>Mark as Cancelled</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                        No orders found for the selected period.
+                    </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
