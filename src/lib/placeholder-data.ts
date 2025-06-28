@@ -10,6 +10,7 @@ export interface Stat {
   description: ReactNode;
   progressValue?: number;
   className?: string;
+  invertChangeColor?: boolean;
 }
 
 export interface RecentOrder {
@@ -62,6 +63,7 @@ export const dashboardData: DashboardData = {
       change: "+7.1%",
       changeType: "increase",
       description: "vs. last month",
+      invertChangeColor: true,
     },
     {
       icon: "TrendingUp",
@@ -167,6 +169,7 @@ export const dashboardData: DashboardData = {
       change: "+20%",
       changeType: "increase",
       description: "vs. last month",
+      invertChangeColor: true,
     },
     {
       icon: "Star",

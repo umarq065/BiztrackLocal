@@ -57,12 +57,15 @@ export default function StatCard({
   description,
   progressValue,
   className,
+  invertChangeColor,
 }: Stat) {
   const Icon = iconMap[icon];
 
   if (!Icon) {
     return null; 
   }
+
+  const isPositive = invertChangeColor ? changeType === "decrease" : changeType === "increase";
 
   return (
     <Card className={className}>
@@ -78,7 +81,7 @@ export default function StatCard({
                 <span
                 className={cn(
                     "flex items-center gap-1",
-                    changeType === "increase"
+                    isPositive
                     ? "text-green-600"
                     : "text-red-600"
                 )}
