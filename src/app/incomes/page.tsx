@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -64,6 +65,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface Gig {
   id: string;
@@ -84,30 +88,31 @@ const initialIncomeSources: IncomeSource[] = [
     gigs: [
       { id: "g1", name: "Acme Corp Redesign", date: "2023-01-15" },
       { id: "g2", name: "Startup Landing Page", date: "2023-01-25" },
+      { id: "g3", name: "E-commerce Site for 'ShopEasy'", date: "2023-02-05" },
     ],
   },
   {
     id: "2",
     name: "Consulting",
-    gigs: [{ id: "g3", name: "Q1 Strategy Session", date: "2023-01-20" }],
+    gigs: [{ id: "g4", name: "Q1 Strategy Session", date: "2023-01-20" }],
   },
   {
     id: "3",
     name: "Logo Design",
     gigs: [
-      { id: "g4", name: "Brand Identity for 'Innovate'", date: "2023-02-01" },
+      { id: "g5", name: "Brand Identity for 'Innovate'", date: "2023-02-01" },
     ],
   },
   {
     id: "4",
     name: "SEO Services",
-    gigs: [{ id: "g5", name: "Monthly SEO Retainer", date: "2023-02-10" }],
+    gigs: [{ id: "g6", name: "Monthly SEO Retainer", date: "2023-02-10" }],
   },
   {
     id: "5",
     name: "Maintenance",
     gigs: [
-      { id: "g6", name: "Website Support Package", date: "2023-02-15" },
+      { id: "g7", name: "Website Support Package", date: "2023-02-15" },
     ],
   },
 ];
@@ -135,6 +140,12 @@ export default function IncomesPage() {
     useState<IncomeSource[]>(initialIncomeSources);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const [mergingSourceId, setMergingSourceId] = useState<string | null>(null);
+  const [selectedGigs, setSelectedGigs] = useState<Record<string, boolean>>({});
+  const [isMergeConfirmOpen, setIsMergeConfirmOpen] = useState(false);
+  const [gigsForMergeConfirmation, setGigsForMergeConfirmation] = useState<Gig[]>([]);
+  const [mainGigId, setMainGigId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -170,6 +181,54 @@ export default function IncomesPage() {
     form.setValue("gigs", [{ name: "", date: new Date() }]);
     setOpen(false);
   }
+
+  const handleCancelMerge = () => {
+    setMergingSourceId(null);
+    setSelectedGigs({});
+  };
+
+  const handleInitiateMerge = () => {
+    const source = incomeSources.find(s => s.id === mergingSourceId);
+    if (!source) return;
+
+    const selected = source.gigs.filter(gig => selectedGigs[gig.id]);
+    setGigsForMergeConfirmation(selected);
+    setIsMergeConfirmOpen(true);
+  };
+  
+  const handleConfirmMerge = () => {
+    if (!mainGigId || !mergingSourceId) return;
+
+    setIncomeSources(prevSources => 
+      prevSources.map(source => {
+        if (source.id === mergingSourceId) {
+          const gigsToKeep = source.gigs.filter(gig => !selectedGigs[gig.id] || gig.id === mainGigId);
+          return { ...source, gigs: gigsToKeep };
+        }
+        return source;
+      })
+    );
+
+    toast({
+      title: "Gigs Merged",
+      description: "The selected gigs have been successfully merged.",
+    });
+
+    setIsMergeConfirmOpen(false);
+    setMergingSourceId(null);
+    setSelectedGigs({});
+    setGigsForMergeConfirmation([]);
+    setMainGigId(null);
+  };
+  
+  const handleSelectAllGigs = (gigs: Gig[]) => (checked: boolean) => {
+    const newSelectedGigs = { ...selectedGigs };
+    gigs.forEach(gig => {
+        newSelectedGigs[gig.id] = checked;
+    });
+    setSelectedGigs(newSelectedGigs);
+  };
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -339,9 +398,37 @@ export default function IncomesPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
+                  <div className="flex justify-end mb-4">
+                    {mergingSourceId === source.id ? (
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleCancelMerge}>Cancel Merge</Button>
+                        <Button onClick={handleInitiateMerge} disabled={Object.values(selectedGigs).filter(Boolean).length < 2}>
+                          Merge Selected ({Object.values(selectedGigs).filter(Boolean).length})
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={() => {
+                        setMergingSourceId(source.id);
+                        setSelectedGigs({});
+                      }}>
+                        Merge Gigs
+                      </Button>
+                    )}
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {mergingSourceId === source.id && (
+                           <TableHead className="w-12">
+                             <Checkbox
+                                onCheckedChange={(checked) => handleSelectAllGigs(source.gigs)(!!checked)}
+                                checked={
+                                    source.gigs.length > 0 && source.gigs.every((gig) => selectedGigs[gig.id])
+                                }
+                                aria-label="Select all gigs for this source"
+                             />
+                           </TableHead>
+                        )}
                         <TableHead>Gig Name</TableHead>
                         <TableHead>Date Added</TableHead>
                         <TableHead>
@@ -352,6 +439,17 @@ export default function IncomesPage() {
                     <TableBody>
                       {source.gigs.map((gig) => (
                         <TableRow key={gig.id}>
+                          {mergingSourceId === source.id && (
+                              <TableCell>
+                                <Checkbox
+                                    onCheckedChange={(checked) => {
+                                        setSelectedGigs(prev => ({...prev, [gig.id]: !!checked}));
+                                    }}
+                                    checked={!!selectedGigs[gig.id]}
+                                    aria-label={`Select gig ${gig.name}`}
+                                />
+                              </TableCell>
+                          )}
                           <TableCell className="font-medium">
                             {gig.name}
                           </TableCell>
@@ -387,6 +485,34 @@ export default function IncomesPage() {
           </Accordion>
         </CardContent>
       </Card>
+
+      <Dialog open={isMergeConfirmOpen} onOpenChange={setIsMergeConfirmOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirm Gig Merge</DialogTitle>
+                <DialogDescription>
+                    Select one gig to keep as the main gig. The other selected gigs will be removed. This action cannot be undone.
+                </DialogDescription>
+            </DialogHeader>
+            <RadioGroup onValueChange={setMainGigId} className="my-4 space-y-2">
+                {gigsForMergeConfirmation.map(gig => (
+                    <div key={gig.id} className="flex items-center space-x-2 rounded-md border p-3">
+                        <RadioGroupItem value={gig.id} id={gig.id} />
+                        <Label htmlFor={gig.id} className="flex-grow font-normal cursor-pointer">{gig.name} ({format(new Date(gig.date), "PPP")})</Label>
+                    </div>
+                ))}
+            </RadioGroup>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline" onClick={() => setMainGigId(null)}>Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleConfirmMerge} disabled={!mainGigId}>
+                    Confirm Merge
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
-}
+
+    
