@@ -10,7 +10,7 @@ import type { DateRange } from "react-day-picker";
 import { CalendarIcon, MoreHorizontal, Star, ArrowUpDown, Edit, Trash2 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -80,7 +80,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { Textarea } from "@/components/ui/textarea";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
@@ -180,6 +180,25 @@ export default function OrdersPage() {
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
 
+    const [date, setDate] = useState<DateRange | undefined>(() => {
+        if (fromParam && toParam) {
+            const from = new Date(fromParam.replace(/-/g, '/'));
+            const to = new Date(toParam.replace(/-/g, '/'));
+            if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+                return { from, to };
+            }
+        }
+        return undefined;
+    });
+
+    useEffect(() => {
+        if (!date) {
+            const today = new Date();
+            const startOfYear = new Date(today.getFullYear(), 0, 1);
+            setDate({ from: startOfYear, to: today });
+        }
+    }, [date]);
+
     const createQueryString = useCallback(
         (paramsToUpdate: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams.toString());
@@ -195,27 +214,8 @@ export default function OrdersPage() {
         [searchParams]
     );
 
-    const date: DateRange | undefined = useMemo(() => {
-        const from = fromParam ? new Date(fromParam) : undefined;
-        const to = toParam ? new Date(toParam) : undefined;
-        if ((from && !isNaN(from.getTime())) || (to && !isNaN(to.getTime()))) {
-            return { from, to };
-        }
-        return undefined;
-    }, [fromParam, toParam]);
-    
-    useEffect(() => {
-        if (!fromParam || !toParam) {
-            const today = new Date();
-            const startOfYear = new Date(today.getFullYear(), 0, 1);
-            router.replace(`${pathname}?${createQueryString({ 
-                from: startOfYear.toISOString().split('T')[0],
-                to: today.toISOString().split('T')[0]
-            })}`, { scroll: false });
-        }
-    }, [fromParam, toParam, createQueryString, pathname, router]);
-
-    const setDate = (newDate: DateRange | undefined) => {
+    const handleSetDate = (newDate: DateRange | undefined) => {
+        setDate(newDate);
         router.push(`${pathname}?${createQueryString({
             from: newDate?.from ? newDate.from.toISOString().split('T')[0] : null,
             to: newDate?.to ? newDate.to.toISOString().split('T')[0] : null,
@@ -276,7 +276,7 @@ export default function OrdersPage() {
             form.reset({
                 id: order.id,
                 username: order.clientUsername,
-                date: new Date(order.date),
+                date: new Date(order.date.replace(/-/g, '/')),
                 amount: order.amount,
                 source: order.source,
                 gig: order.gig,
@@ -397,9 +397,12 @@ export default function OrdersPage() {
     };
 
     const filteredOrders = useMemo(() => {
+        if (!date) {
+            return [];
+        }
         return orders.filter(order => {
             if (!order.date) return false;
-            const orderDate = new Date(order.date);
+            const orderDate = new Date(order.date.replace(/-/g, '/'));
 
             const from = date?.from;
             const to = date?.to;
@@ -450,7 +453,7 @@ export default function OrdersPage() {
           Orders
         </h1>
         <div className="ml-auto flex items-center gap-2">
-            <DateFilter date={date} setDate={setDate} />
+            <DateFilter date={date} setDate={handleSetDate} />
             <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
         </div>
       </div>
@@ -512,21 +515,23 @@ export default function OrdersPage() {
               {sortedOrders.length > 0 ? (
                 sortedOrders.map((order) => (
                     <TableRow key={order.id}>
-                    <TableCell>{order.date}</TableCell>
+                    <TableCell>{format(new Date(order.date.replace(/-/g, '/')), 'PPP')}</TableCell>
                     <TableCell className="font-medium">{order.id}</TableCell>
                     <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
                     <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
                     <TableCell>
-                        <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="inline-block max-w-[120px] truncate">
-                            {order.source}
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{order.source}</p>
-                        </TooltipContent>
-                        </Tooltip>
+                        <TooltipProvider>
+                            <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="inline-block max-w-[120px] truncate">
+                                {order.source}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{order.source}</p>
+                            </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </TableCell>
                     <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
                     <TableCell>
