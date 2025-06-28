@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -107,11 +107,15 @@ export default function ExpensesPage() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const { toast } = useToast();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
   const [filterCategory, setFilterCategory] = useState('all');
+
+  useEffect(() => {
+    setDate({
+      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      to: new Date(),
+    });
+  }, []);
 
   const [expenseCategories, setExpenseCategories] = useState([
     "Software", 
