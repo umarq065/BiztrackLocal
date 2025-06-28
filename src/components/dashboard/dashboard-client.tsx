@@ -23,6 +23,7 @@ import type { DateRange } from "react-day-picker";
 export function DashboardClient({
   stats: initialStats,
   revenueByDay,
+  previousRevenueByDay,
   incomeBySource,
   recentOrders,
   aiInsights,
@@ -158,15 +159,7 @@ export function DashboardClient({
 
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>
-              A summary of your revenue for the selected period.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <RevenueChart data={revenueByDay} />
-          </CardContent>
+           <RevenueChart data={revenueByDay} previousData={previousRevenueByDay} />
         </Card>
         <Card>
           <CardHeader>

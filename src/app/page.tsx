@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const {
     stats,
     revenueByDay,
+    previousRevenueByDay,
     incomeBySource,
     recentOrders,
     aiInsights,
@@ -21,6 +22,7 @@ export default function DashboardPage() {
     <DashboardClient
       stats={stats}
       revenueByDay={revenueByDay}
+      previousRevenueByDay={previousRevenueByDay}
       incomeBySource={incomeBySource}
       recentOrders={recentOrders}
       aiInsights={aiInsights}

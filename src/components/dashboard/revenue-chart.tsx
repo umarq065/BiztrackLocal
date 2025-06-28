@@ -1,3 +1,7 @@
+
+"use client";
+
+import { useState, useMemo } from "react";
 import {
   Line,
   LineChart,
@@ -6,6 +10,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
+  Dot,
 } from "recharts";
 import {
   ChartContainer,
@@ -14,9 +19,15 @@ import {
   ChartConfig
 } from "@/components/ui/chart";
 import { type RevenueByDay } from "@/lib/placeholder-data";
+import { CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { BookText } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface RevenueChartProps {
   data: RevenueByDay[];
+  previousData: RevenueByDay[];
 }
 
 const chartConfig = {
@@ -24,53 +35,145 @@ const chartConfig = {
     label: "Revenue",
     color: "hsl(var(--chart-1))",
   },
-} satisfies ChartConfig
+  previousRevenue: {
+    label: "Previous Period",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig;
 
-export default function RevenueChart({ data }: RevenueChartProps) {
+const CustomDot = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (payload.note) {
+    return (
+      <Dot
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill="hsl(var(--primary))"
+        stroke="hsl(var(--background))"
+        strokeWidth={2}
+      />
+    );
+  }
+  return <Dot cx={cx} cy={cy} r={2} fill="hsl(var(--chart-1))" />;
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const note = payload[0].payload.note;
+    return (
+      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+        <p className="font-medium">{new Date(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric"})}</p>
+        {payload.map((pld: any) => (
+          pld.value ? (
+            <div key={pld.dataKey} className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="mr-2 h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: pld.color }} />
+                <span>{chartConfig[pld.dataKey as keyof typeof chartConfig].label}:</span>
+              </div>
+              <span className="ml-4 font-semibold">${pld.value.toLocaleString()}</span>
+            </div>
+          ) : null
+        ))}
+        {note && (
+          <>
+            <Separator className="my-2" />
+            <div className="flex items-start gap-2 text-muted-foreground">
+              <BookText className="size-4 shrink-0 mt-0.5" />
+              <p className="font-medium">{note}</p>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+
+export default function RevenueChart({ data, previousData }: RevenueChartProps) {
+  const [showComparison, setShowComparison] = useState(false);
+  
+  const combinedData = useMemo(() => {
+    return data.map((current, index) => ({
+      ...current,
+      previousRevenue: previousData[index]?.revenue ?? null,
+    }));
+  }, [data, previousData]);
+  
   return (
-    <ChartContainer config={chartConfig} className="h-[250px] w-full">
-      <LineChart
-        accessibilityLayer
-        data={data}
-        margin={{
-          top: 5,
-          right: 10,
-          left: 10,
-          bottom: 0,
-        }}
-      >
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey="date"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) => {
-            const date = new Date(value);
-            return date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
-          }}
-        />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) => `$${value / 1000}k`}
-        />
-        <Tooltip
-          cursor={false}
-          content={<ChartTooltipContent indicator="dot" />}
-        />
-        <Line
-          dataKey="revenue"
-          type="natural"
-          stroke="var(--color-revenue)"
-          strokeWidth={2}
-          dot={true}
-        />
-      </LineChart>
-    </ChartContainer>
+    <>
+      <CardHeader>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <CardTitle>Revenue Overview</CardTitle>
+                <CardDescription>
+                  A summary of your revenue for the selected period.
+                </CardDescription>
+            </div>
+            <div className="flex items-center space-x-2 pt-1">
+                <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
+                <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
+            </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pl-2">
+        <ChartContainer config={chartConfig} className="h-[250px] w-full">
+          <LineChart
+            accessibilityLayer
+            data={combinedData}
+            margin={{
+              top: 5,
+              right: 10,
+              left: 10,
+              bottom: 0,
+            }}
+          >
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => {
+                const date = new Date(value);
+                return date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+              }}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => `$${value / 1000}k`}
+            />
+            <Tooltip
+              cursor={false}
+              content={<CustomTooltip />}
+            />
+            <Line
+              dataKey="revenue"
+              type="natural"
+              stroke="var(--color-revenue)"
+              strokeWidth={2}
+              dot={<CustomDot />}
+              activeDot={{ r: 6 }}
+            />
+            {showComparison && (
+                <Line
+                    dataKey="previousRevenue"
+                    type="natural"
+                    stroke="var(--color-previousRevenue)"
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    dot={false}
+                />
+            )}
+          </LineChart>
+        </ChartContainer>
+      </CardContent>
+    </>
   );
 }
