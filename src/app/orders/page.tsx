@@ -73,6 +73,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { Textarea } from "@/components/ui/textarea";
+import { initialIncomeSources } from "@/lib/data/incomes-data";
 
 
 interface Order {
@@ -88,11 +89,11 @@ interface Order {
 }
 
 const initialOrders: Order[] = [
-    { id: 'ORD001', clientUsername: 'olivia.m', date: '2024-05-20', amount: 1999.00, source: 'Comprehensive Web Design & Development for Enterprise', gig: 'Acme Corp Redesign', status: 'Completed', rating: 5 },
+    { id: 'ORD001', clientUsername: 'olivia.m', date: '2024-05-20', amount: 1999.00, source: 'Web Design', gig: 'Acme Corp Redesign', status: 'Completed', rating: 5 },
     { id: 'ORD002', clientUsername: 'jackson.l', date: '2024-05-21', amount: 399.00, source: 'Consulting', gig: 'Q1 Strategy Session', status: 'Completed', rating: 4.2 },
     { id: 'ORD003', clientUsername: 'isabella.n', date: '2024-05-22', amount: 299.00, source: 'Logo Design', gig: "Brand Identity for 'Innovate'", status: 'Cancelled', cancellationReasons: ["Not satisfied with design"] },
     { id: 'ORD004', clientUsername: 'will.k', date: '2024-05-23', amount: 999.00, source: 'Web Design', gig: 'Startup Landing Page', status: 'In Progress' },
-    { id: 'ORD005', clientUsername: 'sofia.d', date: '2024-05-24', amount: 499.00, source: 'SEO Services and Digital Marketing Campaigns', gig: 'Monthly SEO Retainer', status: 'Completed', rating: 3.7 },
+    { id: 'ORD005', clientUsername: 'sofia.d', date: '2024-05-24', amount: 499.00, source: 'SEO Services', gig: 'Monthly SEO Retainer', status: 'Completed', rating: 3.7 },
 ];
 
 const clients = [
@@ -103,7 +104,7 @@ const clients = [
   { username: "sofia.d", name: "Sofia Davis" },
 ];
 
-const incomeSources = ["Comprehensive Web Design & Development for Enterprise", "Consulting", "Logo Design", "SEO Services and Digital Marketing Campaigns", "Maintenance", "Web Design"];
+const incomeSourceNames = initialIncomeSources.map(s => s.name);
 
 const orderFormSchema = z.object({
   date: z.date({ required_error: "An order date is required." }),
@@ -111,7 +112,7 @@ const orderFormSchema = z.object({
   username: z.string().min(1, "Username is required."),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
   source: z.string().min(1, "Source is required."),
-  gig: z.string().optional(),
+  gig: z.string().min(1, "Gig is required."),
   rating: z.coerce.number().min(0, "Rating must be at least 0").max(5, "Rating cannot be more than 5").optional(),
   isCancelled: z.boolean().default(false),
   cancellationReasons: z.array(z.string()).optional(),
@@ -218,6 +219,17 @@ export default function OrdersPage() {
     });
 
     const isCancelled = form.watch("isCancelled");
+    const selectedSource = form.watch("source");
+
+    const availableGigs = useMemo(() => {
+        if (!selectedSource) return [];
+        const sourceData = initialIncomeSources.find(s => s.name === selectedSource);
+        return sourceData ? sourceData.gigs : [];
+    }, [selectedSource]);
+
+    useEffect(() => {
+        form.resetField("gig", { defaultValue: "" });
+    }, [selectedSource, form]);
 
     const handleOpenChange = (isOpen: boolean) => {
         if (isOpen) {
@@ -448,7 +460,7 @@ export default function OrdersPage() {
                                             </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {incomeSources.map(source => (
+                                                {incomeSourceNames.map(source => (
                                                     <SelectItem key={source} value={source}>{source}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -464,10 +476,23 @@ export default function OrdersPage() {
                                 name="gig"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Gig (Optional)</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g., Acme Corp Redesign" {...field} />
-                                        </FormControl>
+                                        <FormLabel>Gig*</FormLabel>
+                                        <Select 
+                                            onValueChange={field.onChange} 
+                                            value={field.value}
+                                            disabled={!selectedSource || availableGigs.length === 0}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={!selectedSource ? "Select a source first" : "Select a gig"} />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {availableGigs.map(gig => (
+                                                    <SelectItem key={gig.id} value={gig.name}>{gig.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
