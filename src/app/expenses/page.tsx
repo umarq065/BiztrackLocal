@@ -66,8 +66,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-const expenseCategories = ["Software", "Office Supplies", "Marketing", "Cloud Hosting", "Freelancer Payment", "Travel", "Other"];
+import { Badge } from "@/components/ui/badge";
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: "An expense date is required." }),
@@ -103,12 +102,26 @@ const initialExpenses: Expense[] = [
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [open, setOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
   const { toast } = useToast();
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
   const [filterCategory, setFilterCategory] = useState('all');
+
+  const [expenseCategories, setExpenseCategories] = useState([
+    "Software", 
+    "Subscription",
+    "Office Supplies", 
+    "Marketing", 
+    "Cloud Hosting", 
+    "Freelancer Payment", 
+    "Salary",
+    "Travel", 
+    "Other"
+  ].sort());
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -136,6 +149,25 @@ export default function ExpensesPage() {
     form.reset();
     setOpen(false);
   }
+
+  const handleAddCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newCategory.trim() && !expenseCategories.some(cat => cat.toLowerCase() === newCategory.trim().toLowerCase())) {
+        const updatedCategories = [...expenseCategories, newCategory.trim()];
+        setExpenseCategories(updatedCategories.sort());
+        setNewCategory("");
+        toast({
+            title: "Category Added",
+            description: `"${newCategory.trim()}" has been added.`,
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: newCategory.trim() ? "Category already exists." : "Category name cannot be empty.",
+        });
+    }
+  };
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
@@ -183,6 +215,44 @@ export default function ExpensesPage() {
             </SelectContent>
           </Select>
           <DateFilter date={date} setDate={setDate} />
+          
+          <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">Manage Categories</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Manage Expense Categories</DialogTitle>
+                    <DialogDescription>
+                        Add new expense categories to suit your business needs.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddCategory} className="space-y-4 pt-4">
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            value={newCategory} 
+                            onChange={(e) => setNewCategory(e.target.value)}
+                            placeholder="New category name"
+                        />
+                        <Button type="submit">Add</Button>
+                    </div>
+                </form>
+                <div className="space-y-2">
+                    <p className="text-sm font-medium">Existing Categories:</p>
+                    <div className="flex flex-wrap gap-2">
+                        {expenseCategories.map(cat => (
+                            <Badge key={cat} variant="secondary">{cat}</Badge>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button>Add New Expense</Button>
@@ -353,7 +423,7 @@ export default function ExpensesPage() {
             <CardHeader>
                 <CardTitle>Total Expenses</CardTitle>
                 <CardDescription>Total for the selected period.</CardDescription>
-            </CardHeader>
+            </Header>
             <CardContent>
                 <p className="text-4xl font-bold">${totalExpenses.toFixed(2)}</p>
             </CardContent>
