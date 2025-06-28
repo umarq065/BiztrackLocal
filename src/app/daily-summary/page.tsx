@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -191,6 +191,15 @@ export default function DailySummaryPage() {
     withSummary: 'bg-accent/50 rounded-md relative',
   };
 
+  const DayContent = useCallback((props: any) => (
+      <DayWithSummary 
+        date={props.date} 
+        summaries={summaries} 
+        onEdit={handleOpenDialog}
+        onDelete={setDeletingSummary}
+      />
+    ), [summaries]);
+
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
@@ -213,14 +222,7 @@ export default function DailySummaryPage() {
               modifiers={modifiers}
               modifiersClassNames={modifiersClassNames}
               components={{
-                DayContent: (props) => (
-                  <DayWithSummary 
-                    date={props.date} 
-                    summaries={summaries} 
-                    onEdit={handleOpenDialog}
-                    onDelete={setDeletingSummary}
-                  />
-                )
+                DayContent,
               }}
             />
           )}

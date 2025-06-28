@@ -110,6 +110,9 @@
 }
 
 @layer utilities {
+  .summary-calendar .rdp-month {
+    width: 100%;
+  }
   .summary-calendar .rdp-table {
     width: 100%;
     table-layout: fixed;
