@@ -68,6 +68,7 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import ExpenseChart from "@/components/expenses/expense-chart";
 
 const expenseFormSchema = z.object({
   date: z.date({ required_error: "An expense date is required." }),
@@ -198,6 +199,31 @@ export default function ExpensesPage() {
   }, [date, expenses, filterCategory]);
 
   const totalExpenses = filteredExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+
+  const expensesByCategory = useMemo(() => {
+    const categoryMap: Map<string, number> = new Map();
+    filteredExpenses.forEach((expense) => {
+      const currentAmount = categoryMap.get(expense.category) || 0;
+      categoryMap.set(expense.category, currentAmount + expense.amount);
+    });
+
+    const COLORS = [
+      "hsl(var(--chart-1))",
+      "hsl(var(--chart-2))",
+      "hsl(var(--chart-3))",
+      "hsl(var(--chart-4))",
+      "hsl(var(--chart-5))",
+    ];
+
+    const sortedCategories = Array.from(categoryMap.entries())
+      .sort((a, b) => b[1] - a[1]);
+
+    return sortedCategories.map(([name, amount], index) => ({
+      name,
+      amount,
+      fill: COLORS[index % COLORS.length],
+    }));
+  }, [filteredExpenses]);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -365,8 +391,8 @@ export default function ExpensesPage() {
           </Dialog>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2">
+      <div className="grid gap-4">
+        <Card>
             <CardHeader>
             <CardTitle>Manage Expenses</CardTitle>
             <CardDescription>
@@ -420,15 +446,32 @@ export default function ExpensesPage() {
             </Table>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle>Total Expenses</CardTitle>
-                <CardDescription>Total for the selected period.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p className="text-4xl font-bold">${totalExpenses.toFixed(2)}</p>
-            </CardContent>
-        </Card>
+        <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Total Expenses</CardTitle>
+                    <CardDescription>Total for the selected period.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold">${totalExpenses.toFixed(2)}</p>
+                </CardContent>
+            </Card>
+            <Card className="md:col-span-2">
+                <CardHeader>
+                    <CardTitle>Expenses by Category</CardTitle>
+                    <CardDescription>A breakdown of your expenses for the selected period.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {filteredExpenses.length > 0 ? (
+                    <ExpenseChart data={expensesByCategory} />
+                  ) : (
+                    <div className="flex h-[300px] w-full items-center justify-center">
+                        <p className="text-muted-foreground">No expense data to display chart.</p>
+                    </div>
+                  )}
+                </CardContent>
+            </Card>
+        </div>
       </div>
     </main>
   );
