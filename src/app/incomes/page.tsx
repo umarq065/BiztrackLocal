@@ -74,72 +74,9 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import type { IncomeSource, Gig, SourceDataPoint } from "@/lib/data/incomes-data";
+import { initialIncomeSources } from "@/lib/data/incomes-data";
 
-interface Gig {
-  id: string;
-  name: string;
-  date: string;
-  messages?: number;
-  analytics?: {
-    date: string;
-    impressions: number;
-    clicks: number;
-    ctr: number;
-  }[];
-}
-
-interface SourceDataPoint {
-  date: string;
-  messages: number;
-}
-
-interface IncomeSource {
-  id: string;
-  name: string;
-  gigs: Gig[];
-  dataPoints?: SourceDataPoint[];
-}
-
-const initialIncomeSources: IncomeSource[] = [
-  {
-    id: "1",
-    name: "Web Design",
-    gigs: [
-      { id: "g1", name: "Acme Corp Redesign", date: "2023-01-15", messages: 125, analytics: [] },
-      { id: "g2", name: "Startup Landing Page", date: "2023-01-25", messages: 52, analytics: [] },
-      { id: "g3", name: "E-commerce Site for 'ShopEasy'", date: "2023-02-05", messages: 210, analytics: [] },
-    ],
-    dataPoints: [],
-  },
-  {
-    id: "2",
-    name: "Consulting",
-    gigs: [{ id: "g4", name: "Q1 Strategy Session", date: "2023-01-20", messages: 30, analytics: [] }],
-    dataPoints: [],
-  },
-  {
-    id: "3",
-    name: "Logo Design",
-    gigs: [
-      { id: "g5", name: "Brand Identity for 'Innovate'", date: "2023-02-01", messages: 15, analytics: [] },
-    ],
-    dataPoints: [],
-  },
-  {
-    id: "4",
-    name: "SEO Services",
-    gigs: [{ id: "g6", name: "Monthly SEO Retainer", date: "2023-02-10", messages: 88, analytics: [] }],
-    dataPoints: [],
-  },
-  {
-    id: "5",
-    name: "Maintenance",
-    gigs: [
-      { id: "g7", name: "Website Support Package", date: "2023-02-15", messages: 5, analytics: [] },
-    ],
-    dataPoints: [],
-  },
-];
 
 const formSchema = z.object({
   sourceName: z.string().min(2, {
@@ -607,15 +544,32 @@ export default function IncomesPage() {
               <AccordionItem
                 value={source.id}
                 key={source.id}
-                className="rounded-md border px-4"
+                className="rounded-md border"
               >
-                <AccordionTrigger>
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-lg">{source.name}</span>
-                    <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
+                <div className="flex items-center pr-4">
+                    <AccordionTrigger className="flex-grow px-4">
+                    <div className="flex items-center gap-4">
+                        <span className="font-semibold text-lg">{source.name}</span>
+                        <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
+                    </div>
+                    </AccordionTrigger>
+                     <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <NProgressLink href={`/incomes/${source.id}`} passHref>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={e => e.stopPropagation()}>
+                                        <BarChart className="h-4 w-4" />
+                                        <span className="sr-only">View Analytics</span>
+                                    </Button>
+                                </NProgressLink>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>View Source Analytics</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+                <AccordionContent className="px-4">
                   <div className="flex justify-end gap-2 mb-4">
                     {mergingSourceId === source.id ? (
                       <div className="flex gap-2">
