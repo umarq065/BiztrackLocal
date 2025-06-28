@@ -118,78 +118,118 @@ export default function SourceAnalyticsPage({
   const {
     aggregatedAnalytics,
     aggregatedMessages,
-    totalImpressions,
-    totalClicks,
-    totalMessages,
+    sourceStats,
   } = useMemo(() => {
-    const from = date?.from;
-    const to = date?.to;
-    
-    const isDateInRange = (itemDate: Date) => {
-        if (!from && !to) return true;
-        if (from && itemDate < from) return false;
-        if (to) {
-            const toDateEnd = new Date(to);
+    const calculateMetricsForPeriod = (periodFrom?: Date, periodTo?: Date) => {
+        if (!periodFrom || !periodTo) {
+            return { impressions: 0, clicks: 0, sourceMessages: 0, aggregatedAnalytics: [], aggregatedMessages: [] };
+        }
+        
+        const isDateInRange = (itemDate: Date) => {
+            if (itemDate < periodFrom) return false;
+            const toDateEnd = new Date(periodTo);
             toDateEnd.setHours(23, 59, 59, 999);
             if (itemDate > toDateEnd) return false;
+            return true;
         }
-        return true;
+
+        const analyticsMap = new Map<string, { impressions: number; clicks: number }>();
+        source.gigs.flatMap(gig => gig.analytics ?? [])
+            .filter(analytic => isDateInRange(new Date(analytic.date)))
+            .forEach(analytic => {
+                const existing = analyticsMap.get(analytic.date) || { impressions: 0, clicks: 0 };
+                analyticsMap.set(analytic.date, {
+                    impressions: existing.impressions + analytic.impressions,
+                    clicks: existing.clicks + analytic.clicks,
+                });
+            });
+        const aggregatedAnalyticsData = Array.from(analyticsMap.entries())
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const impressions = aggregatedAnalyticsData.reduce((acc, curr) => acc + curr.impressions, 0);
+        const clicks = aggregatedAnalyticsData.reduce((acc, curr) => acc + curr.clicks, 0);
+
+        const messagesMap = new Map<string, { messages: number }>();
+        (source.dataPoints ?? [])
+            .filter(dp => isDateInRange(new Date(dp.date)))
+            .forEach(dp => {
+                const existing = messagesMap.get(dp.date) || { messages: 0 };
+                messagesMap.set(dp.date, {
+                    messages: existing.messages + dp.messages,
+                });
+            });
+        const aggregatedMessagesData = Array.from(messagesMap.entries())
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const sourceMessages = aggregatedMessagesData.reduce((acc, curr) => acc + curr.messages, 0);
+        
+        return { impressions, clicks, sourceMessages, aggregatedAnalytics: aggregatedAnalyticsData, aggregatedMessages: aggregatedMessagesData };
+    };
+
+    const currentPeriodMetrics = calculateMetricsForPeriod(date?.from, date?.to);
+
+    let prevPeriodMetrics = { impressions: 0, clicks: 0, sourceMessages: 0 };
+    if (date?.from && date.to) {
+        const duration = date.to.getTime() - date.from.getTime();
+        const prevTo = new Date(date.from.getTime() - 1);
+        const prevFrom = new Date(prevTo.getTime() - duration);
+        prevPeriodMetrics = calculateMetricsForPeriod(prevFrom, prevTo);
     }
-
-    const filteredGigAnalytics = source.gigs.flatMap(gig => gig.analytics ?? [])
-        .filter(analytic => isDateInRange(new Date(analytic.date)));
     
-    const filteredSourceDataPoints = (source.dataPoints ?? [])
-        .filter(dp => isDateInRange(new Date(dp.date)));
+    const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) {
+            return current > 0 ? { change: `+100%`, changeType: "increase" as const } : {};
+        }
+        if (current === 0 && previous > 0) {
+            return { change: `-100%`, changeType: "decrease" as const };
+        }
+        const diff = ((current - previous) / previous) * 100;
+        if (Math.abs(diff) < 0.1) return {};
+        return {
+            change: `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`,
+            changeType: diff >= 0 ? "increase" as const : "decrease" as const,
+        };
+    };
 
-    const analyticsMap = new Map<string, { impressions: number; clicks: number }>();
-    let currentImpressions = 0;
-    let currentClicks = 0;
-    filteredGigAnalytics.forEach(analytic => {
-        currentImpressions += analytic.impressions;
-        currentClicks += analytic.clicks;
-        const existing = analyticsMap.get(analytic.date) || { impressions: 0, clicks: 0 };
-        analyticsMap.set(analytic.date, {
-            impressions: existing.impressions + analytic.impressions,
-            clicks: existing.clicks + analytic.clicks,
-        });
-    });
-
-    const messagesMap = new Map<string, { messages: number }>();
-    let currentMessagesFromSource = 0;
-    filteredSourceDataPoints.forEach(dp => {
-        currentMessagesFromSource += dp.messages;
-        const existing = messagesMap.get(dp.date) || { messages: 0 };
-        messagesMap.set(dp.date, {
-            messages: existing.messages + dp.messages,
-        });
-    });
-
-    // Gig messages are an all-time count, not tied to a date range
+    const impressionsChange = calculateChange(currentPeriodMetrics.impressions, prevPeriodMetrics.impressions);
+    const clicksChange = calculateChange(currentPeriodMetrics.clicks, prevPeriodMetrics.clicks);
+    const messagesChange = calculateChange(currentPeriodMetrics.sourceMessages, prevPeriodMetrics.sourceMessages);
+    
     const totalMessagesFromGigs = source.gigs.reduce((acc, gig) => acc + (gig.messages || 0), 0);
+    const totalMessages = currentPeriodMetrics.sourceMessages + totalMessagesFromGigs;
 
-    const aggregatedAnalyticsData = Array.from(analyticsMap.entries())
-        .map(([date, data]) => ({ date, ...data }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const aggregatedMessagesData = Array.from(messagesMap.entries())
-        .map(([date, data]) => ({ date, ...data }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const finalSourceStats = [
+      { 
+        icon: "Eye", 
+        title: "Total Impressions", 
+        value: currentPeriodMetrics.impressions.toLocaleString(), 
+        description: "vs. previous period",
+        ...impressionsChange
+      },
+      { 
+        icon: "MousePointerClick", 
+        title: "Total Clicks", 
+        value: currentPeriodMetrics.clicks.toLocaleString(), 
+        description: "vs. previous period",
+        ...clicksChange
+      },
+      { 
+        icon: "MessageSquare", 
+        title: "Source Messages", 
+        value: currentPeriodMetrics.sourceMessages.toLocaleString(), 
+        description: "vs. previous period",
+        ...messagesChange
+      },
+    ];
 
     return {
-        aggregatedAnalytics: aggregatedAnalyticsData,
-        aggregatedMessages: aggregatedMessagesData,
-        totalImpressions: currentImpressions,
-        totalClicks: currentClicks,
-        totalMessages: totalMessagesFromGigs + currentMessagesFromSource,
+      aggregatedAnalytics: currentPeriodMetrics.aggregatedAnalytics,
+      aggregatedMessages: currentPeriodMetrics.aggregatedMessages,
+      sourceStats: finalSourceStats,
     };
   }, [source, date]);
-
-  const sourceStats = [
-    { icon: "Eye", title: "Total Impressions", value: totalImpressions.toLocaleString(), description: "For selected period" },
-    { icon: "MousePointerClick", title: "Total Clicks", value: totalClicks.toLocaleString(), description: "For selected period" },
-    { icon: "MessageSquare", title: "Total Messages", value: totalMessages.toLocaleString(), description: "Gig messages (all-time) + Source messages (filtered)" },
-  ];
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
