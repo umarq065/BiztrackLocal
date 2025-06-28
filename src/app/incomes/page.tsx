@@ -69,6 +69,9 @@ const formSchema = z.object({
   }),
   gigs: z.array(
     z.object({
+      name: z.string().min(2, {
+        message: "Gig name must be at least 2 characters.",
+      }),
       date: z.date({
         required_error: "A date for the gig is required.",
       }),
@@ -85,7 +88,7 @@ export default function IncomesPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       sourceName: "",
-      gigs: [{ date: new Date() }],
+      gigs: [{ name: "", date: new Date() }],
     },
   });
 
@@ -95,18 +98,20 @@ export default function IncomesPage() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const newSource = {
-      id: (incomeSources.length + 1).toString(),
-      source: values.sourceName,
-      date: format(values.gigs[0].date, "yyyy-MM-dd"),
-    };
-    setIncomeSources([newSource, ...incomeSources]);
+    const newSources = values.gigs.map((gig, index) => ({
+      id: (incomeSources.length + 1 + index).toString(),
+      source: `${values.sourceName}: ${gig.name}`,
+      date: format(gig.date, "yyyy-MM-dd"),
+    }));
+
+    setIncomeSources([...newSources, ...incomeSources]);
+    
     toast({
         title: "Success",
-        description: "New income source added successfully.",
+        description: `Added ${newSources.length} new income source(s).`,
     });
     form.reset();
-    form.setValue("gigs", [{ date: new Date() }]);
+    form.setValue("gigs", [{ name: "", date: new Date() }]);
     setOpen(false);
   }
 
@@ -121,7 +126,7 @@ export default function IncomesPage() {
             <DialogTrigger asChild>
               <Button>Add New Source</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
+            <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>Add New Income Source</DialogTitle>
                 <DialogDescription>
@@ -149,47 +154,62 @@ export default function IncomesPage() {
                     <div className="mt-2 space-y-4">
                       {fields.map((field, index) => (
                         <div key={field.id} className="flex items-end gap-2">
-                           <FormField
-                              control={form.control}
-                              name={`gigs.${index}.date`}
-                              render={({ field }) => (
-                                <FormItem className="flex flex-col flex-grow">
-                                  {index === 0 && <FormLabel>Gig Date</FormLabel>}
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <FormControl>
-                                        <Button
-                                          variant={"outline"}
-                                          className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                          )}
-                                        >
-                                          {field.value ? (
-                                            format(field.value, "PPP")
-                                          ) : (
-                                            <span>Pick a date</span>
-                                          )}
-                                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                      </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) =>
-                                          date > new Date() || date < new Date("1900-01-01")
-                                        }
-                                        initialFocus
-                                      />
-                                    </PopoverContent>
-                                  </Popover>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
+                             <FormField
+                                control={form.control}
+                                name={`gigs.${index}.name`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Gig Name</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., Acme Corp Website" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`gigs.${index}.date`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Gig Date</FormLabel>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <FormControl>
+                                          <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                              "w-full pl-3 text-left font-normal",
+                                              !field.value && "text-muted-foreground"
+                                            )}
+                                          >
+                                            {field.value ? (
+                                              format(field.value, "PPP")
+                                            ) : (
+                                              <span>Pick a date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                        </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={field.value}
+                                          onSelect={field.onChange}
+                                          disabled={(date) =>
+                                            date > new Date() || date < new Date("1900-01-01")
+                                          }
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                           </div>
                             <Button type="button" variant="outline" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                                 <Trash2 className="h-4 w-4" />
                                 <span className="sr-only">Remove Gig</span>
@@ -202,7 +222,7 @@ export default function IncomesPage() {
                         variant="outline"
                         size="sm"
                         className="mt-4"
-                        onClick={() => append({ date: new Date() })}
+                        onClick={() => append({ name: "", date: new Date() })}
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add another Gig
