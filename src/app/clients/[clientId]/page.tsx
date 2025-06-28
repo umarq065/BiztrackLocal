@@ -22,6 +22,7 @@ import {
 import StatCard from "@/components/dashboard/stat-card";
 import { Facebook, Twitter, Linkedin, Github, Globe, DollarSign, ShoppingCart, BarChart, Calendar } from "lucide-react";
 import type { Stat } from "@/lib/placeholder-data";
+import ClientOrderHistoryChart from "@/components/clients/client-order-history-chart";
 
 
 // Mock data - in a real app, this would be fetched from a database
@@ -207,6 +208,10 @@ export default function ClientDetailsPage({ params }: { params: { clientId: stri
             </CardContent>
         </Card>
       </div>
+
+      <section>
+        <ClientOrderHistoryChart data={clientOrders} />
+      </section>
 
     </main>
   );
