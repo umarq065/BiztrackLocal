@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -136,6 +136,11 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(orderFormSchema),
@@ -222,7 +227,7 @@ export default function OrdersPage() {
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                                 >
-                                                {field.value ? (
+                                                {isClient && field.value ? (
                                                     format(field.value, "PPP")
                                                 ) : (
                                                     <span>Pick a date</span>
