@@ -151,7 +151,6 @@ const formSchema = z.object({
 const addGigFormSchema = z.object({
     name: z.string().min(2, { message: "Gig name must be at least 2 characters." }),
     date: z.date({ required_error: "A date for the gig is required." }),
-    messages: z.coerce.number().int().min(0).optional(),
 });
 type AddGigFormValues = z.infer<typeof addGigFormSchema>;
 
@@ -198,7 +197,6 @@ export default function IncomesPage() {
     defaultValues: {
       name: "",
       date: new Date(),
-      messages: 0,
     },
   });
 
@@ -242,7 +240,6 @@ export default function IncomesPage() {
       id: `g-${Date.now()}`,
       name: values.name,
       date: format(values.date, "yyyy-MM-dd"),
-      messages: values.messages,
     };
 
     setIncomeSources(prevSources => 
@@ -258,7 +255,7 @@ export default function IncomesPage() {
       title: "Gig Added",
       description: `Added "${values.name}" to the income source.`,
     });
-    addGigForm.reset({ name: "", date: new Date(), messages: 0 });
+    addGigForm.reset({ name: "", date: new Date() });
     setAddGigDialogOpen(false);
   }
 
@@ -665,59 +662,44 @@ export default function IncomesPage() {
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                          control={addGigForm.control}
-                          name="date"
-                          render={({ field }) => (
-                              <FormItem className="flex flex-col">
-                              <FormLabel>Date</FormLabel>
-                              <Popover>
-                                  <PopoverTrigger asChild>
-                                  <FormControl>
-                                      <Button
-                                      variant={"outline"}
-                                      className={cn(
-                                          "pl-3 text-left font-normal",
-                                          !field.value && "text-muted-foreground"
-                                      )}
-                                      >
-                                      {field.value ? (
-                                          format(field.value, "PPP")
-                                      ) : (
-                                          <span>Pick a date</span>
-                                      )}
-                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                      </Button>
-                                  </FormControl>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                      mode="single"
-                                      selected={field.value}
-                                      onSelect={field.onChange}
-                                      initialFocus
-                                  />
-                                  </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                      <FormField
+                    <FormField
                         control={addGigForm.control}
-                        name="messages"
+                        name="date"
                         render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>No. of Messages</FormLabel>
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Date</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Input type="number" placeholder="e.g., 25" {...field} />
+                                    <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "pl-3 text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                    )}
+                                    >
+                                    {field.value ? (
+                                        format(field.value, "PPP")
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
                                 </FormControl>
-                                <FormMessage />
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={field.value}
+                                    onSelect={field.onChange}
+                                    initialFocus
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
                             </FormItem>
                         )}
-                      />
-                    </div>
+                    />
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
