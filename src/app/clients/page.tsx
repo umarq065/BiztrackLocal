@@ -1,6 +1,8 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +21,45 @@ import { ClientsTable } from "@/components/clients/clients-table";
 export default function ClientsPage() {
     const [clients, setClients] = useState<Client[]>(initialClients);
     const [open, setOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filterSource, setFilterSource] = useState('all');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Client | null; direction: 'ascending' | 'descending' }>({ key: null, direction: 'ascending' });
     
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    // Read state from URL
+    const searchQuery = searchParams.get('q') || "";
+    const filterSource = searchParams.get('source') || "all";
+    const sortParam = searchParams.get('sort');
+
+    const sortConfig = useMemo(() => {
+        if (!sortParam) return { key: null, direction: 'ascending' as const };
+        const [key, direction] = sortParam.split('_');
+        return { key: key as keyof Client, direction: direction as 'ascending' | 'descending' };
+    }, [sortParam]);
+
+    const createQueryString = useCallback(
+        (paramsToUpdate: Record<string, string | null>) => {
+            const params = new URLSearchParams(searchParams.toString());
+            for (const [name, value] of Object.entries(paramsToUpdate)) {
+                if (value) {
+                    params.set(name, value);
+                } else {
+                    params.delete(name);
+                }
+            }
+            return params.toString();
+        },
+        [searchParams]
+    );
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        router.push(`${pathname}?${createQueryString({ q: e.target.value || null })}`);
+    };
+    
+    const handleFilterChange = (value: string) => {
+        router.push(`${pathname}?${createQueryString({ source: value === 'all' ? null : value })}`);
+    };
+
     const handleClientAdded = (newClient: Client) => {
         setClients([newClient, ...clients]);
     };
@@ -32,7 +69,8 @@ export default function ClientsPage() {
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
             direction = 'descending';
         }
-        setSortConfig({ key, direction });
+        const newSortParam = `${key}_${direction}`;
+        router.push(`${pathname}?${createQueryString({ sort: newSortParam })}`);
     };
 
     const getSortIndicator = (key: keyof Client) => {
@@ -101,10 +139,10 @@ export default function ClientsPage() {
                     placeholder="Search clients..."
                     className="pl-8 sm:w-[200px] md:w-[250px]"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                 />
             </div>
-          <Select value={filterSource} onValueChange={setFilterSource}>
+          <Select value={filterSource} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by source" />
             </SelectTrigger>
