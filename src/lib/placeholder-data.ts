@@ -18,11 +18,6 @@ export interface RecentOrder {
   amount: number;
 }
 
-export interface IncomeBySource {
-  source: string;
-  amount: number;
-}
-
 export interface RevenueByDay {
   date: string;
   revenue: number;
@@ -38,7 +33,6 @@ export interface DashboardData {
   stats: Stat[];
   revenueByDay: RevenueByDay[];
   previousRevenueByDay: RevenueByDay[];
-  incomeBySource: IncomeBySource[];
   recentOrders: RecentOrder[];
   aiInsights: string;
   topClients: TopClient[];
@@ -214,13 +208,6 @@ export const dashboardData: DashboardData = {
     { date: "2024-04-29", revenue: 5700 },
     { date: "2024-04-30", revenue: 5600 },
   ],
-  incomeBySource: [
-    { source: "Web Design", amount: 15231 },
-    { source: "Consulting", amount: 10432 },
-    { source: "Logo Design", amount: 8900 },
-    { source: "SEO Services", amount: 6400 },
-    { source: "Maintenance", amount: 4268 },
-  ],
   recentOrders: [
     {
       id: "ORD001",
@@ -261,5 +248,5 @@ export const dashboardData: DashboardData = {
     { name: "Ava Jones", amount: 1900 },
   ],
   aiInsights:
-    "Your revenue is trending positively, driven by Web Design services. Consider offering tiered packages for Consulting to increase average order value. Client acquisition is strong, but focus on strategies to improve the repeat client rate, such as loyalty discounts or follow-up services.",
+    "Your revenue is trending positively. Consider offering tiered packages for Consulting to increase average order value. Client acquisition is strong, but focus on strategies to improve the repeat client rate, such as loyalty discounts or follow-up services.",
 };

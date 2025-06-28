@@ -13,7 +13,6 @@ import { type DashboardData, type Stat } from "@/lib/placeholder-data";
 import { SetTargetDialog } from "./set-target-dialog";
 import StatCard from "./stat-card";
 import RevenueChart from "./revenue-chart";
-import IncomeChart from "./income-chart";
 import RecentOrders from "./recent-orders";
 import AiInsights from "./ai-insights";
 import TopClientsChart from "./top-clients-chart";
@@ -24,7 +23,6 @@ export function DashboardClient({
   stats: initialStats,
   revenueByDay,
   previousRevenueByDay,
-  incomeBySource,
   recentOrders,
   aiInsights,
   topClients,
@@ -157,20 +155,9 @@ export function DashboardClient({
         </div>
       </section>
 
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-           <RevenueChart data={revenueByDay} previousData={previousRevenueByDay} />
-        </Card>
+      <div className="grid gap-4 md:gap-8">
         <Card>
-          <CardHeader>
-            <CardTitle>Income by Source</CardTitle>
-            <CardDescription>
-              A breakdown of your income by source.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <IncomeChart data={incomeBySource} />
-          </CardContent>
+           <RevenueChart data={revenueByDay} previousData={previousRevenueByDay} />
         </Card>
       </div>
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">

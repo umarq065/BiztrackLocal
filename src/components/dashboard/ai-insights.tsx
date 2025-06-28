@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateBusinessInsights } from "@/ai/flows/generate-business-insights";
 import { useToast } from "@/hooks/use-toast";
-import { dashboardData } from "@/lib/placeholder-data";
 
 export default function AiInsights({ initialInsights }: { initialInsights: string }) {
   const [insights, setInsights] = useState(initialInsights);
@@ -27,7 +26,6 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
     try {
       // In a real app, this data would be dynamic based on filters.
       const input = {
-        incomeSources: dashboardData.incomeBySource.map(s => s.source).join(', '),
         totalRevenue: 45231.89,
         totalExpenses: 10543.00,
         netProfit: 34688.89,
@@ -40,7 +38,6 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
         requiredDailyRevenue: 1625.6,
         // Chart data would be base64 encoded images in a real scenario
         incomeVsExpenseChart: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-        incomeBySourcesPieChart: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         dailyRevenueTrendGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         netProfitGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
         competitorOrderCount: 10500,

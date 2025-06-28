@@ -12,7 +12,6 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateBusinessInsightsInputSchema = z.object({
-  incomeSources: z.string().describe('A comma-separated list of income sources.'),
   totalRevenue: z.number().describe('The total revenue for the selected period.'),
   totalExpenses: z.number().describe('The total expenses for the selected period.'),
   netProfit: z.number().describe('The net profit for the selected period.'),
@@ -32,9 +31,6 @@ const GenerateBusinessInsightsInputSchema = z.object({
     'The required daily revenue to meet the monthly target.'
   ),
   incomeVsExpenseChart: z.string().describe('A data URI representing the income vs expense chart.'),
-  incomeBySourcesPieChart: z
-    .string()
-    .describe('A data URI representing the income by sources pie chart.'),
   dailyRevenueTrendGraph: z
     .string()
     .describe('A data URI representing the daily revenue trend graph.'),
@@ -70,7 +66,6 @@ const prompt = ai.definePrompt({
   prompt: `You are an AI-powered business consultant. Analyze the following business data and provide insights and recommendations to improve business performance.
 
 Business Data:
-Income Sources: {{{incomeSources}}}
 Total Revenue: {{{totalRevenue}}}
 Total Expenses: {{{totalExpenses}}}
 Net Profit: {{{netProfit}}}
@@ -85,13 +80,12 @@ Competitor Order Count: {{{competitorOrderCount}}}
 
 Charts:
 Income vs Expense Chart: {{media url=incomeVsExpenseChart}}
-Income by Sources Pie Chart: {{media url=incomeBySourcesPieChart}}
 Daily Revenue Trend Graph: {{media url=dailyRevenueTrendGraph}}
 Net Profit Graph: {{media url=netProfitGraph}}
 
 Additional Notes: {{{additionalNotes}}}
 
-Provide actionable insights and recommendations based on the provided data. Focus on trends in income sources, areas for improvement, and strategies to increase revenue and profitability.`,
+Provide actionable insights and recommendations based on the provided data. Focus on areas for improvement, and strategies to increase revenue and profitability.`,
 });
 
 const generateBusinessInsightsFlow = ai.defineFlow(

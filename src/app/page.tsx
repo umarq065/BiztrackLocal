@@ -13,7 +13,6 @@ export default function DashboardPage() {
     stats,
     revenueByDay,
     previousRevenueByDay,
-    incomeBySource,
     recentOrders,
     aiInsights,
     topClients,
@@ -23,7 +22,6 @@ export default function DashboardPage() {
       stats={stats}
       revenueByDay={revenueByDay}
       previousRevenueByDay={previousRevenueByDay}
-      incomeBySource={incomeBySource}
       recentOrders={recentOrders}
       aiInsights={aiInsights}
       topClients={topClients}
