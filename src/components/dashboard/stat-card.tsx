@@ -21,6 +21,9 @@ import {
   Calendar,
   XCircle,
   Star,
+  Eye,
+  MousePointerClick,
+  Percent,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +40,9 @@ const iconMap: { [key: string]: LucideIcon } = {
     Calendar,
     XCircle,
     Star,
+    Eye,
+    MousePointerClick,
+    Percent,
 };
 
 export default function StatCard({

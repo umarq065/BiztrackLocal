@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -7,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -451,7 +451,9 @@ export default function IncomesPage() {
                               </TableCell>
                           )}
                           <TableCell className="font-medium">
-                            {gig.name}
+                            <Link href={`/gigs/${gig.id}`} className="hover:underline">
+                                {gig.name}
+                            </Link>
                           </TableCell>
                           <TableCell>
                             {format(new Date(gig.date), "PPP")}
@@ -516,3 +518,4 @@ export default function IncomesPage() {
   );
 
     
+}
