@@ -46,6 +46,7 @@ import {
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -82,12 +83,13 @@ interface Order {
     gig?: string;
     status: 'Completed' | 'In Progress' | 'Cancelled';
     rating?: number;
+    cancellationReasons?: string[];
 }
 
 const initialOrders: Order[] = [
     { id: 'ORD001', clientUsername: 'olivia.m', date: '2024-05-20', amount: 1999.00, source: 'Comprehensive Web Design & Development for Enterprise', gig: 'Acme Corp Redesign', status: 'Completed', rating: 5 },
     { id: 'ORD002', clientUsername: 'jackson.l', date: '2024-05-21', amount: 399.00, source: 'Consulting', gig: 'Q1 Strategy Session', status: 'Completed', rating: 4.2 },
-    { id: 'ORD003', clientUsername: 'isabella.n', date: '2024-05-22', amount: 299.00, source: 'Logo Design', gig: "Brand Identity for 'Innovate'", status: 'Cancelled' },
+    { id: 'ORD003', clientUsername: 'isabella.n', date: '2024-05-22', amount: 299.00, source: 'Logo Design', gig: "Brand Identity for 'Innovate'", status: 'Cancelled', cancellationReasons: ["Not satisfied with design"] },
     { id: 'ORD004', clientUsername: 'will.k', date: '2024-05-23', amount: 999.00, source: 'Web Design', gig: 'Startup Landing Page', status: 'In Progress' },
     { id: 'ORD005', clientUsername: 'sofia.d', date: '2024-05-24', amount: 499.00, source: 'SEO Services and Digital Marketing Campaigns', gig: 'Monthly SEO Retainer', status: 'Completed', rating: 3.7 },
 ];
@@ -110,9 +112,19 @@ const orderFormSchema = z.object({
   source: z.string().min(1, "Source is required."),
   rating: z.coerce.number().min(0, "Rating must be at least 0").max(5, "Rating cannot be more than 5").optional(),
   isCancelled: z.boolean().default(false),
+  cancellationReasons: z.array(z.string()).optional(),
 });
 
 type OrderFormValues = z.infer<typeof orderFormSchema>;
+
+const cancellationReasonsList = [
+    "Canceled without requirements",
+    "Expectations beyond requirements",
+    "Not satisfied with design",
+    "Not satisfied with animations",
+    "Late delivery",
+    "Unresponsive buyer",
+];
 
 const StarDisplay = ({ rating }: { rating?: number }) => {
     if (rating === undefined) return <span className="text-muted-foreground">N/A</span>;
@@ -196,8 +208,11 @@ export default function OrdersPage() {
             source: "",
             rating: undefined,
             isCancelled: false,
+            cancellationReasons: [],
         }
     });
+
+    const isCancelled = form.watch("isCancelled");
 
     const handleOpenChange = (isOpen: boolean) => {
         if (isOpen) {
@@ -209,6 +224,7 @@ export default function OrdersPage() {
                 source: "",
                 rating: undefined,
                 isCancelled: false,
+                cancellationReasons: [],
             });
         }
         setOpen(isOpen);
@@ -223,6 +239,7 @@ export default function OrdersPage() {
             source: values.source,
             rating: values.rating,
             status: values.isCancelled ? 'Cancelled' : 'Completed',
+            cancellationReasons: values.isCancelled ? values.cancellationReasons : undefined,
         };
         setOrders([newOrder, ...orders]);
         toast({
@@ -462,6 +479,59 @@ export default function OrdersPage() {
                                 </FormItem>
                             )}
                         />
+                        
+                        {isCancelled && (
+                            <FormField
+                                control={form.control}
+                                name="cancellationReasons"
+                                render={() => (
+                                    <FormItem className="rounded-md border p-4">
+                                        <div className="mb-4">
+                                            <FormLabel className="text-base">Reason for Cancellation</FormLabel>
+                                            <FormDescription>
+                                                Select one or more reasons.
+                                            </FormDescription>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {cancellationReasonsList.map((reason) => (
+                                                <FormField
+                                                    key={reason}
+                                                    control={form.control}
+                                                    name="cancellationReasons"
+                                                    render={({ field }) => {
+                                                        return (
+                                                            <FormItem
+                                                                key={reason}
+                                                                className="flex flex-row items-start space-x-3 space-y-0"
+                                                            >
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value?.includes(reason)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            return checked
+                                                                                ? field.onChange([...(field.value || []), reason])
+                                                                                : field.onChange(
+                                                                                    field.value?.filter(
+                                                                                        (value) => value !== reason
+                                                                                    )
+                                                                                )
+                                                                        }}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormLabel className="font-normal">
+                                                                    {reason}
+                                                                </FormLabel>
+                                                            </FormItem>
+                                                        )
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
                         <DialogFooter>
                             <DialogClose asChild>
@@ -590,3 +660,5 @@ export default function OrdersPage() {
     </main>
   );
 }
+
+    
