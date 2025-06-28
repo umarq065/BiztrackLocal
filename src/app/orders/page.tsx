@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -75,16 +74,17 @@ interface Order {
     date: string;
     amount: number;
     source: string;
+    gig?: string;
     status: 'Completed' | 'In Progress' | 'Cancelled';
     rating?: number;
 }
 
 const initialOrders: Order[] = [
-    { id: 'ORD001', clientUsername: 'olivia.m', date: '2024-05-20', amount: 1999.00, source: 'Web Design', status: 'Completed', rating: 5 },
-    { id: 'ORD002', clientUsername: 'jackson.l', date: '2024-05-21', amount: 399.00, source: 'Consulting', status: 'Completed', rating: 4 },
-    { id: 'ORD003', clientUsername: 'isabella.n', date: '2024-05-22', amount: 299.00, source: 'Logo Design', status: 'Cancelled', rating: 1 },
-    { id: 'ORD004', clientUsername: 'will.k', date: '2024-05-23', amount: 999.00, source: 'Web Design', status: 'In Progress' },
-    { id: 'ORD005', clientUsername: 'sofia.d', date: '2024-05-24', amount: 499.00, source: 'SEO Services', status: 'Completed', rating: 5 },
+    { id: 'ORD001', clientUsername: 'olivia.m', date: '2024-05-20', amount: 1999.00, source: 'Web Design', gig: 'Acme Corp Redesign', status: 'Completed', rating: 5 },
+    { id: 'ORD002', clientUsername: 'jackson.l', date: '2024-05-21', amount: 399.00, source: 'Consulting', gig: 'Q1 Strategy Session', status: 'Completed', rating: 4 },
+    { id: 'ORD003', clientUsername: 'isabella.n', date: '2024-05-22', amount: 299.00, source: 'Logo Design', gig: "Brand Identity for 'Innovate'", status: 'Cancelled', rating: 1 },
+    { id: 'ORD004', clientUsername: 'will.k', date: '2024-05-23', amount: 999.00, source: 'Web Design', gig: 'Startup Landing Page', status: 'In Progress' },
+    { id: 'ORD005', clientUsername: 'sofia.d', date: '2024-05-24', amount: 499.00, source: 'SEO Services', gig: 'Monthly SEO Retainer', status: 'Completed', rating: 5 },
 ];
 
 const clients = [
@@ -103,6 +103,7 @@ const orderFormSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
     amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
     source: z.string().min(1, "Please select an income source."),
+    gig: z.string().optional(),
     rating: z.coerce.number().min(1).max(5).optional(),
     isCancelled: z.boolean().default(false),
 });
@@ -139,6 +140,7 @@ export default function OrdersPage() {
             date: new Date(),
             amount: 0,
             source: "",
+            gig: "",
             rating: undefined,
             isCancelled: false,
         },
@@ -151,6 +153,7 @@ export default function OrdersPage() {
             date: format(values.date, "yyyy-MM-dd"),
             amount: values.amount,
             source: values.source,
+            gig: values.gig,
             status: values.isCancelled ? 'Cancelled' : 'In Progress',
             rating: values.rating,
         };
@@ -292,6 +295,19 @@ export default function OrdersPage() {
                                     )}
                                 />
                             </div>
+                            <FormField
+                                control={form.control}
+                                name="gig"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Gig Name (Optional)</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., Acme Corp Redesign" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                              <FormField
                                 control={form.control}
                                 name="rating"
@@ -358,11 +374,12 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Date</TableHead>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Client</TableHead>
-                <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Source</TableHead>
+                <TableHead>Gig</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>
@@ -373,11 +390,12 @@ export default function OrdersPage() {
             <TableBody>
               {orders.map((order) => (
                 <TableRow key={order.id}>
+                  <TableCell>{order.date}</TableCell>
                   <TableCell className="font-medium">{order.id}</TableCell>
                   <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
-                  <TableCell>{order.date}</TableCell>
                   <TableCell>${order.amount.toFixed(2)}</TableCell>
                   <TableCell>{order.source}</TableCell>
+                  <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
                   <TableCell>
                     {order.rating ? <StarDisplay rating={order.rating} /> : <span className="text-muted-foreground">N/A</span>}
                   </TableCell>
