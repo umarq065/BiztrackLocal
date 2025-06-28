@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon, Edit, Trash2 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -71,7 +71,7 @@ const summaryFormSchema = z.object({
 type SummaryFormValues = z.infer<typeof summaryFormSchema>;
 
 function DayWithSummary({ date, summaries, onEdit, onDelete }: { date: Date; summaries: DailySummary[]; onEdit: (summary: DailySummary) => void; onDelete: (summary: DailySummary) => void; }) {
-  const summary = summaries.find(s => isSameDay(new Date(`${s.date}T00:00:00`), date));
+  const summary = summaries.find(s => s.date === format(date, "yyyy-MM-dd"));
 
   if (summary) {
     return (
@@ -126,7 +126,7 @@ export default function DailySummaryPage() {
     if (summary) {
       setEditingSummary(summary);
       form.reset({
-        date: new Date(`${summary.date}T00:00:00`),
+        date: new Date(summary.date.replace(/-/g, '/')),
         content: summary.content,
       });
     } else {
@@ -178,7 +178,7 @@ export default function DailySummaryPage() {
   }
 
   const modifiers = {
-    withSummary: summaries.map(s => new Date(`${s.date}T00:00:00`))
+    withSummary: summaries.map(s => new Date(s.date.replace(/-/g, '/')))
   };
   const modifiersClassNames = {
     withSummary: 'bg-accent/50 rounded-md relative',
@@ -286,7 +286,7 @@ export default function DailySummaryPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the summary for {deletingSummary && format(new Date(`${deletingSummary.date}T00:00:00`), 'PPP')}.
+                    This will permanently delete the summary for {deletingSummary && format(new Date(deletingSummary.date.replace(/-/g, '/')), 'PPP')}.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
