@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -423,7 +424,7 @@ export default function ExpensesPage() {
             <CardHeader>
                 <CardTitle>Total Expenses</CardTitle>
                 <CardDescription>Total for the selected period.</CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
                 <p className="text-4xl font-bold">${totalExpenses.toFixed(2)}</p>
             </CardContent>
