@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -16,8 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
+import { type ChartConfig } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const YearlyPerformanceChart = lazy(() => import('@/components/yearly-stats/yearly-performance-chart').then(m => ({ default: m.YearlyPerformanceChart })));
 
 const yearlyData = {
     "2023": [
@@ -109,35 +111,9 @@ export default function YearlyStatsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {data.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[400px] w-full">
-              <BarChart data={data} accessibilityLayer>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                      dataKey="month"
-                      tickLine={false}
-                      tickMargin={10}
-                      axisLine={false}
-                  />
-                  <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tickFormatter={(value) => `$${value / 1000}k`}
-                  />
-                  <Tooltip
-                      cursor={false}
-                      content={<ChartTooltipContent indicator="dot" />}
-                      />
-                  <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4} />
-                  <Bar dataKey="profit" fill="var(--color-profit)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="flex h-[400px] w-full items-center justify-center">
-              <p className="text-muted-foreground">No data available for {selectedYear}.</p>
-            </div>
-          )}
+          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+            <YearlyPerformanceChart data={data} chartConfig={chartConfig} />
+          </Suspense>
         </CardContent>
       </Card>
     </main>

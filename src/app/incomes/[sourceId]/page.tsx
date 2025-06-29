@@ -34,24 +34,14 @@ import NProgressLink from "@/components/layout/nprogress-link";
 import { Button } from "@/components/ui/button";
 import { initialIncomeSources, type IncomeSource } from "@/lib/data/incomes-data";
 import { format } from "date-fns";
-import {
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
-import {
-  ChartContainer,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+
+import { type ChartConfig } from "@/components/ui/chart";
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+
+const SourcePerformanceChart = lazy(() => import('@/components/incomes/source-performance-chart').then(m => ({ default: m.SourcePerformanceChart })));
 
 const chartConfig = {
   impressions: { label: "Impressions", color: "hsl(var(--chart-1))" },
@@ -63,44 +53,6 @@ const chartConfig = {
   prevMessages: { label: "Prev. Messages", color: "hsl(var(--chart-3))" },
   prevOrders: { label: "Prev. Orders", color: "hsl(var(--chart-4))" },
 } satisfies ChartConfig;
-
-const ChartComponent = ({ data, config, activeMetrics, yAxisLabel, showComparison }: { data: any[], config: ChartConfig, activeMetrics: Record<string, boolean>, yAxisLabel?: string, showComparison: boolean }) => {
-    if (!data || data.length === 0) {
-        return (
-            <div className="flex h-[300px] w-full items-center justify-center">
-                <p className="text-muted-foreground">No data to display chart.</p>
-            </div>
-        );
-    }
-    return (
-        <ChartContainer config={config} className="h-[300px] w-full">
-            <LineChart accessibilityLayer data={data} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => format(new Date(value.replace(/-/g, '/')), "MMM d")}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} label={yAxisLabel} />
-                <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                {activeMetrics.impressions && <Line dataKey="impressions" type="natural" stroke="var(--color-impressions)" strokeWidth={2} dot={false} />}
-                {showComparison && activeMetrics.impressions && <Line dataKey="prevImpressions" type="natural" stroke="var(--color-impressions)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
-                
-                {activeMetrics.clicks && <Line dataKey="clicks" type="natural" stroke="var(--color-clicks)" strokeWidth={2} dot={false} />}
-                {showComparison && activeMetrics.clicks && <Line dataKey="prevClicks" type="natural" stroke="var(--color-clicks)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
-                
-                {activeMetrics.orders && <Line dataKey="orders" type="natural" stroke="var(--color-orders)" strokeWidth={2} dot={false} />}
-                {showComparison && activeMetrics.orders && <Line dataKey="prevOrders" type="natural" stroke="var(--color-orders)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
-                
-                {activeMetrics.messages && <Line dataKey="messages" type="natural" stroke="var(--color-messages)" strokeWidth={2} dot={false} />}
-                {showComparison && activeMetrics.messages && <Line dataKey="prevMessages" type="natural" stroke="var(--color-messages)" strokeWidth={2} dot={false} strokeDasharray="3 3"/>}
-
-            </LineChart>
-        </ChartContainer>
-    );
-}
 
 const getInitialDateRangeForSource = (source: IncomeSource): DateRange => {
     const allDates = [
@@ -405,7 +357,7 @@ export default function SourceAnalyticsPage({
             </CardHeader>
             <CardContent className="pl-2">
                 <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                   <ChartComponent 
+                   <SourcePerformanceChart 
                      data={chartDataForRender} 
                      config={chartConfig}
                      activeMetrics={activeMetrics}
