@@ -267,8 +267,7 @@ export default function CompetitorsPage() {
     }
 
     const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: format(new Date(0, i), 'MMMM') }));
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 10 }, (_, i) => String(currentYear - i));
+    const years = Array.from({ length: 15 }, (_, i) => String(2021 + i));
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
