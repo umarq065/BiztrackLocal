@@ -110,4 +110,9 @@
   }
 }
 
+@layer components {
+    .summary-calendar {
+        grid-template-rows: auto repeat(6,minmax(10rem,auto));
+    }
+}
     
