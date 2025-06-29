@@ -508,10 +508,10 @@ export default function CompetitorsPage() {
                                 captionLayout="dropdown-buttons"
                                 selected={field.value}
                                 onSelect={field.onChange}
-                                fromYear={2000}
-                                toYear={new Date().getFullYear()}
+                                fromYear={2010}
+                                toYear={2035}
                                 disabled={(date) =>
-                                    date > new Date() || date < new Date("2000-01-01")
+                                    date > new Date("2035-12-31") || date < new Date("2010-01-01")
                                 }
                                 initialFocus
                                 />
