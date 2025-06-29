@@ -40,8 +40,12 @@ const navItems = [
   { href: "/daily-summary", icon: BookText, label: "Daily Summary" },
   { href: "/business-notes", icon: Notebook, label: "Business Notes" },
   { href: "/competitors", icon: Swords, label: "Competitors" },
-  { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
   { href: "/yearly-stats", icon: Calendar, label: "Yearly Stats" },
+];
+
+const settingsItems = [
+    { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
+    { href: "#", icon: Settings, label: "Settings" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -49,15 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="p-4 flex items-center justify-between">
+      <Sidebar>
+        <SidebarHeader>
           <div className="flex items-center gap-3">
-            <LayoutDashboard className="size-8 text-primary" />
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <LayoutDashboard className="size-7 text-primary" />
+            <div className="flex flex-col group-data-[collapsed]:hidden">
               <h2 className="text-lg font-semibold font-headline">BizTrack Pro</h2>
             </div>
           </div>
-           <SidebarTrigger className="hidden md:flex" />
         </SidebarHeader>
 
         <SidebarContent>
@@ -67,13 +70,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
-                  tooltip={{
-                    children: item.label,
-                  }}
+                  tooltip={item.label}
                 >
                   <NProgressLink href={item.href}>
                     <item.icon />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    <span>{item.label}</span>
                   </NProgressLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -81,31 +82,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="mt-auto">
+          <SidebarSeparator />
           <SidebarMenu>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={{children: 'Settings'}}>
-                  <NProgressLink href="#">
-                    <Settings />
-                    <span className="group-data-[collapsible=icon]:hidden">Settings</span>
-                  </NProgressLink>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
+            {settingsItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
+                        <NProgressLink href={item.href}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                        </NProgressLink>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            ))}
             <SidebarMenuItem>
               <ThemeToggle />
             </SidebarMenuItem>
+            <SidebarSeparator />
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                    <NProgressLink href="#">
+                         <Avatar className="size-7">
+                            <AvatarImage src="https://placehold.co/100x100.png" alt="@johndoe" data-ai-hint="male avatar" />
+                            <AvatarFallback>JD</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                            <span className="font-semibold text-sm">John Doe</span>
+                            <span className="text-xs text-muted-foreground">john.doe@example.com</span>
+                        </div>
+                    </NProgressLink>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
-          <SidebarSeparator className="my-2" />
-           <div className="flex items-center gap-3 px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="https://placehold.co/100x100.png" alt="@shadcn" data-ai-hint="male avatar" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                  <span className="font-semibold text-sm">John Doe</span>
-                  <span className="text-xs text-muted-foreground">john.doe@example.com</span>
-              </div>
-            </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
