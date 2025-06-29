@@ -10,7 +10,7 @@ import {
     isSameMonth, 
     format 
 } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import type { BusinessNote } from '@/app/business-notes/page';
 
@@ -60,7 +60,7 @@ export default function CalendarView({ currentDate, notes, onDateClick, onNoteCl
             ))}
             
             {daysInMonth.map((day) => {
-                const zonedDay = utcToZonedTime(day, 'UTC');
+                const zonedDay = toZonedTime(day, 'UTC');
                 const dayKey = format(zonedDay, 'yyyy-MM-dd', { timeZone: 'UTC' });
                 const dayNotes = notesByDate.get(dayKey) || [];
                 const isCurrentMonth = isSameMonth(day, currentDate);
