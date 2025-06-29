@@ -505,6 +505,7 @@ export default function CompetitorsPage() {
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                 mode="single"
+                                captionLayout="dropdown-buttons"
                                 selected={field.value}
                                 onSelect={field.onChange}
                                 fromYear={2000}
