@@ -1,18 +1,20 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Edit, Trash2 } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -49,7 +51,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface DailySummary {
   id: number;
@@ -72,55 +73,16 @@ type SummaryFormValues = z.infer<typeof summaryFormSchema>;
 
 // Helper function to format a Date object to a 'yyyy-MM-dd' string consistently
 const toYyyyMmDd = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().split('T')[0];
 };
 
 // Helper function to parse a 'yyyy-MM-dd' string into a local Date object safely
 const fromYyyyMmDd = (dateString: string): Date => {
   const [year, month, day] = dateString.split('-').map(Number);
+  // Creates a date in the local timezone
   return new Date(year, month - 1, day);
 };
-
-
-function DayWithSummary({ date, summaries, onEdit, onDelete }: { date: Date; summaries: DailySummary[]; onEdit: (summary: DailySummary) => void; onDelete: (summary: DailySummary) => void; }) {
-  const formattedDate = toYyyyMmDd(date);
-  const summary = summaries.find(s => s.date === formattedDate);
-  
-  if (summary) {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <div className="relative flex h-full w-full flex-col items-center justify-center p-1 cursor-pointer">
-            <span className="font-semibold">{date.getDate()}</span>
-            <p className="mt-1 w-full truncate px-1 text-center text-xs text-muted-foreground">{summary.content}</p>
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium leading-none">{format(date, "PPPP")}</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">{summary.content}</p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => onEdit(summary)}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => onDelete(summary)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  }
-
-  return <div className="flex h-full w-full items-center justify-center">{date.getDate()}</div>;
-}
-
 
 export default function DailySummaryPage() {
   const [summaries, setSummaries] = useState<DailySummary[]>(initialSummaries);
@@ -128,11 +90,6 @@ export default function DailySummaryPage() {
   const [editingSummary, setEditingSummary] = useState<DailySummary | null>(null);
   const [deletingSummary, setDeletingSummary] = useState<DailySummary | null>(null);
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const form = useForm<SummaryFormValues>({
     resolver: zodResolver(summaryFormSchema),
@@ -175,7 +132,7 @@ export default function DailySummaryPage() {
     };
 
     if (editingSummary) {
-      setSummaries(summaries.map(s => s.id === editingSummary.id ? newSummary : s));
+      setSummaries(summaries.map(s => s.id === editingSummary.id ? newSummary : s).sort((a,b) => fromYyyyMmDd(b.date).getTime() - fromYyyyMmDd(a.date).getTime()));
       toast({ title: "Summary Updated" });
     } else {
       const updatedSummaries = [...summaries, newSummary];
@@ -195,23 +152,6 @@ export default function DailySummaryPage() {
     setDeletingSummary(null);
   }
 
-  const modifiers = {
-    withSummary: summaries.map(s => fromYyyyMmDd(s.date))
-  };
-
-  const modifiersClassNames = {
-    withSummary: 'bg-accent/50 rounded-md relative',
-  };
-
-  const DayContent = (props: any) => (
-      <DayWithSummary 
-        date={props.date} 
-        summaries={summaries} 
-        onEdit={handleOpenDialog}
-        onDelete={setDeletingSummary}
-      />
-    );
-
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
@@ -223,23 +163,30 @@ export default function DailySummaryPage() {
         </div>
       </div>
       
-      <Card>
-        <CardContent className="p-2 md:p-6">
-          {!isClient ? (
-            <Skeleton className="h-[432px] w-full" />
-          ) : (
-            <Calendar
-              mode="single"
-              className="w-full rounded-md summary-calendar"
-              modifiers={modifiers}
-              modifiersClassNames={modifiersClassNames}
-              components={{
-                DayContent,
-              }}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-6">
+        {summaries.length > 0 ? (
+            summaries.map(summary => (
+                <Card key={summary.id}>
+                    <CardHeader>
+                        <CardTitle>{format(fromYyyyMmDd(summary.date), 'PPPP')}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-muted-foreground whitespace-pre-line">{summary.content}</p>
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => handleOpenDialog(summary)}>Edit</Button>
+                        <Button variant="destructive" onClick={() => setDeletingSummary(summary)}>Delete</Button>
+                    </CardFooter>
+                </Card>
+            ))
+        ) : (
+            <Card>
+                <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">No summaries yet. Add one to get started!</p>
+                </CardContent>
+            </Card>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

@@ -110,32 +110,4 @@
   }
 }
 
-@layer utilities {
-  .summary-calendar .rdp-month {
-    width: 100%;
-  }
-  .summary-calendar .rdp-table {
-    width: 100%;
-    table-layout: fixed;
-  }
-  .summary-calendar .rdp-row {
-    height: 10rem;
-  }
-  .summary-calendar .rdp-cell {
-    vertical-align: top;
-  }
-  .summary-calendar .rdp-day {
-    height: 100%;
-    width: 100%;
-    flex-direction: column;
-    justify-content: flex-start;
-    padding-top: 0.5rem;
-    border-radius: 0.375rem;
-  }
-  .summary-calendar .rdp-day_today:not(.rdp-day_outside) {
-    font-weight: bold;
-    border: 1px solid hsl(var(--primary));
-  }
-}
-
     
