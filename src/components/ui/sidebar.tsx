@@ -106,9 +106,10 @@ const Sidebar = React.forwardRef<
           className="w-72 bg-sidebar p-0 text-sidebar-foreground"
         >
           <div
-            className={cn("flex h-full flex-col", className)}
+            className={cn("flex h-full flex-col group", className)}
             {...props}
             ref={ref}
+            data-collapsed={isCollapsed}
           />
         </SheetContent>
       </Sheet>
@@ -119,7 +120,7 @@ const Sidebar = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "z-10 hidden shrink-0 border-r bg-sidebar text-sidebar-foreground transition-[width] md:flex md:flex-col",
+        "group z-10 hidden shrink-0 border-r bg-sidebar text-sidebar-foreground transition-[width] md:flex md:flex-col",
         isCollapsed ? "w-14" : "w-72",
         className
       )}
@@ -251,7 +252,7 @@ const SidebarMenuItem = React.forwardRef<
 SidebarMenuItem.displayName = "SidebarMenuItem"
 
 const sidebarMenuButtonVariants = cva(
-  "flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-data-[collapsed]:justify-center group-data-[collapsed]:p-0 group-data-[collapsed]:data-[has-children=true]:hidden [&>svg]:size-4 [&>svg]:shrink-0",
+  "flex w-full items-center gap-3 overflow-hidden whitespace-nowrap rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:p-0 group-data-[collapsed=true]:data-[has-children=true]:hidden [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
       isActive: {

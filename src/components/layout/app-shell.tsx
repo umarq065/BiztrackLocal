@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarHeader>
             <div className="flex items-center gap-3">
               <LayoutDashboard className="size-7 text-primary" />
-              <div className="flex flex-col group-data-[collapsed]:hidden">
+              <div className="flex flex-col group-data-[collapsed=true]:hidden">
                 <h2 className="text-lg font-semibold font-headline">BizTrack Pro</h2>
               </div>
             </div>
@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     <NProgressLink href={item.href}>
                       <item.icon />
-                      <span>{item.label}</span>
+                      <span className="group-data-[collapsed=true]:hidden">{item.label}</span>
                     </NProgressLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
                           <NProgressLink href={item.href}>
                               <item.icon />
-                              <span>{item.label}</span>
+                              <span className="group-data-[collapsed=true]:hidden">{item.label}</span>
                           </NProgressLink>
                       </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -108,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                               <AvatarImage src="https://placehold.co/100x100.png" alt="@johndoe" data-ai-hint="male avatar" />
                               <AvatarFallback>JD</AvatarFallback>
                           </Avatar>
-                          <div className="flex flex-col">
+                          <div className="flex flex-col group-data-[collapsed=true]:hidden">
                               <span className="font-semibold text-sm">John Doe</span>
                               <span className="text-xs text-muted-foreground">john.doe@example.com</span>
                           </div>
