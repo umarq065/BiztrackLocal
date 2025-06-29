@@ -4,8 +4,8 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, addMonths, subMonths, startOfMonth } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addMonths, subMonths } from "date-fns";
+import { ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -47,6 +47,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import CalendarView from "@/components/business-notes/calendar-view";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 export interface BusinessNote {
   id: number;
@@ -68,6 +74,9 @@ const initialNotesData: { id: number; date: string; title: string; content: stri
 ];
 
 const noteFormSchema = z.object({
+  date: z.date({
+    required_error: "A date for the note is required.",
+  }),
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   content: z.string().min(3, { message: "Note content must be at least 3 characters." }),
 });
@@ -92,6 +101,7 @@ export default function BusinessNotesPage() {
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
     defaultValues: {
+      date: new Date(),
       title: "",
       content: "",
     }
@@ -100,28 +110,37 @@ export default function BusinessNotesPage() {
   const handleDateClick = (date: Date) => {
     setEditingNote(null);
     setSelectedDate(date);
-    form.reset({ title: "", content: "" });
+    form.reset({ date, title: "", content: "" });
     setDialogOpen(true);
   };
   
   const handleNoteClick = (note: BusinessNote) => {
     setEditingNote(note);
     setSelectedDate(note.date);
-    form.reset({ title: note.title, content: note.content });
+    form.reset({ date: note.date, title: note.title, content: note.content });
     setDialogOpen(true);
   }
 
-  const onSubmit = (values: NoteFormValues) => {
-    if (!selectedDate) return;
+  const handleOpenNewNoteDialog = () => {
+    setEditingNote(null);
+    setSelectedDate(null);
+    form.reset({
+      date: new Date(),
+      title: "",
+      content: "",
+    });
+    setDialogOpen(true);
+  };
 
+  const onSubmit = (values: NoteFormValues) => {
     if (editingNote) {
-      const updatedNote = { ...editingNote, title: values.title, content: values.content };
+      const updatedNote = { ...editingNote, ...values };
       setNotes(notes.map(n => n.id === editingNote.id ? updatedNote : n));
       toast({ title: "Note Updated" });
     } else {
       const newNote: BusinessNote = {
         id: Date.now(),
-        date: selectedDate,
+        date: values.date,
         title: values.title,
         content: values.content,
       };
@@ -160,9 +179,9 @@ export default function BusinessNotesPage() {
   }
 
   const dialogTitle = useMemo(() => {
-    if (editingNote) return `Edit Note for ${format(editingNote.date, 'PPP')}`;
+    if (editingNote) return `Edit Note`;
     if (selectedDate) return `Add Note for ${format(selectedDate, 'PPP')}`;
-    return "Note";
+    return "Add New Note";
   }, [editingNote, selectedDate]);
 
   const sortedNotes = useMemo(() => {
@@ -188,7 +207,7 @@ export default function BusinessNotesPage() {
         </div>
         <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleToday}>Today</Button>
-            <Button onClick={() => handleDateClick(new Date())}>Add New Note</Button>
+            <Button onClick={handleOpenNewNoteDialog}>Add New Note</Button>
         </div>
       </header>
       
@@ -242,6 +261,45 @@ export default function BusinessNotesPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="title"
