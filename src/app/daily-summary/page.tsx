@@ -10,6 +10,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -52,6 +58,14 @@ const initialSummaries: DailySummary[] = [
     { id: 3, date: new Date(2025, 5, 12), content: "Client meeting follow-up" },
     { id: 4, date: new Date(2025, 5, 20), content: "Finalize Q3 marketing plan. It needs to be perfect." },
     { id: 5, date: new Date(2025, 5, 20), content: "Review developer applications" },
+    { id: 6, date: new Date(2025, 6, 1), content: "Start of Q3. Review goals and set new targets." },
+    { id: 7, date: new Date(2025, 6, 4), content: "Independence Day holiday prep." },
+    { id: 8, date: new Date(2025, 6, 10), content: "Onboard new freelance writer." },
+    { id: 9, date: new Date(2025, 6, 15), content: "Mid-month performance check-in." },
+    { id: 10, date: new Date(2025, 6, 22), content: "Plan social media content for August." },
+    { id: 11, date: new Date(2025, 6, 28), content: "Finalize invoice for Project X." },
+    { id: 12, date: new Date(2025, 4, 18), content: "Prepare for upcoming presentation." },
+
 ];
 
 const summaryFormSchema = z.object({
@@ -67,6 +81,7 @@ export default function DailySummaryPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingSummary, setEditingSummary] = useState<DailySummary | null>(null);
   const [deletingSummary, setDeletingSummary] = useState<DailySummary | null>(null);
+  const [visibleSummariesCount, setVisibleSummariesCount] = useState(10);
   const { toast } = useToast();
 
   const form = useForm<SummaryFormValues>({
@@ -110,12 +125,16 @@ export default function DailySummaryPage() {
   };
   
   const handleDelete = () => {
-    if (!editingSummary) return;
-    setSummaries(summaries.filter(s => s.id !== editingSummary.id));
+    if (!deletingSummary) return;
+
+    const summaryToDelete = deletingSummary;
+    setSummaries(summaries.filter(s => s.id !== summaryToDelete.id));
     toast({ title: "Summary Deleted" });
     setDeletingSummary(null);
-    setDialogOpen(false);
-    setEditingSummary(null);
+    if(editingSummary && editingSummary.id === summaryToDelete.id) {
+        setDialogOpen(false);
+        setEditingSummary(null);
+    }
   }
 
   const handlePrevMonth = () => {
@@ -136,15 +155,18 @@ export default function DailySummaryPage() {
     return "Summary";
   }, [editingSummary, selectedDate]);
 
+  const sortedSummaries = useMemo(() => {
+    return [...summaries].sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [summaries]);
+
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b px-4 py-3">
+      <header className="flex flex-col items-center justify-between gap-4 border-b px-4 py-3 sm:flex-row">
         <div className="flex items-center gap-4">
             <h1 className="font-headline text-xl font-semibold md:text-2xl">
-                Calendar
+                Daily Summary
             </h1>
-            <Button variant="outline" onClick={handleToday}>Today</Button>
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
                     <ChevronLeft className="h-5 w-5" />
@@ -155,16 +177,47 @@ export default function DailySummaryPage() {
             </div>
             <h2 className="text-xl font-semibold">{format(currentDate, "MMMM yyyy")}</h2>
         </div>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleToday}>Today</Button>
+        </div>
       </header>
       
-      <main className="flex flex-1 overflow-auto">
-        <CalendarView 
-            currentDate={currentDate}
-            summaries={summaries}
-            onDateClick={handleDateClick}
-            onSummaryClick={handleSummaryClick}
-        />
-      </main>
+      <div className="flex-1 overflow-y-auto">
+        <main>
+            <CalendarView 
+                currentDate={currentDate}
+                summaries={summaries}
+                onDateClick={handleDateClick}
+                onSummaryClick={handleSummaryClick}
+            />
+        </main>
+        <section className="px-4 py-8 md:px-8">
+          <h2 className="text-2xl font-semibold mb-4">Recent Summaries</h2>
+          <div className="space-y-4">
+            {sortedSummaries.slice(0, visibleSummariesCount).map((summary) => (
+              <Card key={summary.id}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">{format(summary.date, 'PPP')}</CardTitle>
+                   <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleSummaryClick(summary)}>Edit</Button>
+                      <Button variant="destructive" size="sm" onClick={() => setDeletingSummary(summary)}>Delete</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{summary.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {sortedSummaries.length > visibleSummariesCount && (
+            <div className="mt-6 flex justify-center">
+              <Button onClick={() => setVisibleSummariesCount(prev => prev + 10)}>
+                Load More
+              </Button>
+            </div>
+          )}
+        </section>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
