@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { MoreHorizontal, CalendarIcon, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, CalendarIcon, Link as LinkIcon, BarChart } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -64,9 +64,24 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface CompetitorMonthlyData {
+  month: number;
+  year: number;
+  orders: number;
+  reviews: number;
+}
 
 interface Competitor {
   id: string;
@@ -77,8 +92,10 @@ interface Competitor {
   pricingMid?: number;
   pricingTop?: number;
   reviewsCount?: number;
+  totalOrders?: number;
   workingSince?: Date;
   notes?: string;
+  monthlyData?: CompetitorMonthlyData[];
 }
 
 const competitorFormSchema = z.object({
@@ -95,11 +112,21 @@ const competitorFormSchema = z.object({
 
 type CompetitorFormValues = z.infer<typeof competitorFormSchema>;
 
+const competitorDataFormSchema = z.object({
+  month: z.string().min(1, { message: "Month is required." }),
+  year: z.string().min(1, { message: "Year is required." }),
+  orders: z.coerce.number().int().min(0, "Orders must be a non-negative number."),
+  reviews: z.coerce.number().int().min(0, "Reviews must be a non-negative number."),
+});
+
+type CompetitorDataFormValues = z.infer<typeof competitorDataFormSchema>;
+
+
 const initialCompetitors: Competitor[] = [
-    { id: "1", name: "Creative Solutions Inc.", username: "creativeinc", profileLink: "https://example.com", pricingStart: 500, pricingMid: 1500, pricingTop: 5000, reviewsCount: 250, workingSince: new Date("2018-01-01") },
-    { id: "2", name: "Digital Masters Co.", username: "digitalmasters", profileLink: "https://example.com", pricingStart: 300, pricingMid: 1000, pricingTop: 3000, reviewsCount: 180, workingSince: new Date("2019-06-15") },
-    { id: "3", name: "Innovate Web Agency", username: "innovateweb", profileLink: "https://example.com", pricingStart: 800, pricingMid: 2500, pricingTop: 8000, reviewsCount: 400, workingSince: new Date("2017-03-20") },
-    { id: "4", name: "Pixel Perfect Freelancer", username: "pixelperfect", profileLink: "https://example.com", pricingStart: 100, pricingMid: 500, pricingTop: 1500, reviewsCount: 95, workingSince: new Date("2020-11-01") },
+    { id: "1", name: "Creative Solutions Inc.", username: "creativeinc", profileLink: "https://example.com", pricingStart: 500, pricingMid: 1500, pricingTop: 5000, reviewsCount: 250, totalOrders: 300, workingSince: new Date("2018-01-01"), monthlyData: [] },
+    { id: "2", name: "Digital Masters Co.", username: "digitalmasters", profileLink: "https://example.com", pricingStart: 300, pricingMid: 1000, pricingTop: 3000, reviewsCount: 180, totalOrders: 220, workingSince: new Date("2019-06-15"), monthlyData: [] },
+    { id: "3", name: "Innovate Web Agency", username: "innovateweb", profileLink: "https://example.com", pricingStart: 800, pricingMid: 2500, pricingTop: 8000, reviewsCount: 400, totalOrders: 500, workingSince: new Date("2017-03-20"), monthlyData: [] },
+    { id: "4", name: "Pixel Perfect Freelancer", username: "pixelperfect", profileLink: "https://example.com", pricingStart: 100, pricingMid: 500, pricingTop: 1500, reviewsCount: 95, totalOrders: 110, workingSince: new Date("2020-11-01"), monthlyData: [] },
 ];
 
 
@@ -108,6 +135,8 @@ export default function CompetitorsPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingCompetitor, setEditingCompetitor] = useState<Competitor | null>(null);
     const [deletingCompetitor, setDeletingCompetitor] = useState<Competitor | null>(null);
+    const [addDataDialogOpen, setAddDataDialogOpen] = useState(false);
+    const [updatingCompetitor, setUpdatingCompetitor] = useState<Competitor | null>(null);
     const { toast } = useToast();
 
     const form = useForm<CompetitorFormValues>({
@@ -122,6 +151,16 @@ export default function CompetitorsPage() {
             reviewsCount: undefined,
             workingSince: undefined,
             notes: "",
+        },
+    });
+    
+    const addDataForm = useForm<CompetitorDataFormValues>({
+        resolver: zodResolver(competitorDataFormSchema),
+        defaultValues: {
+            month: String(new Date().getMonth() + 1),
+            year: String(new Date().getFullYear()),
+            orders: 0,
+            reviews: 0,
         },
     });
 
@@ -152,9 +191,22 @@ export default function CompetitorsPage() {
         setDialogOpen(true);
     }
     
+    const handleOpenDataDialog = (competitor: Competitor) => {
+        setUpdatingCompetitor(competitor);
+        addDataForm.reset({
+            month: String(new Date().getMonth() + 1),
+            year: String(new Date().getFullYear()),
+            orders: 0,
+            reviews: 0,
+        });
+        setAddDataDialogOpen(true);
+    };
+
     const onSubmit = (values: CompetitorFormValues) => {
         const competitorData: Competitor = {
             id: editingCompetitor ? editingCompetitor.id : `comp-${Date.now()}`,
+            totalOrders: editingCompetitor ? editingCompetitor.totalOrders : 0,
+            monthlyData: editingCompetitor ? editingCompetitor.monthlyData : [],
             ...values,
         };
 
@@ -170,6 +222,35 @@ export default function CompetitorsPage() {
         setEditingCompetitor(null);
     }
 
+    const onSubmitData = (values: CompetitorDataFormValues) => {
+        if (!updatingCompetitor) return;
+        
+        const monthlyData: CompetitorMonthlyData = {
+            month: parseInt(values.month, 10),
+            year: parseInt(values.year, 10),
+            orders: values.orders,
+            reviews: values.reviews,
+        };
+
+        setCompetitors(prev => 
+            prev.map(c => {
+                if (c.id === updatingCompetitor.id) {
+                    return {
+                        ...c,
+                        reviewsCount: (c.reviewsCount || 0) + values.reviews,
+                        totalOrders: (c.totalOrders || 0) + values.orders,
+                        monthlyData: [...(c.monthlyData || []), monthlyData],
+                    };
+                }
+                return c;
+            })
+        );
+        
+        toast({ title: "Data Added", description: `New monthly data has been added for ${updatingCompetitor.name}.` });
+        setAddDataDialogOpen(false);
+        setUpdatingCompetitor(null);
+    };
+
     const handleDelete = () => {
         if (!deletingCompetitor) return;
         setCompetitors(competitors.filter(c => c.id !== deletingCompetitor.id));
@@ -181,6 +262,10 @@ export default function CompetitorsPage() {
         if (value === undefined || value === null) return <span className="text-muted-foreground">N/A</span>;
         return `$${value.toLocaleString()}`;
     }
+
+    const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: format(new Date(0, i), 'MMMM') }));
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 10 }, (_, i) => String(currentYear - i));
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -206,6 +291,7 @@ export default function CompetitorsPage() {
                 <TableHead>Competitor</TableHead>
                 <TableHead>Pricing Tiers (S/M/T)</TableHead>
                 <TableHead>Reviews</TableHead>
+                <TableHead>Total Orders</TableHead>
                 <TableHead>Working Since</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -230,21 +316,37 @@ export default function CompetitorsPage() {
                     {formatCurrency(competitor.pricingStart)} / {formatCurrency(competitor.pricingMid)} / {formatCurrency(competitor.pricingTop)}
                   </TableCell>
                   <TableCell>{competitor.reviewsCount?.toLocaleString() ?? <span className="text-muted-foreground">N/A</span>}</TableCell>
+                  <TableCell>{competitor.totalOrders?.toLocaleString() ?? <span className="text-muted-foreground">N/A</span>}</TableCell>
                    <TableCell>{competitor.workingSince ? format(competitor.workingSince, "PPP") : <span className="text-muted-foreground">N/A</span>}</TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleOpenDialog(competitor)}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDeletingCompetitor(competitor)} className="text-destructive">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex justify-end items-center gap-1">
+                      <TooltipProvider>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" onClick={() => handleOpenDataDialog(competitor)}>
+                                      <BarChart className="h-4 w-4" />
+                                      <span className="sr-only">Add Data</span>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                  <p>Add monthly data</p>
+                              </TooltipContent>
+                          </Tooltip>
+                      </TooltipProvider>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleOpenDialog(competitor)}>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setDeletingCompetitor(competitor)} className="text-destructive">Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -419,6 +521,97 @@ export default function CompetitorsPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={addDataDialogOpen} onOpenChange={setAddDataDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Add Monthly Data for {updatingCompetitor?.name}</DialogTitle>
+                <DialogDescription>
+                    Enter the performance data for a specific month.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...addDataForm}>
+                <form onSubmit={addDataForm.handleSubmit(onSubmitData)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={addDataForm.control}
+                            name="month"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Month</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select month" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={addDataForm.control}
+                            name="year"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Year</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select year" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={addDataForm.control}
+                            name="orders"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>No. of Orders</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 50" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={addDataForm.control}
+                            name="reviews"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>No. of Reviews</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 10" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Add Data</Button>
+                    </DialogFooter>
+                </form>
+            </Form>
         </DialogContent>
       </Dialog>
       
