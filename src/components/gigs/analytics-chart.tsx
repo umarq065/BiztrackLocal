@@ -95,12 +95,11 @@ export default function GigAnalyticsChart({ data, activeMetrics, showComparison 
           axisLine={false}
           tickMargin={8}
           tickFormatter={(value) => {
-            const date = new Date(value);
-            // add a day to account for timezone issues with date parsing
-            const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
-            return adjustedDate.toLocaleDateString("en-US", {
+            const date = new Date(value.replace(/-/g, "/"));
+            return date.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
+              timeZone: "UTC",
             });
           }}
         />

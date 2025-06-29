@@ -177,7 +177,7 @@ export default function GigAnalyticsPage({ params }: { params: { gigId: string }
     const filterDataByPeriod = (dataToFilter: typeof gigData.analyticsData, periodFrom?: Date, periodTo?: Date) => {
         if (!periodFrom || !periodTo) return [];
         return dataToFilter.filter(item => {
-            const itemDate = new Date(item.date);
+            const itemDate = new Date(item.date.replace(/-/g, "/"));
             if (itemDate < periodFrom) return false;
             const toDateEnd = new Date(periodTo);
             toDateEnd.setHours(23, 59, 59, 999);
