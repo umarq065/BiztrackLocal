@@ -119,7 +119,7 @@ export default function ClientDetailsPage({ params }: { params: { clientId: stri
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
             <Avatar className="h-20 w-20 border">
-            <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
+            <AvatarImage src={client.avatarUrl || `https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
             <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>

@@ -53,6 +53,7 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded, children }:
             username: "",
             name: "",
             email: "",
+            avatarUrl: "",
             source: "",
             socialLinks: [],
             notes: "",
@@ -70,6 +71,7 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded, children }:
         const newClient: Client = {
             id: `client-${Date.now()}`,
             ...values,
+            avatarUrl: values.avatarUrl || undefined,
             tags: values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
             clientType: 'New',
             clientSince: new Date().toISOString().split('T')[0],
@@ -136,6 +138,19 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded, children }:
                                 <FormLabel>Email (Optional)</FormLabel>
                                 <FormControl>
                                     <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="avatarUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Avatar URL (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input type="url" placeholder="https://example.com/avatar.png" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

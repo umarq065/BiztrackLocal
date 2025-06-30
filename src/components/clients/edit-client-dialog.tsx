@@ -60,6 +60,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
                 username: client.username,
                 name: client.name || "",
                 email: client.email || "",
+                avatarUrl: client.avatarUrl || "",
                 source: client.source,
                 socialLinks: client.socialLinks || [],
                 notes: client.notes || "",
@@ -78,6 +79,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
         const updatedClient: Client = {
             ...client,
             ...values,
+            avatarUrl: values.avatarUrl || undefined,
             tags: values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         };
         onClientUpdated(updatedClient);
@@ -140,6 +142,19 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
                                 <FormLabel>Email (Optional)</FormLabel>
                                 <FormControl>
                                     <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="avatarUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Avatar URL (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input type="url" placeholder="https://example.com/avatar.png" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

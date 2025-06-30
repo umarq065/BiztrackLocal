@@ -98,7 +98,7 @@ export function ClientsTable({ clients, requestSort, getSortIndicator, onEdit }:
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-10 w-10">
-                                                <AvatarImage src={`https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
+                                                <AvatarImage src={client.avatarUrl || `https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
                                                 <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
                                             </Avatar>
                                             <div>
