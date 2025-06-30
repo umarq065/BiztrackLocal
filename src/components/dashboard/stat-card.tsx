@@ -71,14 +71,22 @@ export default function StatCard({
   const isPositive = invertChangeColor ? changeType === "decrease" : changeType === "increase";
 
   return (
-    <Card className={cn("relative overflow-hidden group", className)}>
+    <Card
+      className={cn(
+        "relative overflow-hidden group transition-all duration-300 hover:shadow-[0_0_20px_var(--glow-color)]",
+        className
+      )}
+      style={color ? { '--glow-color': color } as React.CSSProperties : undefined}
+    >
       <div className="relative z-10">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="text-2xl font-bold transition-all duration-300 group-hover:text-shadow-[0_0_10px_var(--glow-color)]">
+            {value}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             <div className="flex items-center">
               {change && (
