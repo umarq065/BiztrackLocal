@@ -96,7 +96,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 
 export default function RevenueChart({ data, previousData, dailyTarget }: RevenueChartProps) {
-  const [showComparison, setShowComparison] = useState(false);
+  const [showComparison, setShowComparison] = useState(true);
   const [showTarget, setShowTarget] = useState(true);
   
   const combinedData = useMemo(() => {
@@ -175,28 +175,12 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     <stop offset="95%" stopColor="var(--color-previousRevenue)" stopOpacity={0.05} />
                 </linearGradient>
             </defs>
-            <Area
-                dataKey="revenue"
-                type="natural"
-                fill="url(#fillRevenue)"
-                fillOpacity={1}
-                strokeWidth={0}
-            />
-            <Line
-              dataKey="revenue"
-              type="natural"
-              stroke="var(--color-revenue)"
-              strokeWidth={2}
-              dot={<CustomDot />}
-              activeDot={{ r: 6 }}
-            />
             {showComparison && (
                 <>
                     <Area
                         dataKey="previousRevenue"
                         type="natural"
                         fill="url(#fillPreviousRevenue)"
-                        fillOpacity={1}
                         strokeWidth={0}
                     />
                     <Line
@@ -209,6 +193,20 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     />
                 </>
             )}
+            <Area
+                dataKey="revenue"
+                type="natural"
+                fill="url(#fillRevenue)"
+                strokeWidth={0}
+            />
+            <Line
+              dataKey="revenue"
+              type="natural"
+              stroke="var(--color-revenue)"
+              strokeWidth={2}
+              dot={<CustomDot />}
+              activeDot={{ r: 6 }}
+            />
             {showTarget && dailyTarget !== undefined && (
                 <Line
                     dataKey="target"
