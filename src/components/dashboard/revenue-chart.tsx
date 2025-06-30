@@ -170,27 +170,16 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1} />
                 </linearGradient>
-                 <linearGradient id="fillPreviousRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-previousRevenue)" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="var(--color-previousRevenue)" stopOpacity={0.05} />
-                </linearGradient>
             </defs>
-            {/* Area Fills */}
-            {showComparison && (
-              <Area
-                dataKey="previousRevenue"
-                type="natural"
-                fill="url(#fillPreviousRevenue)"
-                strokeWidth={0}
-              />
-            )}
             <Area
               dataKey="revenue"
               type="natural"
               fill="url(#fillRevenue)"
-              strokeWidth={0}
+              stroke="var(--color-revenue)"
+              strokeWidth={2}
+              dot={<CustomDot />}
+              activeDot={{ r: 6 }}
             />
-            {/* Lines on Top */}
             {showComparison && (
               <Line
                 dataKey="previousRevenue"
@@ -201,14 +190,6 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                 dot={false}
               />
             )}
-            <Line
-              dataKey="revenue"
-              type="natural"
-              stroke="var(--color-revenue)"
-              strokeWidth={2}
-              dot={<CustomDot />}
-              activeDot={{ r: 6 }}
-            />
             {showTarget && dailyTarget !== undefined && (
               <Line
                 dataKey="target"
