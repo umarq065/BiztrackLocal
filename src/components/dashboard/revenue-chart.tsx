@@ -178,16 +178,15 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     <stop offset="95%" stopColor="var(--color-previousRevenue)" stopOpacity={0.1} />
                 </linearGradient>
             </defs>
+
+            {/* Render Area fills first (in the background) */}
             {showComparison && (
                 <Area
                     dataKey="previousRevenue"
                     type="natural"
                     fill="url(#fillPreviousRevenue)"
                     fillOpacity={0.4}
-                    stroke="var(--color-previousRevenue)"
-                    strokeWidth={2}
-                    strokeDasharray="3 3"
-                    dot={false}
+                    strokeWidth={0}
                 />
             )}
             <Area
@@ -195,6 +194,23 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
               type="natural"
               fill="url(#fillRevenue)"
               fillOpacity={0.4}
+              strokeWidth={0}
+            />
+
+            {/* Render Lines on top of the fills */}
+            {showComparison && (
+                 <Line
+                    dataKey="previousRevenue"
+                    type="natural"
+                    stroke="var(--color-previousRevenue)"
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                    dot={false}
+                />
+            )}
+            <Line
+              dataKey="revenue"
+              type="natural"
               stroke="var(--color-revenue)"
               strokeWidth={2}
               dot={<CustomDot />}
