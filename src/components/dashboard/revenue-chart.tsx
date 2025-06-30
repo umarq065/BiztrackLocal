@@ -171,6 +171,7 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1} />
                 </linearGradient>
             </defs>
+            {/* The Area component MUST be rendered first to be in the background. */}
             <Area
               dataKey="revenue"
               type="natural"
@@ -180,6 +181,7 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
               dot={<CustomDot />}
               activeDot={{ r: 6 }}
             />
+            {/* The Line components are rendered ON TOP of the Area component. */}
             {showComparison && (
               <Line
                 dataKey="previousRevenue"
