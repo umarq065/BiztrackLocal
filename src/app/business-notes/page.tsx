@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -90,7 +91,7 @@ export default function BusinessNotesPage() {
       date: parseDateString(note.date),
     }))
   );
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date("2024-05-01T12:00:00Z"));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingNote, setEditingNote] = useState<BusinessNote | null>(null);
@@ -98,10 +99,17 @@ export default function BusinessNotesPage() {
   const [visibleNotesCount, setVisibleNotesCount] = useState(10);
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Set to the user's current date on the client after initial render
+    setCurrentDate(new Date());
+  }, []);
+
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
+    // IMPORTANT: Avoid `new Date()` here to prevent hydration mismatch.
+    // The date is set dynamically when the dialog opens.
     defaultValues: {
-      date: new Date(),
+      date: undefined,
       title: "",
       content: "",
     }

@@ -77,6 +77,7 @@ import {
 import type { IncomeSource, Gig, SourceDataPoint } from "@/lib/data/incomes-data";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
 
+const staticDate = new Date("2024-01-01T12:00:00Z");
 
 const formSchema = z.object({
   sourceName: z.string().min(2, {
@@ -148,7 +149,7 @@ export default function IncomesPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       sourceName: "",
-      gigs: [{ name: "", date: new Date() }],
+      gigs: [{ name: "", date: staticDate }],
     },
   });
 
@@ -161,14 +162,14 @@ export default function IncomesPage() {
     resolver: zodResolver(addGigFormSchema),
     defaultValues: {
       name: "",
-      date: new Date(),
+      date: staticDate,
     },
   });
 
   const addDataForm = useForm<AddDataFormValues>({
     resolver: zodResolver(addDataFormSchema),
     defaultValues: {
-        date: new Date(),
+        date: staticDate,
         messages: 0,
     },
   });
@@ -176,7 +177,7 @@ export default function IncomesPage() {
   const addGigDataForm = useForm<AddGigDataFormValues>({
     resolver: zodResolver(addGigDataFormSchema),
     defaultValues: {
-        date: new Date(),
+        date: staticDate,
         impressions: 0,
         clicks: 0,
         ctr: 0,
@@ -588,14 +589,14 @@ export default function IncomesPage() {
                     )}
                      <Button variant="outline" onClick={() => {
                         setUpdatingSourceId(source.id);
-                        addDataForm.reset();
+                        addDataForm.reset({date: new Date(), messages: 0});
                         setIsAddDataDialogOpen(true);
                      }}>
                         Add Source Data
                     </Button>
                      <Button variant="outline" onClick={() => {
                         setAddingToSourceId(source.id);
-                        addGigForm.reset();
+                        addGigForm.reset({name: "", date: new Date()});
                         setAddGigDialogOpen(true);
                       }}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -661,7 +662,7 @@ export default function IncomesPage() {
                                             sourceId: source.id,
                                             gigId: gig.id,
                                         });
-                                        addGigDataForm.reset();
+                                        addGigDataForm.reset({date: new Date(), impressions: 0, clicks: 0, ctr: 0});
                                         setIsAddGigDataDialogOpen(true);
                                         }}
                                     >

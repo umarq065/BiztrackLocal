@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, lazy, Suspense } from "react";
@@ -33,7 +34,7 @@ export function DashboardClient({
   const [stats, setStats] = useState<Stat[]>(initialStats);
   const [date, setDate] = useState<DateRange | undefined>();
   const [targetMonth, setTargetMonth] = useState("June");
-  const [targetYear, setTargetYear] = useState(new Date().getFullYear());
+  const [targetYear, setTargetYear] = useState(2024); // Static year for SSR
 
   useEffect(() => {
     const today = new Date();
