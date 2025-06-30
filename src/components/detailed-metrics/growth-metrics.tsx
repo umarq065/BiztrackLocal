@@ -21,6 +21,15 @@ const growthMetrics = [
 
 export function GrowthMetrics() {
   const [showChart, setShowChart] = useState(false);
+  const [activeMetrics, setActiveMetrics] = useState({
+    revenueGrowth: true,
+    profitGrowth: true,
+    clientGrowth: true,
+  });
+
+  const handleMetricToggle = (metric: string) => {
+    setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
+  };
 
   return (
     <Card>
@@ -69,7 +78,7 @@ export function GrowthMetrics() {
       {showChart && (
         <CardContent>
              <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                <GrowthMetricsChart />
+                <GrowthMetricsChart activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
             </Suspense>
         </CardContent>
       )}
