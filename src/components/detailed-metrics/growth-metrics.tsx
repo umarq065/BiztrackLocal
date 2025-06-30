@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils";
 
 const growthMetrics = [
     { name: "Monthly Revenue Growth (%)", value: "2.5%", formula: "((This Month’s Revenue - Last Month’s Revenue) / Last Month’s Revenue) × 100", change: "+0.5%", changeType: "increase" as const },
+    { name: "Net Profit Growth (%)", value: "3.1%", formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100", change: "+0.8%", changeType: "increase" as const },
     { name: "Client Growth Rate (%)", value: "10%", formula: "((New Clients - Lost Clients) / Clients Last Month) × 100", change: "-2.0%", changeType: "decrease" as const },
-    { name: "Referral Growth Rate", value: "15%", formula: "(Referral Clients / Total New Clients) × 100", change: "+3.0%", changeType: "increase" as const },
+    { name: "Average Order Value (AOV) Growth (%)", value: "1.2%", formula: "Growth rate of AOV over a period", change: "+0.3%", changeType: "increase" as const },
+    { name: "High-Value Client Growth Rate (%)", value: "8%", formula: "Growth rate of clients in top spending quintile", change: "+1.5%", changeType: "increase" as const },
+    { name: "Income Source/Gig Growth Rate (%)", value: "12%", formula: "Growth rate of top-performing income sources or gigs", change: "+2.2%", changeType: "increase" as const },
 ];
 
 export function GrowthMetrics() {
