@@ -33,13 +33,13 @@ export default function DetailedMetricsPage() {
       </div>
 
       <div className="space-y-8">
+        <GrowthMetrics />
         <FinancialMetrics />
         <ClientMetrics />
         <SalesMetrics />
         <MarketingMetrics />
         <ProjectMetrics />
         <TeamMetrics />
-        <GrowthMetrics />
       </div>
     </main>
   );
