@@ -11,9 +11,20 @@ import { MarketingMetrics } from "@/components/detailed-metrics/marketing-metric
 import { ProjectMetrics } from "@/components/detailed-metrics/project-metrics";
 import { TeamMetrics } from "@/components/detailed-metrics/team-metrics";
 import { GrowthMetrics } from "@/components/detailed-metrics/growth-metrics";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { initialIncomeSources } from "@/lib/data/incomes-data";
+
+const incomeSourceNames = initialIncomeSources.map((s) => s.name);
 
 export default function DetailedMetricsPage() {
   const [date, setDate] = useState<DateRange | undefined>();
+  const [source, setSource] = useState("all");
 
   useEffect(() => {
     const today = new Date();
@@ -27,7 +38,20 @@ export default function DetailedMetricsPage() {
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
           Detailed Metrics
         </h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+           <Select value={source} onValueChange={setSource}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sources</SelectItem>
+              {incomeSourceNames.map((sourceName) => (
+                <SelectItem key={sourceName} value={sourceName}>
+                  {sourceName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DateFilter date={date} setDate={setDate} />
         </div>
       </div>
