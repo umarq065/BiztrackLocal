@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, lazy, Suspense } from "react";
@@ -23,23 +24,10 @@ const financialMetrics = [
 
 export function FinancialMetrics() {
   const [showChart, setShowChart] = useState(false);
-  const [activeValueMetrics, setActiveValueMetrics] = useState({
-    totalRevenue: true,
-    totalExpenses: true,
-    netProfit: true,
-    cac: false,
-    cltv: false,
-    aov: false,
-  });
-
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,
     grossMargin: true,
   });
-
-  const handleValueMetricToggle = (metric: string) => {
-    setActiveValueMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
-  };
 
   const handlePercentageMetricToggle = (metric: string) => {
     setActivePercentageMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
@@ -93,10 +81,7 @@ export function FinancialMetrics() {
        {showChart && (
         <CardContent className="space-y-6">
              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <FinancialValueChart 
-                  activeMetrics={activeValueMetrics}
-                  onMetricToggle={handleValueMetricToggle}
-                />
+                <FinancialValueChart />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <FinancialPercentageChart 
