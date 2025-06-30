@@ -3,22 +3,18 @@
 
 import { useState, useMemo } from "react";
 import {
-  Area,
-  AreaChart,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   CartesianGrid,
-  Legend,
   Dot,
 } from "recharts";
 import {
   ChartContainer,
   type ChartConfig,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart";
 import { type RevenueByDay } from "@/lib/placeholder-data";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -134,7 +130,7 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
       </CardHeader>
       <CardContent className="pl-2">
         <ChartContainer config={chartConfig} className="h-[250px] w-full">
-          <AreaChart
+          <LineChart
             accessibilityLayer
             data={combinedData}
             margin={{
@@ -168,34 +164,6 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
               cursor={false}
               content={<CustomTooltip />}
             />
-            <defs>
-                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="fillPreviousRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-previousRevenue)" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="var(--color-previousRevenue)" stopOpacity={0.1} />
-                </linearGradient>
-            </defs>
-
-            {/* Render Area fills first (in the background) */}
-            {showComparison && (
-                <Area
-                    dataKey="previousRevenue"
-                    type="natural"
-                    fill="url(#fillPreviousRevenue)"
-                    stroke="none"
-                />
-            )}
-            <Area
-              dataKey="revenue"
-              type="natural"
-              fill="url(#fillRevenue)"
-              stroke="none"
-            />
-
-            {/* Render Lines on top of the fills */}
             {showComparison && (
                  <Line
                     dataKey="previousRevenue"
@@ -223,7 +191,7 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                 dot={false}
               />
             )}
-          </AreaChart>
+          </LineChart>
         </ChartContainer>
       </CardContent>
     </Card>
