@@ -59,7 +59,7 @@ const CustomDot = (props: any) => {
       />
     );
   }
-  return null; // Hide default dots, as the line is prominent enough
+  return null;
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -171,17 +171,17 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                     <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.1} />
                 </linearGradient>
             </defs>
-            {/* The Area component MUST be rendered first to be in the background. */}
+            
+            {/* Render the Area fill first, without a stroke */}
             <Area
               dataKey="revenue"
               type="natural"
               fill="url(#fillRevenue)"
-              stroke="var(--color-revenue)"
-              strokeWidth={2}
-              dot={<CustomDot />}
-              activeDot={{ r: 6 }}
+              stroke="none"
+              stackId="a"
             />
-            {/* The Line components are rendered ON TOP of the Area component. */}
+            
+            {/* Render Lines on top of the Area fill */}
             {showComparison && (
               <Line
                 dataKey="previousRevenue"
@@ -192,6 +192,7 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                 dot={false}
               />
             )}
+
             {showTarget && dailyTarget !== undefined && (
               <Line
                 dataKey="target"
@@ -202,6 +203,16 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                 dot={false}
               />
             )}
+            
+            {/* Render the main revenue line on top of everything */}
+            <Line
+                dataKey="revenue"
+                type="natural"
+                stroke="var(--color-revenue)"
+                strokeWidth={2}
+                dot={<CustomDot />}
+                activeDot={{ r: 6 }}
+            />
           </AreaChart>
         </ChartContainer>
       </CardContent>
