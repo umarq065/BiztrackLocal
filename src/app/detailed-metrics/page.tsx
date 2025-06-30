@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
@@ -19,12 +19,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart2, EyeOff } from "lucide-react";
+
+const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
 
 const incomeSourceNames = initialIncomeSources.map((s) => s.name);
 
 export default function DetailedMetricsPage() {
   const [date, setDate] = useState<DateRange | undefined>();
   const [source, setSource] = useState("all");
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -53,8 +59,18 @@ export default function DetailedMetricsPage() {
             </SelectContent>
           </Select>
           <DateFilter date={date} setDate={setDate} />
+          <Button variant="outline" onClick={() => setShowChart(!showChart)}>
+            {showChart ? <EyeOff className="mr-2" /> : <BarChart2 className="mr-2" />}
+            {showChart ? "Hide Graph" : "Show Graph"}
+          </Button>
         </div>
       </div>
+
+      {showChart && (
+        <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
+          <GrowthMetricsChart />
+        </Suspense>
+      )}
 
       <div className="space-y-8">
         <GrowthMetrics />
