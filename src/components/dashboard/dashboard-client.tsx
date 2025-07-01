@@ -139,13 +139,20 @@ export function DashboardClient({
         </div>
       </section>
 
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-1">
-        <Suspense fallback={<Skeleton className="h-[340px] w-full" />}>
-          <RevenueChart
-            data={revenueByDay}
-            previousData={previousRevenueByDay}
-          />
-        </Suspense>
+      <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-4">
+          <Suspense fallback={<Skeleton className="h-[340px] w-full" />}>
+            <RevenueChart
+              data={revenueByDay}
+              previousData={previousRevenueByDay}
+            />
+          </Suspense>
+        </div>
+        <div className="lg:col-span-1">
+          <Suspense fallback={<Skeleton className="h-full w-full rounded-lg" />}>
+            <PerformanceRadialChart performance={performanceValue} />
+          </Suspense>
+        </div>
       </div>
 
       <StatsGrid
@@ -159,12 +166,7 @@ export function DashboardClient({
         gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
       />
 
-      <div className="grid grid-cols-1 gap-4 md:gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <Suspense fallback={<Skeleton className="h-[250px] w-full rounded-lg" />}>
-            <PerformanceRadialChart
-                performance={performanceValue}
-            />
-        </Suspense>
+      <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-2">
         <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-lg" />}>
             <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
         </Suspense>
