@@ -1,3 +1,4 @@
+
 import React, { type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
@@ -37,6 +38,17 @@ export interface IncomeBySource {
   amount: number;
 }
 
+export interface FinancialCardData {
+  title: string;
+  value: string;
+  dateRange: string;
+  chartData: { value: number }[];
+  chartType: "bar" | "line";
+  gradient: string;
+  change?: string;
+  changeType?: "increase" | "decrease";
+}
+
 export interface DashboardData {
   stats: Stat[];
   revenueByDay: RevenueByDay[];
@@ -45,9 +57,58 @@ export interface DashboardData {
   aiInsights: string;
   topClients: TopClient[];
   incomeBySource: IncomeBySource[];
+  financialCards: FinancialCardData[];
 }
 
-export const dashboardData: DashboardData = {
+const generateDummyChartData = (points: number, max: number) => {
+  return Array.from({ length: points }, () => ({ value: Math.random() * max }));
+};
+
+export const financialCardsData: FinancialCardData[] = [
+  {
+    title: "Total Revenue",
+    value: "$45.2k",
+    dateRange: "May 01 - May 30",
+    change: "+12.5%",
+    changeType: "increase" as const,
+    chartData: generateDummyChartData(15, 2000),
+    chartType: 'bar' as const,
+    gradient: "from-emerald-500 to-green-600",
+  },
+  {
+    title: "Total Expenses",
+    value: "$10.5k",
+    dateRange: "May 01 - May 30",
+    change: "+8.1%",
+    changeType: "increase" as const,
+    chartData: generateDummyChartData(15, 800),
+    chartType: 'line' as const,
+    gradient: "from-red-500 to-orange-500",
+  },
+  {
+    title: "Net Profit",
+    value: "$34.7k",
+    dateRange: "May 01 - May 30",
+    change: "+14.2%",
+    changeType: "increase" as const,
+    chartData: generateDummyChartData(15, 1500),
+    chartType: 'line' as const,
+    gradient: "from-sky-500 to-blue-600",
+  },
+  {
+    title: "Avg. Order Value",
+    value: "$131.50",
+    dateRange: "May 01 - May 30",
+    change: "-3.2%",
+    changeType: "decrease" as const,
+    chartData: generateDummyChartData(15, 200),
+    chartType: 'bar' as const,
+    gradient: "from-violet-500 to-purple-600",
+  }
+];
+
+
+export const dashboardData: Omit<DashboardData, "financialCards"> = {
   stats: [
     {
       icon: "DollarSign",

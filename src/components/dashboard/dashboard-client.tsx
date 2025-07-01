@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { type DashboardData, type Stat } from "@/lib/placeholder-data";
+import { type DashboardData, type Stat, financialCardsData } from "@/lib/placeholder-data";
 import RecentOrders from "./recent-orders";
 import AiInsights from "./ai-insights";
 import type { DateRange } from "react-day-picker";
@@ -122,53 +122,6 @@ export function DashboardClient({
   }));
   
   const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
-
-  const generateDummyChartData = (points: number, max: number) => {
-    return Array.from({ length: points }, () => ({ value: Math.random() * max }));
-  };
-  
-  const financialCardsData = [
-    {
-      title: "Total Revenue",
-      value: "$45.2k",
-      dateRange: "May 01 - May 30",
-      change: "+12.5%",
-      changeType: "increase" as const,
-      chartData: generateDummyChartData(15, 2000),
-      chartType: 'bar' as const,
-      gradient: "from-emerald-500 to-green-600",
-    },
-    {
-      title: "Total Expenses",
-      value: "$10.5k",
-      dateRange: "May 01 - May 30",
-      change: "+8.1%",
-      changeType: "increase" as const,
-      chartData: generateDummyChartData(15, 800),
-      chartType: 'line' as const,
-      gradient: "from-red-500 to-orange-500",
-    },
-    {
-      title: "Net Profit",
-      value: "$34.7k",
-      dateRange: "May 01 - May 30",
-      change: "+14.2%",
-      changeType: "increase" as const,
-      chartData: generateDummyChartData(15, 1500),
-      chartType: 'line' as const,
-      gradient: "from-sky-500 to-blue-600",
-    },
-    {
-      title: "Avg. Order Value",
-      value: "$131.50",
-      dateRange: "May 01 - May 30",
-      change: "-3.2%",
-      changeType: "decrease" as const,
-      chartData: generateDummyChartData(15, 200),
-      chartType: 'bar' as const,
-      gradient: "from-violet-500 to-purple-600",
-    }
-  ];
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">

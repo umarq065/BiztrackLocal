@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { dashboardData } from "@/lib/placeholder-data";
+import { dashboardData, financialCardsData } from "@/lib/placeholder-data";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export default function DashboardPage() {
