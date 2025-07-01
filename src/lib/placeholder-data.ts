@@ -13,6 +13,14 @@ export interface Stat {
   className?: string;
   invertChangeColor?: boolean;
   color?: string;
+  breakdown?: {
+    label: string;
+    value: number;
+    percentage: number;
+    color: string;
+    change: string;
+    changeType: "increase" | "decrease";
+  }[];
 }
 
 export interface RecentOrder {
@@ -186,37 +194,25 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       value: "344",
       change: "+12.5%",
       changeType: "increase",
-      description: React.createElement(
-        "div",
-        { className: "flex flex-wrap items-center gap-x-4 gap-y-1" },
-        React.createElement(
-          "span",
-          { key: "new", className: "inline-flex items-center" },
-          "New: 227 (66%)",
-          React.createElement(
-            "span",
-            { className: "ml-1 inline-flex items-center text-green-600" },
-            "(",
-            React.createElement(ArrowUp, { className: "inline h-3 w-3" }),
-            "15.2%",
-            ")"
-          )
-        ),
-        React.createElement(
-          "span",
-          { key: "repeat", className: "inline-flex items-center" },
-          "Repeat: 117 (34%)",
-          React.createElement(
-            "span",
-            { className: "ml-1 inline-flex items-center text-red-600" },
-            "(",
-            React.createElement(ArrowDown, { className: "inline h-3 w-3" }),
-            "5.1%",
-            ")"
-          )
-        )
-      ),
-      className: "lg:col-span-2",
+      description: "vs. last month",
+      breakdown: [
+        {
+          label: "New",
+          value: 227,
+          percentage: 66,
+          color: "hsl(var(--chart-1))",
+          change: "+15.2%",
+          changeType: "increase",
+        },
+        {
+          label: "Repeat",
+          value: 117,
+          percentage: 34,
+          color: "hsl(var(--chart-2))",
+          change: "-5.1%",
+          changeType: "decrease",
+        },
+      ],
     },
     {
       icon: "Calendar",

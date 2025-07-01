@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialStatCard } from "./financial-stat-card";
 import RevenueChart from "./revenue-chart";
 import { PerformanceRadialChart } from "./performance-radial-chart";
+import StatCard from "./stat-card";
 
 // Lazy load heavy chart components to speed up initial page load
 const TopClientsChart = lazy(() => import("./top-clients-chart"));
@@ -103,9 +104,8 @@ export function DashboardClient({
       color: s.title.includes("Cancelled") ? 'hsl(var(--destructive))' : `hsl(var(--chart-${(i % 5) + 1}))`
   }));
   
-  const customerMetrics = stats.filter((s) =>
+  const dailyMetrics = stats.filter((s) =>
     [
-      "Buyers",
       "All-Time Total Buyers",
       "Avg Daily Revenue (ADR)",
       "Req. Daily Revenue (RDR)",
@@ -114,6 +114,8 @@ export function DashboardClient({
       ...s,
       color: `hsl(var(--chart-${(i % 5) + 1}))`
   }));
+
+  const buyersMetric = stats.find(s => s.title === 'Buyers');
 
   const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
 
@@ -160,11 +162,20 @@ export function DashboardClient({
         stats={orderMetrics}
         gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
       />
-      <StatsGrid
-        title="Customer & Daily Metrics"
-        stats={customerMetrics}
-        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-      />
+
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Customer & Daily Metrics</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {dailyMetrics.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </div>
+        {buyersMetric && (
+          <div className="mt-4">
+            <StatCard {...buyersMetric} />
+          </div>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-2">
         <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-lg" />}>

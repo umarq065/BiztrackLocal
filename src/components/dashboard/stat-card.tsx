@@ -60,6 +60,7 @@ export default function StatCard({
   className,
   invertChangeColor,
   color,
+  breakdown,
 }: Stat) {
   const Icon = iconMap[icon];
 
@@ -107,10 +108,40 @@ export default function StatCard({
               )}
               {typeof description === "string" && <span className="ml-1">{description}</span>}
             </div>
-            {typeof description !== "string" && <div className="mt-1">{description}</div>}
+            {typeof description !== "string" && !breakdown && <div className="mt-1">{description}</div>}
           </div>
           {progressValue !== undefined && (
              <Progress value={progressValue} className="mt-2 h-1" style={{ '--color': color } as React.CSSProperties} />
+          )}
+          {breakdown && (
+            <div className="mt-4 space-y-2">
+                <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted">
+                    {breakdown.map((item) => (
+                        <div
+                            key={item.label}
+                            className="h-full"
+                            style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
+                            title={`${item.label}: ${item.percentage}%`}
+                        />
+                    ))}
+                </div>
+                <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs">
+                    {breakdown.map((item) => (
+                        <div key={item.label} className="flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="text-muted-foreground">{item.label}:</span>
+                            <span className="font-medium">{item.value} ({item.percentage}%)</span>
+                             <span
+                                className={cn(
+                                    "flex items-center gap-0.5",
+                                    item.changeType === 'increase' ? "text-green-600" : "text-red-600"
+                                )}>
+                                ({item.changeType === 'increase' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{item.change.replace(/[+-]/g, '')})
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
           )}
         </CardContent>
       </div>

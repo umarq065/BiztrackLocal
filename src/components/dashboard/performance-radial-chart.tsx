@@ -1,3 +1,4 @@
+
 "use client"
 
 import { RadialBar, RadialBarChart, ResponsiveContainer, PolarAngleAxis } from "recharts"
@@ -59,8 +60,8 @@ export function PerformanceRadialChart({
             <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
                 <p className="text-3xl font-bold text-primary">{`${Math.round(performance)}%`}</p>
             </div>
-             <div className="absolute bottom-[15px] left-[5px] text-xs font-medium text-muted-foreground">0%</div>
-            <div className="absolute bottom-[15px] right-[5px] text-xs font-medium text-muted-foreground">100%</div>
+             <div className="absolute bottom-3 left-2 text-xs font-medium text-muted-foreground">0%</div>
+            <div className="absolute bottom-3 right-2 text-xs font-medium text-muted-foreground">100%</div>
         </div>
       </CardContent>
     </Card>
