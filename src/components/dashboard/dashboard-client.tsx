@@ -92,13 +92,11 @@ export function DashboardClient({
     stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
-  const keyMetrics = stats.filter((s) =>
-    [
-      "Avg Daily Revenue (ADR)",
-      "Req. Daily Revenue (RDR)",
-      "Avg Order Value (AOV)",
-    ].includes(s.title)
-  );
+  const adrStat = stats.find((s) => s.title === "Avg Daily Revenue (ADR)");
+  const rdrStat = stats.find((s) => s.title === "Req. Daily Revenue (RDR)");
+  const targetStat = stats.find((s) => s.title.startsWith("Target for"));
+  const keyMetrics = [adrStat, rdrStat, targetStat].filter(Boolean) as Stat[];
+
 
   const otherMetrics = stats.filter((s) =>
     [
@@ -118,7 +116,6 @@ export function DashboardClient({
 
   const performanceValue = parseFloat(stats.find(s => s.title === 'Performance vs Target')?.value as string) || 0;
 
-  const rdrStat = stats.find(s => s.title === "Req. Daily Revenue (RDR)");
   const requiredDailyRevenue = rdrStat ? parseFloat(String(rdrStat.value).replace(/[^0-9.-]+/g, "")) : 0;
 
   return (

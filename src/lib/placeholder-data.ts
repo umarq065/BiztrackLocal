@@ -150,6 +150,8 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       title: "Target for June",
       value: "$50,000.00",
       description: "Monthly revenue goal",
+      color: "hsl(var(--chart-3))",
+      highlight: "top-border",
     },
     {
       icon: "BarChart",
