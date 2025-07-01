@@ -5,13 +5,20 @@ import { Bar, BarChart, Line, LineChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
+const gradientMap = {
+  revenue: "from-emerald-500 to-green-600",
+  expenses: "from-red-500 to-orange-500",
+  profit: "from-sky-500 to-blue-600",
+  aov: "from-violet-500 to-purple-600",
+};
+
 interface FinancialStatCardProps {
   title: string;
   value: string;
   dateRange: string;
   chartData: { value: number }[];
   chartType: "bar" | "line";
-  gradient: string;
+  gradient: keyof typeof gradientMap;
   className?: string;
   change?: string;
   changeType?: "increase" | "decrease";
@@ -44,7 +51,7 @@ export function FinancialStatCard({
       />
       <div className="relative z-10 flex h-full flex-col justify-between overflow-hidden rounded-lg p-4 text-white shadow">
         <div
-          className={cn("absolute inset-0 bg-gradient-to-br", gradient)}
+          className={cn("absolute inset-0 bg-gradient-to-br", gradientMap[gradient])}
           aria-hidden="true"
         />
 

@@ -53,7 +53,7 @@ export interface FinancialCardData {
   dateRange: string;
   chartData: { value: number }[];
   chartType: "bar" | "line";
-  gradient: string;
+  gradient: "revenue" | "expenses" | "profit" | "aov";
   change?: string;
   changeType?: "increase" | "decrease";
 }
@@ -82,7 +82,7 @@ export const financialCardsData: FinancialCardData[] = [
     changeType: "increase" as const,
     chartData: generateDummyChartData(15, 2000),
     chartType: 'bar' as const,
-    gradient: "from-emerald-500 to-green-600",
+    gradient: "revenue",
   },
   {
     title: "Total Expenses",
@@ -92,7 +92,7 @@ export const financialCardsData: FinancialCardData[] = [
     changeType: "increase" as const,
     chartData: generateDummyChartData(15, 800),
     chartType: 'line' as const,
-    gradient: "from-red-500 to-orange-500",
+    gradient: "expenses",
   },
   {
     title: "Net Profit",
@@ -102,7 +102,7 @@ export const financialCardsData: FinancialCardData[] = [
     changeType: "increase" as const,
     chartData: generateDummyChartData(15, 1500),
     chartType: 'line' as const,
-    gradient: "from-sky-500 to-blue-600",
+    gradient: "profit",
   },
   {
     title: "Avg. Order Value",
@@ -112,7 +112,7 @@ export const financialCardsData: FinancialCardData[] = [
     changeType: "decrease" as const,
     chartData: generateDummyChartData(15, 200),
     chartType: 'bar' as const,
-    gradient: "from-violet-500 to-purple-600",
+    gradient: "aov",
   }
 ];
 
