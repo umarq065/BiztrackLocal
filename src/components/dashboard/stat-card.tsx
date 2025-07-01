@@ -61,8 +61,8 @@ export default function StatCard({
   invertChangeColor,
   color,
   highlight,
-  breakdown,
   highlightValue,
+  breakdown,
 }: Stat) {
   const Icon = iconMap[icon];
 
