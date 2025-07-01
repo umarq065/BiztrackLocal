@@ -72,10 +72,9 @@ export default function StatCard({
   return (
     <div
       className={cn("relative group", className)}
-      style={color ? { '--glow-color': color } as React.CSSProperties : { '--glow-color': 'hsl(var(--primary))' } as React.CSSProperties}
     >
       <div
-        className="absolute -inset-px rounded-lg bg-[conic-gradient(from_var(--gradient-angle)_at_50%_50%,var(--glow-color)_0%,hsl(var(--primary))_50%,var(--glow-color)_100%)] opacity-0 blur-sm transition-opacity duration-500 group-hover:opacity-75 group-hover:animate-spin-gradient"
+        className="absolute -inset-px rounded-lg bg-[conic-gradient(from_var(--gradient-angle)_at_50%_50%,white_0deg,transparent_60deg)] opacity-0 blur-sm transition-opacity duration-500 group-hover:opacity-75 group-hover:animate-spin-gradient"
       ></div>
       <div className="relative z-10 h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -83,7 +82,7 @@ export default function StatCard({
           <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold transition-all duration-300 group-hover:text-shadow-[0_0_10px_white]">
+          <div className="text-2xl font-bold transition-all duration-300 group-hover:text-shadow-[0_0_15px_white]">
             {value}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
