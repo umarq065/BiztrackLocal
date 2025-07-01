@@ -140,6 +140,12 @@ export function DashboardClient({
         </Suspense>
       </div>
 
+      <StatsGrid 
+        title="Customer & Order Metrics"
+        stats={customerAndOrderStats}
+        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      />
+
       <div className="grid grid-cols-1 gap-4 md:gap-8 md:grid-cols-2 lg:grid-cols-3">
         <Suspense fallback={<Skeleton className="h-[250px] w-full rounded-lg" />}>
             <PerformanceRadialChart
@@ -179,11 +185,6 @@ export function DashboardClient({
         <AiInsights initialInsights={aiInsights} />
       </div>
 
-      <StatsGrid 
-        title="Customer & Order Metrics"
-        stats={customerAndOrderStats}
-        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-      />
     </main>
   );
 }
