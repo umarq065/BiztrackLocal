@@ -208,7 +208,7 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
           label: "Repeat",
           value: 117,
           percentage: 34,
-          color: "hsl(var(--chart-2))",
+          color: "hsl(var(--chart-4))",
           change: "-5.1%",
           changeType: "decrease",
         },
