@@ -1,4 +1,3 @@
-
 "use client"
 
 import { RadialBar, RadialBarChart, ResponsiveContainer, PolarAngleAxis } from "recharts"
@@ -24,7 +23,7 @@ export function PerformanceRadialChart({
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle>Performance vs Goals</CardTitle>
+        <CardTitle>Performance</CardTitle>
         <CardDescription>Your progress towards your monthly revenue target.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-grow flex-col items-center justify-center gap-4 py-2">
