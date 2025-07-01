@@ -26,7 +26,6 @@ import { BookText } from "lucide-react";
 interface RevenueChartProps {
   data: RevenueByDay[];
   previousData: RevenueByDay[];
-  dailyTarget?: number;
 }
 
 const chartConfig = {
@@ -38,10 +37,6 @@ const chartConfig = {
     label: "Previous Period",
     color: "hsl(var(--chart-2))",
   },
-  target: {
-    label: "Daily Target",
-    color: "hsl(var(--chart-4))",
-  }
 } satisfies ChartConfig;
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -94,17 +89,15 @@ const CustomDot = (props: any) => {
 };
 
 
-export default function RevenueChart({ data, previousData, dailyTarget }: RevenueChartProps) {
+export default function RevenueChart({ data, previousData }: RevenueChartProps) {
   const [showComparison, setShowComparison] = useState(true);
-  const [showTarget, setShowTarget] = useState(true);
   
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
       ...current,
       previousRevenue: previousData[index]?.revenue ?? null,
-      target: dailyTarget,
     }));
-  }, [data, previousData, dailyTarget]);
+  }, [data, previousData]);
   
   return (
     <Card>
@@ -117,10 +110,6 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
                 </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-                <div className="flex items-center space-x-2">
-                    <Checkbox id="show-target" checked={showTarget} onCheckedChange={(checked) => setShowTarget(!!checked)} />
-                    <Label htmlFor="show-target" className="text-sm font-normal">Show Daily Target</Label>
-                </div>
                 <div className="flex items-center space-x-2">
                     <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
                     <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
@@ -181,16 +170,6 @@ export default function RevenueChart({ data, previousData, dailyTarget }: Revenu
               strokeWidth={2}
               dot={<CustomDot />}
             />
-            {showTarget && dailyTarget !== undefined && (
-              <Line
-                dataKey="target"
-                type="monotone"
-                stroke="var(--color-target)"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-              />
-            )}
           </LineChart>
         </ChartContainer>
       </CardContent>

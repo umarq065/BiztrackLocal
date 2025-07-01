@@ -18,6 +18,7 @@ import { StatsGrid } from "./stats-grid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialStatCard } from "./financial-stat-card";
 import RevenueChart from "./revenue-chart";
+import { PerformanceRadialChart } from "./performance-radial-chart";
 
 // Lazy load heavy chart components to speed up initial page load
 const TopClientsChart = lazy(() => import("./top-clients-chart"));
@@ -90,23 +91,6 @@ export function DashboardClient({
     stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const monthIndex = monthNames.indexOf(targetMonth);
-  const daysInMonth = monthIndex !== -1 ? new Date(targetYear, monthIndex + 1, 0).getDate() : 30;
-  const dailyTarget = currentTarget > 0 ? currentTarget / daysInMonth : undefined;
-
-  const performanceStats = stats.filter((s) =>
-    [
-      "Performance vs Target",
-      "Avg Daily Revenue (ADR)",
-      "Req. Daily Revenue (RDR)",
-      "Days Left in Month",
-    ].includes(s.title) || s.title.startsWith("Target for")
-  ).map((s, i) => ({
-      ...s,
-      color: s.title.startsWith("Target for") ? `hsl(var(--chart-4))` : `hsl(var(--chart-${(i % 5) + 1}))`
-  }));
-
   const customerAndOrderStats = stats.filter((s) =>
     [
       "Avg Order Value (AOV)",
@@ -122,6 +106,11 @@ export function DashboardClient({
   }));
   
   const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
+
+  const performanceValue = parseFloat(stats.find(s => s.title === 'Performance vs Target')?.value as string) || 0;
+  const adrStat = stats.find(s => s.title === 'Avg Daily Revenue (ADR)');
+  const rdrStat = stats.find(s => s.title === 'Req. Daily Revenue (RDR)');
+  const sparklineData = revenueByDay.map(d => ({ value: d.revenue }));
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
@@ -143,24 +132,29 @@ export function DashboardClient({
         </div>
       </section>
 
-      <StatsGrid 
-        title="Performance vs. Goals"
-        stats={performanceStats}
-        gridClassName="grid gap-4 md:grid-cols-3 lg:grid-cols-5"
-      />
-
-      <StatsGrid 
-        title="Customer & Order Metrics"
-        stats={customerAndOrderStats}
-        gridClassName="grid gap-4 md:grid-cols-3 lg:grid-cols-4"
-      />
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
+        <Suspense fallback={<Skeleton className="h-[430px] w-full" />}>
+          <PerformanceRadialChart
+            performance={performanceValue}
+            adr={adrStat?.value as string || "N/A"}
+            rdr={rdrStat?.value as string || "N/A"}
+            adrChange={adrStat?.change}
+            adrChangeType={adrStat?.changeType}
+            sparklineData={sparklineData}
+          />
+        </Suspense>
+        <StatsGrid 
+          title="Customer & Order Metrics"
+          stats={customerAndOrderStats}
+          gridClassName="grid gap-4 md:grid-cols-2"
+        />
+      </div>
 
       <div className="grid gap-4 md:gap-8 lg:grid-cols-1">
         <Suspense fallback={<Skeleton className="h-[340px] w-full" />}>
           <RevenueChart
             data={revenueByDay}
             previousData={previousRevenueByDay}
-            dailyTarget={dailyTarget}
           />
         </Suspense>
       </div>
