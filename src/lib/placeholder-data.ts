@@ -13,6 +13,7 @@ export interface Stat {
   className?: string;
   invertChangeColor?: boolean;
   color?: string;
+  highlight?: "top-border" | "background" | "none";
   breakdown?: {
     label: string;
     value: number;
@@ -165,12 +166,16 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       change: "+4.1%",
       changeType: "increase",
       description: "vs. last month",
+      color: "hsl(var(--chart-1))",
+      highlight: "top-border",
     },
     {
       icon: "DollarSign",
       title: "Req. Daily Revenue (RDR)",
       value: "$476.81",
       description: "To meet your monthly target",
+      color: "hsl(var(--chart-2))",
+      highlight: "top-border",
     },
     {
       icon: "BarChart",
@@ -179,6 +184,8 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       change: "-3.2%",
       changeType: "decrease",
       description: "vs. last month",
+      color: "hsl(var(--chart-3))",
+      highlight: "top-border",
     },
     {
       icon: "ShoppingCart",

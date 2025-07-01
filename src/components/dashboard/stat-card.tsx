@@ -61,6 +61,7 @@ export default function StatCard({
   invertChangeColor,
   color,
   breakdown,
+  highlight,
 }: Stat) {
   const Icon = iconMap[icon];
 
@@ -78,7 +79,13 @@ export default function StatCard({
         className="absolute -inset-px rounded-lg bg-[conic-gradient(from_var(--gradient-angle)_at_50%_50%,white_0deg,transparent_60deg)] opacity-0 blur-sm transition-opacity duration-500 group-hover:opacity-75 group-hover:animate-spin-gradient"
         aria-hidden="true"
       ></div>
-      <div className="relative z-10 h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div
+        className={cn(
+          "relative z-10 h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm",
+          highlight === 'top-border' && color && "border-t-4"
+        )}
+        style={highlight === 'top-border' && color ? { borderTopColor: color } as React.CSSProperties : {}}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>
           <Icon className="h-4 w-4 text-muted-foreground" />
