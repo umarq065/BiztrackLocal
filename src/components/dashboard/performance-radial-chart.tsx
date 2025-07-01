@@ -22,13 +22,13 @@ export function PerformanceRadialChart({
   const data = [{ name: 'performance', value: performance, fill: 'url(#performance-gradient)' }];
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Performance vs Goals</CardTitle>
         <CardDescription>Your progress towards your monthly revenue target.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col items-center justify-center gap-4 py-0">
-        <div className="relative h-[200px] w-[200px]">
+      <CardContent className="flex flex-col items-center justify-center gap-4 py-4">
+        <div className="relative h-[180px] w-[180px]">
             <ResponsiveContainer width="100%" height="100%">
                  <RadialBarChart
                     data={data}
@@ -58,7 +58,7 @@ export function PerformanceRadialChart({
                 </RadialBarChart>
             </ResponsiveContainer>
             <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center text-center">
-                <p className="text-5xl font-bold text-primary">{`${Math.round(performance)}%`}</p>
+                <p className="text-4xl font-bold text-primary">{`${Math.round(performance)}%`}</p>
             </div>
              <div className="absolute bottom-[20px] left-[10px] text-xs font-medium text-muted-foreground">0%</div>
             <div className="absolute bottom-[20px] right-[10px] text-xs font-medium text-muted-foreground">100%</div>
