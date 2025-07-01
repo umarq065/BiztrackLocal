@@ -131,19 +131,6 @@ export function DashboardClient({
         </div>
       </section>
 
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 lg:items-start">
-        <Suspense fallback={<Skeleton className="h-[430px] w-full" />}>
-          <PerformanceRadialChart
-            performance={performanceValue}
-          />
-        </Suspense>
-        <StatsGrid 
-          title="Customer & Order Metrics"
-          stats={customerAndOrderStats}
-          gridClassName="grid gap-4 md:grid-cols-2"
-        />
-      </div>
-
       <div className="grid gap-4 md:gap-8 lg:grid-cols-1">
         <Suspense fallback={<Skeleton className="h-[340px] w-full" />}>
           <RevenueChart
@@ -151,6 +138,30 @@ export function DashboardClient({
             previousData={previousRevenueByDay}
           />
         </Suspense>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <Suspense fallback={<Skeleton className="h-[250px] w-full rounded-lg" />}>
+            <PerformanceRadialChart
+                performance={performanceValue}
+            />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-lg" />}>
+            <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
+        </Suspense>
+        <Card>
+          <CardHeader>
+            <CardTitle>Income by Source</CardTitle>
+            <CardDescription>
+              A breakdown of your income sources for the selected period.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <Suspense fallback={<Skeleton className="mx-auto h-[250px] w-[250px] rounded-full" />}>
+              <IncomeChart data={incomeBySource} />
+            </Suspense>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
@@ -165,26 +176,14 @@ export function DashboardClient({
             <RecentOrders orders={recentOrders} />
           </CardContent>
         </Card>
-        <Suspense fallback={<Skeleton className="h-[430px] w-full rounded-lg" />}>
-            <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
-        </Suspense>
-      </div>
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Income by Source</CardTitle>
-            <CardDescription>
-              A breakdown of your income sources for the selected period.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <Suspense fallback={<Skeleton className="mx-auto h-[250px] w-[250px] rounded-full" />}>
-              <IncomeChart data={incomeBySource} />
-            </Suspense>
-          </CardContent>
-        </Card>
         <AiInsights initialInsights={aiInsights} />
       </div>
+
+      <StatsGrid 
+        title="Customer & Order Metrics"
+        stats={customerAndOrderStats}
+        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      />
     </main>
   );
 }
