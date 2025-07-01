@@ -26,6 +26,7 @@ import { BookText } from "lucide-react";
 interface RevenueChartProps {
   data: RevenueByDay[];
   previousData: RevenueByDay[];
+  requiredDailyRevenue: number;
 }
 
 const chartConfig = {
@@ -36,6 +37,10 @@ const chartConfig = {
   previousRevenue: {
     label: "Previous Period",
     color: "hsl(var(--chart-2))",
+  },
+  requiredDailyRevenue: {
+    label: "Req. Daily Revenue",
+    color: "hsl(var(--chart-5))",
   },
 } satisfies ChartConfig;
 
@@ -89,15 +94,16 @@ const CustomDot = (props: any) => {
 };
 
 
-export default function RevenueChart({ data, previousData }: RevenueChartProps) {
+export default function RevenueChart({ data, previousData, requiredDailyRevenue }: RevenueChartProps) {
   const [showComparison, setShowComparison] = useState(true);
   
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
       ...current,
       previousRevenue: previousData[index]?.revenue ?? null,
+      requiredDailyRevenue,
     }));
-  }, [data, previousData]);
+  }, [data, previousData, requiredDailyRevenue]);
   
   return (
     <Card>
@@ -152,6 +158,14 @@ export default function RevenueChart({ data, previousData }: RevenueChartProps) 
             <Tooltip
               cursor={false}
               content={<CustomTooltip />}
+            />
+            <Line
+              dataKey="requiredDailyRevenue"
+              type="monotone"
+              stroke="var(--color-requiredDailyRevenue)"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
             />
             {showComparison && (
                  <Line

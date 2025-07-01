@@ -100,7 +100,7 @@ export function DashboardClient({
     ].includes(s.title)
   );
 
-  const secondaryMetrics = stats.filter((s) =>
+  const otherMetrics = stats.filter((s) =>
     [
       "Total Orders (Completed)",
       "Cancelled Orders",
@@ -117,6 +117,9 @@ export function DashboardClient({
   const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
 
   const performanceValue = parseFloat(stats.find(s => s.title === 'Performance vs Target')?.value as string) || 0;
+
+  const rdrStat = stats.find(s => s.title === "Req. Daily Revenue (RDR)");
+  const requiredDailyRevenue = rdrStat ? parseFloat(String(rdrStat.value).replace(/[^0-9.-]+/g, "")) : 0;
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
@@ -144,6 +147,7 @@ export function DashboardClient({
             <RevenueChart
               data={revenueByDay}
               previousData={previousRevenueByDay}
+              requiredDailyRevenue={requiredDailyRevenue}
             />
           </Suspense>
         </div>
@@ -154,15 +158,15 @@ export function DashboardClient({
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {keyMetrics.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
-      </div>
-
+      <StatsGrid
+        title="Key Metrics"
+        stats={keyMetrics}
+        gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+      />
+      
       <StatsGrid
         title="Other Metrics"
-        stats={secondaryMetrics}
+        stats={otherMetrics}
         gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
       />
 
@@ -175,7 +179,7 @@ export function DashboardClient({
         )}
       </section>
 
-      <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-3">
         <Suspense fallback={<Skeleton className="h-[300px] w-full rounded-lg" />}>
             <TopClientsChart data={topClients} totalRevenue={totalRevenue} />
         </Suspense>
@@ -192,10 +196,10 @@ export function DashboardClient({
             </Suspense>
           </CardContent>
         </Card>
+        <AiInsights initialInsights={aiInsights} />
       </div>
 
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
-        <Card>
+       <Card>
           <CardHeader>
             <CardTitle>Recent Orders</CardTitle>
             <CardDescription>
@@ -206,8 +210,6 @@ export function DashboardClient({
             <RecentOrders orders={recentOrders} />
           </CardContent>
         </Card>
-        <AiInsights initialInsights={aiInsights} />
-      </div>
 
     </main>
   );
