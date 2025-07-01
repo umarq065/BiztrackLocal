@@ -92,27 +92,24 @@ export function DashboardClient({
     stats.find((s) => s.title.startsWith("Target for"))?.value.replace(/[^0-9.-]+/g, "") || "0"
   );
   
-  const orderMetrics = stats.filter((s) =>
+  const keyMetrics = stats.filter((s) =>
     [
+      "Avg Daily Revenue (ADR)",
+      "Req. Daily Revenue (RDR)",
       "Avg Order Value (AOV)",
+    ].includes(s.title)
+  );
+
+  const secondaryMetrics = stats.filter((s) =>
+    [
       "Total Orders (Completed)",
       "Cancelled Orders",
       "% Orders with Reviews",
+      "All-Time Total Buyers",
     ].includes(s.title)
   ).map((s, i) => ({
       ...s,
       color: s.title.includes("Cancelled") ? 'hsl(var(--destructive))' : `hsl(var(--chart-${(i % 5) + 1}))`
-  }));
-  
-  const dailyMetrics = stats.filter((s) =>
-    [
-      "All-Time Total Buyers",
-      "Avg Daily Revenue (ADR)",
-      "Req. Daily Revenue (RDR)",
-    ].includes(s.title)
-  ).map((s, i) => ({
-      ...s,
-      color: `hsl(var(--chart-${(i % 5) + 1}))`
   }));
 
   const buyersMetric = stats.find(s => s.title === 'Buyers');
@@ -156,20 +153,21 @@ export function DashboardClient({
           </Suspense>
         </div>
       </div>
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {keyMetrics.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
+      </div>
 
       <StatsGrid
-        title="Order Metrics"
-        stats={orderMetrics}
+        title="Other Metrics"
+        stats={secondaryMetrics}
         gridClassName="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
       />
 
       <section>
-        <h2 className="text-xl font-semibold mb-4">Customer & Daily Metrics</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {dailyMetrics.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
+        <h2 className="text-xl font-semibold mb-4">Buyer Breakdown</h2>
         {buyersMetric && (
           <div className="mt-4">
             <StatCard {...buyersMetric} />
