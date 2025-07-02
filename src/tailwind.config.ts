@@ -96,9 +96,11 @@ export default {
         },
         'pulse-glow': {
           '0%, 100%': { 
+            transform: 'scale(1)',
             textShadow: 'none',
           },
           '50%': {
+            transform: 'scale(1.15)',
             textShadow: '0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3)',
            },
         }
@@ -107,7 +109,7 @@ export default {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'spin-gradient': 'spin-gradient 3s linear infinite',
-        'pulse-glow': 'pulse-glow 10s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 20s linear infinite',
       },
       textShadow: {
         sm: '0 1px 2px var(--tw-shadow-color)',
