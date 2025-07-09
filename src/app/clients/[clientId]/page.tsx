@@ -56,7 +56,8 @@ const parseDateString = (dateString: string): Date => {
   return new Date(year, month - 1, day);
 };
 
-export default function ClientDetailsPage({ params: { clientId } }: { params: { clientId: string } }) {
+export default function ClientDetailsPage({ params }: { params: { clientId: string } }) {
+  const { clientId } = params;
   const [clients, setClients] = useState<Client[]>(staticClients);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
