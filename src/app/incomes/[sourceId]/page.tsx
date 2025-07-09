@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, lazy, Suspense, useState } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import {
   ArrowLeft,
   Eye,
@@ -73,12 +73,9 @@ const getInitialDateRangeForSource = (source: IncomeSource): DateRange => {
     return { from: oneMonthAgo, to: today };
 };
 
-export default function SourceAnalyticsPage({
-  params,
-}: {
-  params: { sourceId: string };
-}) {
-  const { sourceId } = params;
+export default function SourceAnalyticsPage() {
+  const params = useParams();
+  const sourceId = params.sourceId as string;
   const source = initialIncomeSources.find((s) => s.id === sourceId);
 
   if (!source) {

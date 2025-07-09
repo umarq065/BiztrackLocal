@@ -3,7 +3,7 @@
 
 import { lazy, Suspense, useState } from "react";
 import NProgressLink from "@/components/layout/nprogress-link";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -56,8 +56,9 @@ const parseDateString = (dateString: string): Date => {
   return new Date(year, month - 1, day);
 };
 
-export default function ClientDetailsPage({ params }: { params: { clientId: string } }) {
-  const { clientId } = params;
+export default function ClientDetailsPage() {
+  const params = useParams();
+  const clientId = params.clientId as string;
   const [clients, setClients] = useState<Client[]>(staticClients);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
