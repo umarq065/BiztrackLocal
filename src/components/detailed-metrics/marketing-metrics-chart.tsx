@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, BarChart } from 'recharts';
@@ -83,7 +84,7 @@ export default function MarketingMetricsChart({ activeMetrics, onMetricToggle }:
                             cursor={false}
                             content={<ChartTooltipContent
                                 indicator="dot"
-                                valueFormatter={(value, name) => name.includes('CPL') ? `$${value.toFixed(2)}` : `${value}%`}
+                                valueFormatter={(value, name) => typeof name === 'string' && name.includes('CPL') ? `$${(value as number).toFixed(2)}` : `${value}%`}
                             />}
                         />
                         {activeMetrics.cpl && <Line yAxisId="left" dataKey="cpl" type="monotone" stroke="var(--color-cpl)" strokeWidth={2} dot={true} />}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
@@ -82,7 +83,7 @@ export default function ProjectMetricsChart({ activeMetrics, onMetricToggle }: P
                             cursor={false}
                             content={<ChartTooltipContent
                                 indicator="dot"
-                                valueFormatter={(value, name) => name.includes('Rate') ? `${value}%` : value.toFixed(1)}
+                                valueFormatter={(value, name) => typeof name === 'string' && name.includes('Rate') ? `${value}%` : (value as number).toFixed(1)}
                             />}
                         />
                         {activeMetrics.revisions && <Bar yAxisId="left" dataKey="revisions" fill="var(--color-revisions)" radius={4} />}

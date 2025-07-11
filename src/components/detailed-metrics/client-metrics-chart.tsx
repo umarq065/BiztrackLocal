@@ -1,6 +1,7 @@
+
 "use client";
 
-import { Bar, BarChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -84,7 +85,7 @@ export default function ClientMetricsChart({ activeMetrics, onMetricToggle }: Cl
                             cursor={false}
                             content={<ChartTooltipContent
                                 indicator="dot"
-                                valueFormatter={(value, name) => name.includes('Rate') || name.includes('CSAT') ? `${value.toFixed(1)}%` : value.toString()}
+                                valueFormatter={(value, name) => typeof name === 'string' && (name.includes('Rate') || name.includes('CSAT')) ? `${(value as number).toFixed(1)}%` : String(value)}
                             />}
                         />
                         {activeMetrics.totalClients && <Line yAxisId="left" dataKey="totalClients" type="monotone" stroke="var(--color-totalClients)" strokeWidth={2} dot={true} />}
