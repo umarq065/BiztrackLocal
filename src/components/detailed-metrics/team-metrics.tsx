@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 
 const teamMetrics = [
     { name: "Internal Training Time", value: "8 hours/month", formula: "Total Training Hours / Team Members", change: "+2 hours", changeType: "increase" as const },
-    { name: "Team Efficiency Score", value: "92%", formula: "Tasks Completed on Time / Total Tasks", change: "+3%", changeType: "increase" as const },
 ];
 
 export function TeamMetrics() {
