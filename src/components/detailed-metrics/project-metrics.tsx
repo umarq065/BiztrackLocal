@@ -1,7 +1,13 @@
+"use client";
 
+import { useState, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, ArrowUp, ArrowDown } from "lucide-react";
+import { Clock, ArrowUp, ArrowDown, EyeOff, BarChart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ProjectMetricsChart = lazy(() => import("@/components/detailed-metrics/project-metrics-chart"));
 
 const projectMetrics = [
     { name: "Revisions per Project", value: "1.8", formula: "Total Number of Revisions / Total Projects Delivered", change: "+0.2", changeType: "increase" as const, invertColor: true },
@@ -9,13 +15,27 @@ const projectMetrics = [
 ];
 
 export function ProjectMetrics() {
+  const [showChart, setShowChart] = useState(false);
+  const [activeMetrics, setActiveMetrics] = useState({
+    revisions: true,
+    completionRate: true,
+  });
+
+  const handleMetricToggle = (metric: keyof typeof activeMetrics) => {
+    setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-6 w-6 text-primary" />
           <span>Project & Delivery Metrics</span>
         </CardTitle>
+        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)}>
+            {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />}
+            {showChart ? "Hide Graph" : "Show Graph"}
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -49,6 +69,13 @@ export function ProjectMetrics() {
           })}
         </div>
       </CardContent>
+      {showChart && (
+        <CardContent>
+             <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+                <ProjectMetricsChart activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
+            </Suspense>
+        </CardContent>
+      )}
     </Card>
   );
 }

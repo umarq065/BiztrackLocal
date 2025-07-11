@@ -1,7 +1,13 @@
+"use client";
 
+import { useState, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, ArrowUp, ArrowDown, BarChart, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ClientMetricsChart = lazy(() => import("@/components/detailed-metrics/client-metrics-chart"));
 
 const clientMetrics = [
     { name: "Total Clients", value: "125", formula: "Total unique clients in period", change: "+15", changeType: "increase" as const },
@@ -15,13 +21,29 @@ const clientMetrics = [
 ];
 
 export function ClientMetrics() {
+  const [showChart, setShowChart] = useState(false);
+  const [activeMetrics, setActiveMetrics] = useState({
+    totalClients: true,
+    newClients: true,
+    retentionRate: false,
+    csat: false,
+  });
+
+  const handleMetricToggle = (metric: keyof typeof activeMetrics) => {
+    setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Users className="h-6 w-6 text-primary" />
           <span>Client Metrics</span>
         </CardTitle>
+        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)}>
+            {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />}
+            {showChart ? "Hide Graph" : "Show Graph"}
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -55,6 +77,13 @@ export function ClientMetrics() {
           })}
         </div>
       </CardContent>
+       {showChart && (
+        <CardContent>
+             <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+                <ClientMetricsChart activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
+            </Suspense>
+        </CardContent>
+      )}
     </Card>
   );
 }
