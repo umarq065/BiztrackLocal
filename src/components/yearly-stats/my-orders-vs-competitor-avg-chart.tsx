@@ -7,7 +7,6 @@ import {
   ChartContainer,
   ChartTooltipContent,
   ChartLegend,
-  ChartLegendContent,
   type ChartConfig
 } from "@/components/ui/chart";
 import { CompetitorYearlyData } from '@/lib/data/yearly-stats-data';
@@ -25,7 +24,7 @@ const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: MyOrdersVsCompetitorAvgChartProps) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
 
-    const { chartData, chartConfig, myOrdersAvg, competitorOrdersAvg } = useMemo(() => {
+    const { chartData, chartConfig, myOrdersTotal, myOrdersAvg, competitorOrdersTotal, competitorOrdersAvg } = useMemo(() => {
         const data = months.map((month, index) => {
             const competitorTotalForMonth = competitors.reduce((acc, curr) => acc + curr.monthlyOrders[index], 0);
             const competitorAvgForMonth = competitors.length > 0 ? competitorTotalForMonth / competitors.length : 0;
@@ -39,15 +38,22 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
         const totalMyOrders = myOrders.reduce((acc, curr) => acc + curr, 0);
         const myOrdersAverage = myOrders.length > 0 ? Math.round(totalMyOrders / myOrders.length) : 0;
         
-        const totalCompetitorAvg = data.reduce((acc, curr) => acc + curr.competitorAvg, 0);
-        const competitorAverage = data.length > 0 ? Math.round(totalCompetitorAvg / data.length) : 0;
+        const totalCompetitorOrders = data.reduce((acc, curr) => acc + curr.competitorAvg, 0);
+        const competitorAverage = data.length > 0 ? Math.round(totalCompetitorOrders / data.length) : 0;
         
         const config: ChartConfig = {
           myOrders: { label: "My Orders", color: "hsl(var(--chart-1))" },
           competitorAvg: { label: "Competitor Avg.", color: "hsl(var(--chart-2))" },
         };
         
-        return { chartData: data, chartConfig: config, myOrdersAvg: myOrdersAverage, competitorOrdersAvg: competitorAverage };
+        return { 
+            chartData: data, 
+            chartConfig: config, 
+            myOrdersTotal: totalMyOrders,
+            myOrdersAvg: myOrdersAverage, 
+            competitorOrdersTotal: totalCompetitorOrders,
+            competitorOrdersAvg: competitorAverage 
+        };
 
     }, [myOrders, competitors]);
 
@@ -60,23 +66,35 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
     );
 
     const CustomLegend = (props: any) => {
-      const { payload } = props;
-      return (
-        <div className="flex justify-center gap-6 pt-4">
-          {payload.map((entry: any, index: number) => {
-            const isMyOrders = entry.value === 'myOrders';
-            const avgValue = isMyOrders ? myOrdersAvg : competitorOrdersAvg;
-            
-            return (
-                <div key={`item-${index}`} className="flex items-center space-x-2 text-sm">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span className="text-muted-foreground">{entry.payload.label}:</span>
-                  <span className="font-semibold">{avgValue.toLocaleString()} (Avg)</span>
-                </div>
-            );
-          })}
-        </div>
-      );
+        const { payload } = props;
+        const formatNumber = (value: number) => value.toLocaleString();
+        
+        const statsMap = {
+            myOrders: { total: myOrdersTotal, avg: myOrdersAvg, label: "My Orders" },
+            competitorAvg: { total: competitorOrdersTotal, avg: competitorOrdersAvg, label: "Competitor Avg." },
+        };
+
+        return (
+            <div className="flex justify-center gap-4 pt-4 flex-wrap">
+            {payload.map((entry: any, index: number) => {
+                const key = entry.value as keyof typeof statsMap;
+                const stats = statsMap[key];
+
+                return (
+                    <div key={`item-${index}`} className="flex items-center space-x-2 rounded-lg border bg-background/50 px-4 py-2">
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                        <div className="flex flex-col text-sm">
+                            <span className="font-semibold text-foreground">{stats.label}</span>
+                            <div className="flex gap-2 text-muted-foreground">
+                                <span>Total: <span className="font-medium text-foreground/90">{formatNumber(stats.total)}</span></span>
+                                <span>Avg: <span className="font-medium text-foreground/90">{formatNumber(stats.avg)}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+            </div>
+        );
     }
 
     return (
