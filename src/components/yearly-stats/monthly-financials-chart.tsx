@@ -21,12 +21,6 @@ interface MonthlyFinancialsChartProps {
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const baseChartColors = {
-  revenue: "hsl(var(--chart-1))",
-  expenses: "hsl(var(--chart-2))",
-  profit: "hsl(var(--chart-3))",
-};
-
 const yoyChartColors = [
     "hsl(var(--chart-1))",
     "hsl(var(--chart-2))",
@@ -34,8 +28,19 @@ const yoyChartColors = [
     "hsl(var(--chart-4))",
     "hsl(var(--chart-5))",
     "hsl(var(--primary))",
-    "hsl(var(--destructive))",
+    "#FF5733",
+    "#33FF57",
+    "#3357FF",
+    "#FF33A1",
+    "#A133FF",
+    "#33FFA1",
 ];
+
+const baseChartColors = {
+  revenue: "hsl(var(--chart-1))",
+  expenses: "hsl(var(--chart-2))",
+  profit: "hsl(var(--chart-3))",
+};
 
 
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, '');
