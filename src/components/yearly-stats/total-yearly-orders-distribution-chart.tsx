@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { Pie, PieChart, Cell, Tooltip } from 'recharts';
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
@@ -49,6 +48,24 @@ export default function TotalYearlyOrdersDistributionChart({ myOrders, competito
 
     }, [myOrders, competitors]);
 
+    const CustomLegend = (props: any) => {
+        const { payload } = props;
+        return (
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-4">
+                {payload.map((entry: any, index: number) => {
+                    const percentage = totalOrders > 0 ? ((entry.payload.value / totalOrders) * 100).toFixed(1) : 0;
+                    return (
+                        <div key={`item-${index}`} className="flex items-center space-x-2 text-sm">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                            <span className="text-muted-foreground">{entry.value}:</span>
+                            <span className="font-semibold">{percentage}%</span>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
     return (
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <PieChart>
@@ -68,8 +85,7 @@ export default function TotalYearlyOrdersDistributionChart({ myOrders, competito
                     ))}
                 </Pie>
                  <ChartLegend
-                    content={<ChartLegendContent nameKey="name" />}
-                    className="-translate-y-[2px] flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                    content={<CustomLegend />}
                 />
             </PieChart>
         </ChartContainer>
