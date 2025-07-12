@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,7 +57,7 @@ export default function ProjectMetricsChart({ activeMetrics, onMetricToggle }: P
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                    <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis
                             dataKey="month"
@@ -86,9 +86,9 @@ export default function ProjectMetricsChart({ activeMetrics, onMetricToggle }: P
                                 valueFormatter={(value, name) => typeof name === 'string' && name.includes('Rate') ? `${value}%` : (value as number).toFixed(1)}
                             />}
                         />
-                        {activeMetrics.revisions && <Bar yAxisId="left" dataKey="revisions" fill="var(--color-revisions)" radius={4} />}
-                        {activeMetrics.completionRate && <Bar yAxisId="right" dataKey="completionRate" fill="var(--color-completionRate)" radius={4} />}
-                    </BarChart>
+                        {activeMetrics.revisions && <Line yAxisId="left" dataKey="revisions" type="monotone" stroke="var(--color-revisions)" strokeWidth={2} dot={true} />}
+                        {activeMetrics.completionRate && <Line yAxisId="right" dataKey="completionRate" type="monotone" stroke="var(--color-completionRate)" strokeWidth={2} dot={true} />}
+                    </LineChart>
                 </ChartContainer>
             </CardContent>
         </Card>
