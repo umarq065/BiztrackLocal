@@ -38,17 +38,9 @@ export default function YearlyStatsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>My Orders vs. Average Competitor Orders (Monthly)</CardTitle>
-                <CardDescription>A comparison of your monthly orders against the average of your competitors.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Suspense fallback={<Skeleton className="h-[300px]" />}>
-                    <MyOrdersVsCompetitorAvgChart myOrders={myMonthlyOrders} competitors={competitors} />
-                </Suspense>
-            </CardContent>
-        </Card>
+        <Suspense fallback={<Skeleton className="h-[300px] lg:col-span-2" />}>
+            <MyOrdersVsCompetitorAvgChart myOrders={myMonthlyOrders} competitors={competitors} />
+        </Suspense>
         <Card>
              <CardHeader>
                 <CardTitle>Total Yearly Orders Distribution</CardTitle>
