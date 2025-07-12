@@ -189,7 +189,7 @@ export default function MonthlyFinancialsChart({ allYearlyData }: MonthlyFinanci
                 </div>
             </div>
             <div className="md:col-span-4">
-                <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
                     {chartType === 'bar' ? (
                         <BarChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
                             <CartesianGrid vertical={false} />

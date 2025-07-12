@@ -195,7 +195,7 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData }: Month
                      <div>
                         <h4 className="font-semibold mb-2 mt-4">Display Lines</h4>
                         <p className="text-sm text-muted-foreground mb-4">Toggle lines on the graph.</p>
-                        <ScrollArea className="h-36 rounded-md border p-2">
+                        <ScrollArea className="h-48 max-h-48 rounded-md border p-2">
                             <div className="space-y-2">
                                 {Object.entries(chartConfig).map(([metricKey, config]) => (
                                     <div key={metricKey} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
@@ -217,7 +217,7 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData }: Month
                 </div>
             </div>
             <div className="md:col-span-4">
-                <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
                     <LineChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
