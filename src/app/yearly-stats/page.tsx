@@ -17,6 +17,7 @@ const TotalYearlyOrdersDistributionChart = lazy(() => import("@/components/yearl
 const MonthlyOrdersVsCompetitorsChart = lazy(() => import("@/components/yearly-stats/monthly-orders-vs-competitors-chart"));
 const MonthlyFinancialsChart = lazy(() => import("@/components/yearly-stats/monthly-financials-chart"));
 const MonthlyRevenueVsTargetChart = lazy(() => import("@/components/yearly-stats/monthly-revenue-vs-target-chart"));
+const YearlySummaryTable = lazy(() => import("@/components/yearly-stats/yearly-summary-table"));
 
 
 export default function YearlyStatsPage() {
@@ -35,9 +36,13 @@ export default function YearlyStatsPage() {
           Yearly Stats
         </h1>
       </div>
+      
+      <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+        <YearlySummaryTable allYearlyData={yearlyStatsData} />
+      </Suspense>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Suspense fallback={<Skeleton className="h-[300px] lg:col-span-2" />}>
+        <Suspense fallback={<Skeleton className="h-[500px] lg:col-span-2" />}>
             <MyOrdersVsCompetitorAvgChart allYearlyData={yearlyStatsData} />
         </Suspense>
         <Card>
@@ -59,7 +64,7 @@ export default function YearlyStatsPage() {
             <CardDescription>A line graph showing your monthly orders compared to each of your main competitors throughout the year.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Suspense fallback={<Skeleton className="h-[400px]" />}>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full min-h-[400px]" />}>
                 <MonthlyOrdersVsCompetitorsChart allYearlyData={yearlyStatsData} />
             </Suspense>
         </CardContent>
@@ -71,7 +76,7 @@ export default function YearlyStatsPage() {
             <CardDescription>A bar graph showing your key financial metrics for each month of the year.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Suspense fallback={<Skeleton className="h-[400px]" />}>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full min-h-[400px]" />}>
                 <MonthlyFinancialsChart allYearlyData={yearlyStatsData} />
             </Suspense>
         </CardContent>
@@ -83,7 +88,7 @@ export default function YearlyStatsPage() {
             <CardDescription>A line graph comparing your actual monthly revenue against your target revenue for the year.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Suspense fallback={<Skeleton className="h-[400px]" />}>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full min-h-[400px]" />}>
                 <MonthlyRevenueVsTargetChart allYearlyData={yearlyStatsData} />
             </Suspense>
         </CardContent>
