@@ -27,6 +27,7 @@ import {
   Settings,
   Notebook,
   Gauge,
+  CalendarRange,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
@@ -42,6 +43,7 @@ const navItems = [
   { href: "/business-notes", icon: Notebook, label: "Business Notes" },
   { href: "/competitors", icon: Swords, label: "Competitors" },
   { href: "/detailed-metrics", icon: Gauge, label: "Detailed Metrics" },
+  { href: "/yearly-stats", icon: CalendarRange, label: "Yearly Stats" },
 ];
 
 const settingsItems = [
