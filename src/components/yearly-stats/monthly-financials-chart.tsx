@@ -6,7 +6,6 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, LineChart } 
 import {
   ChartContainer,
   ChartTooltipContent,
-  ChartLegend,
   type ChartConfig
 } from "@/components/ui/chart";
 import { type YearlyStatsData } from '@/lib/data/yearly-stats-data';
@@ -22,11 +21,18 @@ interface MonthlyFinancialsChartProps {
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const chartColors = {
+const baseChartColors = {
   revenue: "hsl(var(--chart-1))",
   expenses: "hsl(var(--chart-2))",
   profit: "hsl(var(--chart-3))",
 };
+
+const chartColorVariants = [
+    {-10: "hsl(var(--chart-1) / 0.4)", 0: "hsl(var(--chart-1))", 10: "hsl(var(--chart-1) / 1.2)"},
+    {-10: "hsl(var(--chart-2) / 0.4)", 0: "hsl(var(--chart-2))", 10: "hsl(var(--chart-2) / 1.2)"},
+    {-10: "hsl(var(--chart-3) / 0.4)", 0: "hsl(var(--chart-3))", 10: "hsl(var(--chart-3) / 1.2)"},
+];
+
 
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, '');
 
@@ -43,22 +49,28 @@ export default function MonthlyFinancialsChart({ allYearlyData }: MonthlyFinanci
         const data: { month: string; [key: string]: string | number }[] = months.map((month, i) => ({ month }));
         const config: ChartConfig = {};
         const legendData: Record<string, { label: string; total: number; avg: number; }> = {};
-        let colorIndexOffset = 0;
-
+        
         if (isYoY) {
             const selectedYears = availableYears.filter(y => y >= startYear && y <= endYear);
             selectedYears.forEach((year, yearIndex) => {
                 const yearData = allYearlyData[year];
                 
-                ['revenue', 'expenses', 'profit'].forEach((metric, metricIndex) => {
+                Object.keys(baseChartColors).forEach((metric, metricIndex) => {
                     const key = sanitizeKey(`${metric}_${year}`);
-                    config[key] = { label: `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}`, color: chartColors[metric as keyof typeof chartColors] };
+                    // Use variants to create distinct colors for each year's metric
+                    const colorShade = yearIndex === 0 ? 0 : (yearIndex % 2 === 1 ? -10 : 10);
+                    config[key] = { 
+                        label: `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}`, 
+                        color: chartColorVariants[metricIndex % chartColorVariants.length][colorShade as keyof typeof chartColorVariants[number]]
+                    };
+                    
                     let total = 0;
                     yearData.monthlyFinancials.forEach((val, monthIndex) => {
                         const metricValue = val[metric as keyof typeof val] as number;
                         data[monthIndex][key] = metricValue;
                         total += metricValue;
                     });
+
                     legendData[key] = {
                         label: `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}`,
                         total: total,
@@ -70,9 +82,12 @@ export default function MonthlyFinancialsChart({ allYearlyData }: MonthlyFinanci
         } else {
             // Single Year
             const yearData = allYearlyData[latestYear];
-            ['revenue', 'expenses', 'profit'].forEach(metric => {
+            Object.keys(baseChartColors).forEach(metric => {
                 const key = sanitizeKey(metric);
-                config[key] = { label: metric.charAt(0).toUpperCase() + metric.slice(1), color: chartColors[metric as keyof typeof chartColors] };
+                config[key] = { 
+                    label: metric.charAt(0).toUpperCase() + metric.slice(1), 
+                    color: baseChartColors[metric as keyof typeof baseChartColors] 
+                };
                 let total = 0;
                 yearData.monthlyFinancials.forEach((val, monthIndex) => {
                     const metricValue = val[metric as keyof typeof val] as number;
@@ -194,7 +209,7 @@ export default function MonthlyFinancialsChart({ allYearlyData }: MonthlyFinanci
                                     valueFormatter={(value) => `$${Number(value).toLocaleString()}`}
                                 />}
                             />
-                            <ChartLegend content={<CustomLegend />} />
+                            <CustomLegend payload={Object.keys(chartConfig).map(key => ({ value: key, color: chartConfig[key].color }))} />
                             {Object.keys(chartConfig).map(key => (
                                 <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={isYoY ? 0 : 4} />
                             ))}
@@ -221,7 +236,7 @@ export default function MonthlyFinancialsChart({ allYearlyData }: MonthlyFinanci
                                     valueFormatter={(value) => `$${Number(value).toLocaleString()}`}
                                 />}
                             />
-                            <ChartLegend content={<CustomLegend />} />
+                             <CustomLegend payload={Object.keys(chartConfig).map(key => ({ value: key, color: chartConfig[key].color }))} />
                             {Object.keys(chartConfig).map(key => (
                                 <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={true} />
                             ))}
