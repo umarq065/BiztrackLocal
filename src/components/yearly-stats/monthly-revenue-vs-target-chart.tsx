@@ -5,10 +5,8 @@ import { useMemo } from 'react';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
-  ChartLegendContent,
   type ChartConfig
 } from "@/components/ui/chart";
 import { MonthlyFinancials } from '@/lib/data/yearly-stats-data';
@@ -25,13 +23,45 @@ const chartConfig = {
 
 export default function MonthlyRevenueVsTargetChart({ monthlyFinancials, monthlyTargetRevenue }: MonthlyRevenueVsTargetChartProps) {
 
-    const chartData = useMemo(() => {
-        return monthlyFinancials.map((data, index) => ({
+    const { chartData, totalRevenue, totalTarget } = useMemo(() => {
+        const data = monthlyFinancials.map((data, index) => ({
             month: data.month,
             revenue: data.revenue,
             target: monthlyTargetRevenue[index],
         }));
+
+        const totalRev = data.reduce((acc, curr) => acc + curr.revenue, 0);
+        const totalTarg = data.reduce((acc, curr) => acc + curr.target, 0);
+
+        return { chartData: data, totalRevenue: totalRev, totalTarget: totalTarg };
     }, [monthlyFinancials, monthlyTargetRevenue]);
+
+    const CustomLegend = (props: any) => {
+      const { payload } = props;
+      const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
+      
+      const statsMap = {
+          revenue: { total: totalRevenue },
+          target: { total: totalTarget },
+      }
+
+      return (
+        <div className="flex justify-center gap-6 pt-4">
+          {payload.map((entry: any, index: number) => {
+            const key = entry.value as keyof typeof statsMap;
+            const stats = statsMap[key];
+
+            return (
+                <div key={`item-${index}`} className="flex items-center space-x-2 text-sm">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                  <span className="text-muted-foreground">{entry.payload.label}:</span>
+                  <span className="font-semibold">{formatCurrency(stats.total)} (Total)</span>
+                </div>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
         <ChartContainer config={chartConfig} className="h-[400px] w-full">
@@ -56,7 +86,7 @@ export default function MonthlyRevenueVsTargetChart({ monthlyFinancials, monthly
                         valueFormatter={(value) => `$${Number(value).toLocaleString()}`}
                     />}
                 />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend content={<CustomLegend />} />
                 <Line
                     dataKey="revenue"
                     type="monotone"
@@ -76,4 +106,3 @@ export default function MonthlyRevenueVsTargetChart({ monthlyFinancials, monthly
         </ChartContainer>
     );
 }
-

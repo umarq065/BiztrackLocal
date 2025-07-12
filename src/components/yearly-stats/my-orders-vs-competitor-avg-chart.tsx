@@ -22,16 +22,11 @@ interface MyOrdersVsCompetitorAvgChartProps {
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const chartConfig = {
-  myOrders: { label: "My Orders", color: "hsl(var(--chart-1))" },
-  competitorAvg: { label: "Competitor Avg.", color: "hsl(var(--chart-2))" },
-} satisfies ChartConfig;
-
 export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: MyOrdersVsCompetitorAvgChartProps) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
 
-    const chartData = useMemo(() => {
-        return months.map((month, index) => {
+    const { chartData, chartConfig, myOrdersAvg, competitorOrdersAvg } = useMemo(() => {
+        const data = months.map((month, index) => {
             const competitorTotalForMonth = competitors.reduce((acc, curr) => acc + curr.monthlyOrders[index], 0);
             const competitorAvgForMonth = competitors.length > 0 ? competitorTotalForMonth / competitors.length : 0;
             return {
@@ -40,6 +35,20 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
                 competitorAvg: Math.round(competitorAvgForMonth),
             };
         });
+        
+        const totalMyOrders = myOrders.reduce((acc, curr) => acc + curr, 0);
+        const myOrdersAverage = myOrders.length > 0 ? Math.round(totalMyOrders / myOrders.length) : 0;
+        
+        const totalCompetitorAvg = data.reduce((acc, curr) => acc + curr.competitorAvg, 0);
+        const competitorAverage = data.length > 0 ? Math.round(totalCompetitorAvg / data.length) : 0;
+        
+        const config: ChartConfig = {
+          myOrders: { label: "My Orders", color: "hsl(var(--chart-1))" },
+          competitorAvg: { label: "Competitor Avg.", color: "hsl(var(--chart-2))" },
+        };
+        
+        return { chartData: data, chartConfig: config, myOrdersAvg: myOrdersAverage, competitorOrdersAvg: competitorAverage };
+
     }, [myOrders, competitors]);
 
     const ChartTooltipContentCustom = (
@@ -49,6 +58,26 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
             nameKey="name"
         />
     );
+
+    const CustomLegend = (props: any) => {
+      const { payload } = props;
+      return (
+        <div className="flex justify-center gap-6 pt-4">
+          {payload.map((entry: any, index: number) => {
+            const isMyOrders = entry.value === 'myOrders';
+            const avgValue = isMyOrders ? myOrdersAvg : competitorOrdersAvg;
+            
+            return (
+                <div key={`item-${index}`} className="flex items-center space-x-2 text-sm">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                  <span className="text-muted-foreground">{entry.payload.label}:</span>
+                  <span className="font-semibold">{avgValue.toLocaleString()} (Avg)</span>
+                </div>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
         <Card className="lg:col-span-2">
@@ -101,7 +130,7 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
                                 cursor={false}
                                 content={ChartTooltipContentCustom}
                             />
-                            <ChartLegend content={<ChartLegendContent />} />
+                            <ChartLegend content={<CustomLegend />} />
                             <Bar dataKey="myOrders" fill="var(--color-myOrders)" radius={4} />
                             <Bar dataKey="competitorAvg" fill="var(--color-competitorAvg)" radius={4} />
                         </BarChart>
@@ -123,7 +152,7 @@ export default function MyOrdersVsCompetitorAvgChart({ myOrders, competitors }: 
                                 cursor={false}
                                 content={ChartTooltipContentCustom}
                             />
-                            <ChartLegend content={<ChartLegendContent />} />
+                            <ChartLegend content={<CustomLegend />} />
                             <Line dataKey="myOrders" type="monotone" stroke="var(--color-myOrders)" strokeWidth={2} dot={true} />
                             <Line dataKey="competitorAvg" type="monotone" stroke="var(--color-competitorAvg)" strokeWidth={2} dot={true} />
                         </LineChart>
