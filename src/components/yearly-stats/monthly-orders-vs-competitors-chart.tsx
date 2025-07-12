@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, BarChart } from 'recharts';
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { BarChart2, LineChartIcon } from 'lucide-react';
 
 interface MonthlyOrdersVsCompetitorsChartProps {
     allYearlyData: YearlyStatsData;
@@ -43,6 +45,7 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData }: Month
     const [isYoY, setIsYoY] = useState(false);
     const [startYear, setStartYear] = useState(availableYears[0]);
     const [endYear, setEndYear] = useState(availableYears[availableYears.length - 1]);
+    const [chartType, setChartType] = useState<'line' | 'bar'>('line');
     
     const latestYear = availableYears[availableYears.length - 1];
 
@@ -192,6 +195,28 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData }: Month
                             </Select>
                         </div>
                     )}
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant={chartType === 'bar' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-center"
+                            onClick={() => setChartType('bar')}
+                            aria-label="Switch to Bar Chart"
+                        >
+                            <BarChart2 className="h-4 w-4" />
+                            <span className="ml-2">Bar</span>
+                        </Button>
+                        <Button
+                            variant={chartType === 'line' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-center"
+                            onClick={() => setChartType('line')}
+                            aria-label="Switch to Line Chart"
+                        >
+                            <LineChartIcon className="h-4 w-4" />
+                            <span className="ml-2">Line</span>
+                        </Button>
+                    </div>
                      <div>
                         <h4 className="font-semibold mb-2 mt-4">Display Lines</h4>
                         <p className="text-sm text-muted-foreground mb-4">Toggle lines on the graph.</p>
@@ -218,25 +243,45 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData }: Month
             </div>
             <div className="md:col-span-4">
                 <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
-                    <LineChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
-                        <CartesianGrid vertical={false} />
-                        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                        <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                        <ChartLegend content={<CustomLegend />} />
-                        {Object.entries(activeMetrics).map(([key, isActive]) => 
-                            isActive && (
-                                <Line
-                                    key={key}
-                                    dataKey={key}
-                                    type="monotone"
-                                    strokeWidth={2}
-                                    stroke={`var(--color-${key})`}
-                                    dot={true}
-                                />
-                            )
-                        )}
-                    </LineChart>
+                    {chartType === 'line' ? (
+                        <LineChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                            <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                            <ChartLegend content={<CustomLegend />} />
+                            {Object.entries(activeMetrics).map(([key, isActive]) => 
+                                isActive && (
+                                    <Line
+                                        key={key}
+                                        dataKey={key}
+                                        type="monotone"
+                                        strokeWidth={2}
+                                        stroke={`var(--color-${key})`}
+                                        dot={true}
+                                    />
+                                )
+                            )}
+                        </LineChart>
+                    ) : (
+                        <BarChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                            <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                            <ChartLegend content={<CustomLegend />} />
+                            {Object.entries(activeMetrics).map(([key, isActive]) => 
+                                isActive && (
+                                    <Bar
+                                        key={key}
+                                        dataKey={key}
+                                        fill={`var(--color-${key})`}
+                                        radius={isYoY ? 0 : 4}
+                                    />
+                                )
+                            )}
+                        </BarChart>
+                    )}
                 </ChartContainer>
             </div>
         </div>
