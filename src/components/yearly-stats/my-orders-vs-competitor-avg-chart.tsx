@@ -69,7 +69,7 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
             });
         });
         
-        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy };
+        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy };
 
     }, [selectedYears, allYearlyData]);
 
