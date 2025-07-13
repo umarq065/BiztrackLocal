@@ -27,8 +27,11 @@ export interface Stat {
 
 export interface RecentOrder {
   id: string;
-  clientName: string;
-  clientEmail:string;
+  username: string;
+  avatarUrl: string;
+  date: string;
+  source: string;
+  status: 'Completed' | 'In Progress' | 'Cancelled';
   amount: number;
 }
 
@@ -321,32 +324,47 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
   recentOrders: [
     {
       id: "ORD001",
-      clientName: "Olivia Martin",
-      clientEmail: "olivia.martin@email.com",
+      username: "olivia.m",
+      avatarUrl: "https://placehold.co/100x100.png?text=O",
+      date: "2024-05-20",
+      source: "Web Design",
+      status: "Completed",
       amount: 1999.0,
     },
     {
       id: "ORD002",
-      clientName: "Jackson Lee",
-      clientEmail: "jackson.lee@email.com",
+      username: "jackson.l",
+      avatarUrl: "https://placehold.co/100x100.png?text=J",
+      date: "2024-05-21",
+      source: "Consulting",
+      status: "Completed",
       amount: 399.0,
     },
     {
       id: "ORD003",
-      clientName: "Isabella Nguyen",
-      clientEmail: "isabella.nguyen@email.com",
+      username: "isabella.n",
+      avatarUrl: "https://placehold.co/100x100.png?text=I",
+      date: "2024-05-22",
+      source: "Logo Design",
+      status: "Cancelled",
       amount: 299.0,
     },
     {
       id: "ORD004",
-      clientName: "William Kim",
-      clientEmail: "will@email.com",
+      username: "will.k",
+      avatarUrl: "https://placehold.co/100x100.png?text=W",
+      date: "2024-05-23",
+      source: "Web Design",
+      status: "In Progress",
       amount: 999.0,
     },
     {
       id: "ORD005",
-      clientName: "Sofia Davis",
-      clientEmail: "sofia.davis@email.com",
+      username: "sofia.d",
+      avatarUrl: "https://placehold.co/100x100.png?text=S",
+      date: "2024-05-24",
+      source: "SEO Services",
+      status: "Completed",
       amount: 499.0,
     },
   ],
