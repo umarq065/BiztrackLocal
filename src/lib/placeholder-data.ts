@@ -1,4 +1,5 @@
 
+
 import React, { type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
@@ -25,14 +26,20 @@ export interface Stat {
   }[];
 }
 
-export interface RecentOrder {
-  id: string;
-  username: string;
+export interface Order {
+    id: string;
+    username: string;
+    date: string;
+    amount: number;
+    source: string;
+    gig?: string;
+    status: 'Completed' | 'In Progress' | 'Cancelled';
+    rating?: number;
+    cancellationReasons?: string[];
+}
+
+export interface RecentOrder extends Order {
   avatarUrl: string;
-  date: string;
-  source: string;
-  status: 'Completed' | 'In Progress' | 'Cancelled';
-  amount: number;
 }
 
 export interface RevenueByDay {
@@ -328,8 +335,10 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       avatarUrl: "https://placehold.co/100x100.png?text=O",
       date: "2024-05-20",
       source: "Web Design",
+      gig: 'Acme Corp Redesign',
       status: "Completed",
       amount: 1999.0,
+      rating: 5,
     },
     {
       id: "ORD002",
@@ -337,8 +346,10 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       avatarUrl: "https://placehold.co/100x100.png?text=J",
       date: "2024-05-21",
       source: "Consulting",
+      gig: 'Q1 Strategy Session',
       status: "Completed",
       amount: 399.0,
+      rating: 4.2
     },
     {
       id: "ORD003",
@@ -346,8 +357,10 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       avatarUrl: "https://placehold.co/100x100.png?text=I",
       date: "2024-05-22",
       source: "Logo Design",
+      gig: "Brand Identity for 'Innovate'",
       status: "Cancelled",
       amount: 299.0,
+      cancellationReasons: ["Not satisfied with design"]
     },
     {
       id: "ORD004",
@@ -355,6 +368,7 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       avatarUrl: "https://placehold.co/100x100.png?text=W",
       date: "2024-05-23",
       source: "Web Design",
+      gig: 'Startup Landing Page',
       status: "In Progress",
       amount: 999.0,
     },
@@ -364,8 +378,10 @@ export const dashboardData: Omit<DashboardData, "financialCards"> = {
       avatarUrl: "https://placehold.co/100x100.png?text=S",
       date: "2024-05-24",
       source: "SEO Services",
+      gig: 'Monthly SEO Retainer',
       status: "Completed",
       amount: 499.0,
+      rating: 3.7
     },
   ],
   topClients: [

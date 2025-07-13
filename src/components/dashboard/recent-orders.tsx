@@ -12,14 +12,13 @@ import { Badge } from "../ui/badge";
 import { format } from "date-fns";
 import { Button } from "../ui/button";
 import { MoreHorizontal, Edit } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import NProgressLink from "../layout/nprogress-link";
 
 interface RecentOrdersProps {
   orders: RecentOrder[];
+  onEditOrder: (orderId: string) => void;
 }
 
-export default function RecentOrders({ orders }: RecentOrdersProps) {
+export default function RecentOrders({ orders, onEditOrder }: RecentOrdersProps) {
   return (
     <Table>
       <TableHeader>
@@ -61,12 +60,10 @@ export default function RecentOrders({ orders }: RecentOrdersProps) {
               ${order.amount.toFixed(2)}
             </TableCell>
             <TableCell className="text-right">
-                <NProgressLink href={`/orders`}>
-                    <Button variant="outline" size="sm">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                </NProgressLink>
+                <Button variant="outline" size="sm" onClick={() => onEditOrder(order.id)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                </Button>
             </TableCell>
           </TableRow>
         ))}

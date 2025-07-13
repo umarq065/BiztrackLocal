@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, memo } from "react";
@@ -120,7 +121,7 @@ const orderFormSchema = z.object({
 });
 
 
-type OrderFormValues = z.infer<typeof orderFormSchema>;
+export type OrderFormValues = z.infer<typeof orderFormSchema>;
 
 const cancellationReasonsList = [
     "Cancelled without requirements",
