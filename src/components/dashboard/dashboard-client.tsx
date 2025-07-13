@@ -38,6 +38,7 @@ export function DashboardClient({
   const [date, setDate] = useState<DateRange | undefined>();
   const [targetMonth, setTargetMonth] = useState("June");
   const [targetYear, setTargetYear] = useState(2024); // Static year for SSR
+  const [daysLeft, setDaysLeft] = useState(0);
 
   useEffect(() => {
     const today = new Date();
@@ -47,6 +48,10 @@ export function DashboardClient({
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const currentMonthName = monthNames[today.getMonth()];
     const currentYear = today.getFullYear();
+    
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
+    setDaysLeft(remainingDays);
 
     setTargetMonth(currentMonthName);
     setTargetYear(currentYear);
@@ -127,6 +132,7 @@ export function DashboardClient({
         onSetTarget={handleSetTarget}
         targetMonth={targetMonth}
         targetYear={targetYear}
+        daysLeft={daysLeft}
       />
 
       <section>
