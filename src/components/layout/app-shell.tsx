@@ -48,7 +48,7 @@ const navItems = [
 
 const settingsItems = [
     { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
-    { href: "#", icon: Settings, label: "Settings" },
+    { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 function AppLogo() {
