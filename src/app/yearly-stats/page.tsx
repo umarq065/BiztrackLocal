@@ -73,10 +73,6 @@ const YearlyStatsPageComponent = () => {
         </div>
       </div>
       
-      <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-        <YearlySummaryTable allYearlyData={yearlyStatsData} selectedYear={singleSelectedYear} />
-      </Suspense>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Suspense fallback={<Skeleton className="h-[500px] lg:col-span-2" />}>
             <MyOrdersVsCompetitorAvgChart allYearlyData={yearlyStatsData} selectedYears={selectedYears}/>
@@ -104,6 +100,10 @@ const YearlyStatsPageComponent = () => {
       
       <Suspense fallback={<Skeleton className="h-[500px]" />}>
           <MonthlyRevenueVsTargetChart allYearlyData={yearlyStatsData} selectedYears={selectedYears} />
+      </Suspense>
+
+      <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+        <YearlySummaryTable allYearlyData={yearlyStatsData} selectedYear={singleSelectedYear} />
       </Suspense>
     </main>
   );
