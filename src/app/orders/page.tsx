@@ -153,15 +153,42 @@ const importFormSchema = z.object({
     file: z.any().optional(),
 });
 
+const ORDERS_PER_PAGE = 10;
+
 interface OrdersTableProps {
     orders: (Order & { dateObj: Date })[];
     onEdit: (order: Order) => void;
     onDelete: (order: Order) => void;
-    onCancel: (order: Order) => void;
 }
 
-const OrdersTable = ({ orders, onEdit, onDelete, onCancel }: OrdersTableProps) => {
+const OrdersTable = ({ orders, onEdit, onDelete }: OrdersTableProps) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = Math.ceil(orders.length / ORDERS_PER_PAGE);
+
+    const paginatedOrders = useMemo(() => {
+        const startIndex = (currentPage - 1) * ORDERS_PER_PAGE;
+        const endIndex = startIndex + ORDERS_PER_PAGE;
+        return orders.slice(startIndex, endIndex);
+    }, [orders, currentPage]);
+
+    const handlePrevPage = () => {
+        setCurrentPage(prev => Math.max(1, prev - 1));
+    };
+
+    const handleNextPage = () => {
+        setCurrentPage(prev => Math.min(totalPages, prev + 1));
+    };
+
+    useEffect(() => {
+      // Reset to page 1 if the orders data changes and current page is out of bounds
+      if (currentPage > totalPages) {
+        setCurrentPage(1);
+      }
+    }, [orders, currentPage, totalPages]);
+
+
     return (
+      <div>
         <Table>
             <TableHeader>
                 <TableRow>
@@ -177,8 +204,8 @@ const OrdersTable = ({ orders, onEdit, onDelete, onCancel }: OrdersTableProps) =
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {orders.length > 0 ? (
-                    orders.map((order) => (
+                {paginatedOrders.length > 0 ? (
+                    paginatedOrders.map((order) => (
                         <TableRow key={order.id}>
                             <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
                             <TableCell className="font-medium">{order.id}</TableCell>
@@ -221,17 +248,6 @@ const OrdersTable = ({ orders, onEdit, onDelete, onCancel }: OrdersTableProps) =
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </DropdownMenuItem>
-                                        {order.status !== 'Cancelled' && (
-                                            <DropdownMenuItem
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onCancel(order);
-                                                }}
-                                                className="text-destructive focus:text-destructive"
-                                            >
-                                                Mark as Cancelled
-                                            </DropdownMenuItem>
-                                        )}
                                         <DropdownMenuItem
                                             className="text-destructive focus:text-destructive"
                                             onClick={(e) => { e.stopPropagation(); onDelete(order); }}
@@ -253,6 +269,30 @@ const OrdersTable = ({ orders, onEdit, onDelete, onCancel }: OrdersTableProps) =
                 )}
             </TableBody>
         </Table>
+        {totalPages > 1 && (
+            <div className="flex items-center justify-end space-x-2 py-4">
+                <span className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </Button>
+            </div>
+        )}
+      </div>
     );
 };
 
@@ -431,29 +471,6 @@ const OrdersPageComponent = () => {
         setDialogOpen(false);
         setEditingOrder(null);
     }
-    
-    function onCancelSubmit(orderToCancel: Order, values: OrderFormValues) {
-        let finalCancellationReasons: string[] = [];
-        if (values.cancellationReasons) {
-            finalCancellationReasons = [...values.cancellationReasons];
-        }
-        if (values.customCancellationReason && values.customCancellationReason.trim()) {
-            finalCancellationReasons.push(values.customCancellationReason.trim());
-        }
-
-        setOrders(prevOrders => 
-            prevOrders.map(o => 
-                o.id === orderToCancel.id 
-                ? { ...o, status: 'Cancelled', cancellationReasons: finalCancellationReasons } 
-                : o
-            )
-        );
-        toast({
-            title: "Order Cancelled",
-            description: `Order ${orderToCancel.id} has been marked as cancelled.`,
-        });
-        setDialogOpen(false);
-    }
 
     const handleDeleteOrder = () => {
         if (!orderToDelete) return;
@@ -580,7 +597,6 @@ const OrdersPageComponent = () => {
                         orders={inProgressOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
-                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
                     />
                 </TabsContent>
                 <TabsContent value="completed" className="mt-4">
@@ -588,7 +604,6 @@ const OrdersPageComponent = () => {
                         orders={completedOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
-                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
                     />
                 </TabsContent>
                 <TabsContent value="cancelled" className="mt-4">
@@ -596,7 +611,6 @@ const OrdersPageComponent = () => {
                         orders={cancelledOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
-                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
                     />
                 </TabsContent>
             </Tabs>
