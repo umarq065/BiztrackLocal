@@ -63,7 +63,6 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
     Popover,
     PopoverContent,
@@ -933,6 +932,7 @@ export default function OrdersPage() {
                                 <FormDescription>
                                     New gigs from your CSV will be added to this source.
                                 </FormDescription>
+                                <FormMessage />
                             </FormItem>
                         )}
                     />
@@ -971,7 +971,7 @@ export default function OrdersPage() {
                     render={() => (
                     <FormItem>
                         <div className="mb-4">
-                        <FormLabel className="text-base">Reason for Cancellation</FormLabel>
+                        <FormLabel>Reason for Cancellation</FormLabel>
                         <FormDescription>Select any applicable reasons.</FormDescription>
                         </div>
                         <div className="space-y-2">
@@ -1044,5 +1044,3 @@ export default function OrdersPage() {
     </main>
   );
 }
-
-    
