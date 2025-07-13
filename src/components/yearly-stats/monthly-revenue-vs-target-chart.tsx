@@ -77,7 +77,7 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
             });
         });
         
-        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy };
+        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy };
     }, [selectedYears, allYearlyData]);
 
     const CustomLegend = (props: any) => {
