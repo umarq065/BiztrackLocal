@@ -51,6 +51,37 @@ const settingsItems = [
     { href: "#", icon: Settings, label: "Settings" },
 ];
 
+function AppLogo() {
+    return (
+        <svg
+            width="28"
+            height="28"
+            viewBox="0 0 28 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="shrink-0"
+        >
+            <rect width="28" height="28" rx="8" fill="url(#logo-gradient)" />
+            <path d="M8 18.5V14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 18.5V9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 18.5V12.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <defs>
+                <linearGradient
+                    id="logo-gradient"
+                    x1="0"
+                    y1="0"
+                    x2="28"
+                    y2="28"
+                    gradientUnits="userSpaceOnUse"
+                >
+                    <stop stopColor="hsl(var(--primary))" />
+                    <stop offset="1" stopColor="hsl(var(--primary) / 0.5)" />
+                </linearGradient>
+            </defs>
+        </svg>
+    )
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
@@ -60,9 +91,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-3">
-              <LayoutDashboard className="size-7 text-primary" />
+              <AppLogo />
               <div className="flex flex-col group-data-[collapsed=true]:hidden">
-                <h2 className="text-lg font-semibold font-headline">BizTrack Pro</h2>
+                <h2 className="font-headline text-lg font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary to-foreground/80">
+                  BizTrack Pro
+                </h2>
               </div>
             </div>
           </SidebarHeader>
