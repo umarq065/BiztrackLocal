@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line } from 'recharts';
 import {
   ChartContainer,
@@ -13,6 +13,8 @@ import { type YearlyStatsData } from '@/lib/data/yearly-stats-data';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface MyOrdersVsCompetitorAvgChartProps {
     allYearlyData: YearlyStatsData;
@@ -32,8 +34,14 @@ const colorVariants: {[key: number]: string} = {
 
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, '');
 
+const baseMetrics = ['My Orders', 'Competitor Avg.'];
+
 export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYears }: MyOrdersVsCompetitorAvgChartProps) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+    const [activeMetrics, setActiveMetrics] = useState<Record<string, boolean>>({
+        'My Orders': true,
+        'Competitor Avg.': true,
+    });
     
     const { chartData, chartConfig, legendStats, isYoy } = useMemo(() => {
         const yoy = selectedYears.length > 1;
@@ -73,6 +81,17 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
 
     }, [selectedYears, allYearlyData]);
 
+    const handleMetricToggle = (metric: string) => {
+        setActiveMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
+    };
+
+    const activeChartKeys = useMemo(() => {
+        return Object.keys(chartConfig).filter(key => {
+            const baseMetric = baseMetrics.find(bm => key.startsWith(sanitizeKey(bm)));
+            return baseMetric && activeMetrics[baseMetric];
+        });
+    }, [chartConfig, activeMetrics]);
+
     const ChartTooltipContentCustom = (
         <ChartTooltipContent
             indicator="dot"
@@ -84,10 +103,11 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
     const CustomLegend = (props: any) => {
       const { payload } = props;
       const formatNumber = (value: number) => value.toLocaleString();
+      const activePayload = payload.filter((p: any) => activeChartKeys.includes(p.value));
 
       return (
         <div className="flex justify-center gap-4 pt-4 flex-wrap">
-          {payload.map((entry: any, index: number) => {
+          {activePayload.map((entry: any, index: number) => {
             const key = entry.value as keyof typeof legendStats;
             const stats = legendStats[key];
             if (!stats) return null;
@@ -138,58 +158,83 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
                 </div>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
-                    {chartType === 'bar' ? (
-                        <BarChart
-                            data={chartData}
-                            margin={{ top: 20, right: 20, left: 10, bottom: 5 }}
-                        >
-                            <CartesianGrid vertical={false} />
-                            <XAxis
-                                dataKey="month"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                            />
-                            <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                            />
-                            <Tooltip
-                                cursor={false}
-                                content={ChartTooltipContentCustom}
-                            />
-                            <ChartLegend content={<CustomLegend />} />
-                            {Object.keys(chartConfig).map(key => (
-                                <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={4} />
-                            ))}
-                        </BarChart>
-                    ) : (
-                         <LineChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
-                            <CartesianGrid vertical={false} />
-                            <XAxis
-                                dataKey="month"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                            />
-                            <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                            />
-                            <Tooltip
-                                cursor={false}
-                                content={ChartTooltipContentCustom}
-                            />
-                            <ChartLegend content={<CustomLegend />} />
-                            {Object.keys(chartConfig).map(key => (
-                                <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={true} />
-                            ))}
-                        </LineChart>
-                    )}
-                </ChartContainer>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div className="md:col-span-1">
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="font-semibold mb-2">Display Metrics</h4>
+                                <div className="space-y-2 rounded-md border p-2">
+                                    {baseMetrics.map((metric) => (
+                                        <div key={metric} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
+                                            <Checkbox
+                                                id={`metric-avg-${metric}`}
+                                                checked={!!activeMetrics[metric]}
+                                                onCheckedChange={() => handleMetricToggle(metric)}
+                                            />
+                                            <Label htmlFor={`metric-avg-${metric}`} className="flex-1 cursor-pointer font-normal">
+                                                {metric}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="md:col-span-4">
+                        <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
+                            {chartType === 'bar' ? (
+                                <BarChart
+                                    data={chartData}
+                                    margin={{ top: 20, right: 20, left: 10, bottom: 5 }}
+                                >
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis
+                                        dataKey="month"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                    />
+                                    <Tooltip
+                                        cursor={false}
+                                        content={ChartTooltipContentCustom}
+                                    />
+                                    <ChartLegend content={<CustomLegend />} />
+                                    {activeChartKeys.map(key => (
+                                        <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={4} />
+                                    ))}
+                                </BarChart>
+                            ) : (
+                                 <LineChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+                                    <CartesianGrid vertical={false} />
+                                    <XAxis
+                                        dataKey="month"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                    />
+                                    <YAxis
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={8}
+                                    />
+                                    <Tooltip
+                                        cursor={false}
+                                        content={ChartTooltipContentCustom}
+                                    />
+                                    <ChartLegend content={<CustomLegend />} />
+                                    {activeChartKeys.map(key => (
+                                        <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={true} />
+                                    ))}
+                                </LineChart>
+                            )}
+                        </ChartContainer>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );

@@ -39,8 +39,15 @@ const colorVariants: { [key: number]: string } = {
 
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, '');
 
+const baseMetrics = Object.keys(baseChartColors);
+
 export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }: MonthlyFinancialsChartProps) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+    const [activeMetrics, setActiveMetrics] = useState<Record<string, boolean>>({
+        revenue: true,
+        expenses: true,
+        profit: true,
+    });
     
     const { chartData, chartConfig, legendStats, isYoy } = useMemo(() => {
         const yoy = selectedYears.length > 1;
@@ -84,13 +91,25 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
 
     }, [selectedYears, allYearlyData]);
 
+    const handleMetricToggle = (metric: string) => {
+        setActiveMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
+    };
+
+    const activeChartKeys = useMemo(() => {
+        return Object.keys(chartConfig).filter(key => {
+            const baseMetric = baseMetrics.find(bm => key.startsWith(bm));
+            return baseMetric && activeMetrics[baseMetric];
+        });
+    }, [chartConfig, activeMetrics]);
+
     const CustomLegend = (props: any) => {
         const { payload } = props;
         const formatCurrency = (value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+        const activePayload = payload.filter((p: any) => activeChartKeys.includes(p.value));
         
         return (
             <div className="flex justify-center gap-4 pt-4 flex-wrap">
-            {payload.map((entry: any, index: number) => {
+            {activePayload.map((entry: any, index: number) => {
                 const key = entry.value as keyof typeof legendStats;
                 const stats = legendStats[key];
                 if (!stats) return null;
@@ -144,6 +163,23 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
                                     <span className="ml-2">Line</span>
                                 </Button>
                             </div>
+                            <div>
+                                <h4 className="font-semibold mb-2 mt-4">Display Metrics</h4>
+                                <div className="space-y-2 rounded-md border p-2">
+                                    {baseMetrics.map((metric) => (
+                                        <div key={metric} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50">
+                                            <Checkbox
+                                                id={`metric-financial-${metric}`}
+                                                checked={!!activeMetrics[metric]}
+                                                onCheckedChange={() => handleMetricToggle(metric)}
+                                            />
+                                            <Label htmlFor={`metric-financial-${metric}`} className="flex-1 cursor-pointer font-normal capitalize">
+                                                {metric}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div className="md:col-span-4">
@@ -171,7 +207,7 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
                                         />}
                                     />
                                     <ChartLegend content={<CustomLegend />} />
-                                    {Object.keys(chartConfig).map(key => (
+                                    {activeChartKeys.map(key => (
                                         <Bar key={key} dataKey={key} fill={`var(--color-${key})`} radius={4} />
                                     ))}
                                 </BarChart>
@@ -198,7 +234,7 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
                                         />}
                                     />
                                     <ChartLegend content={<CustomLegend />} />
-                                    {Object.keys(chartConfig).map(key => (
+                                    {activeChartKeys.map(key => (
                                         <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={true} />
                                     ))}
                                 </LineChart>
