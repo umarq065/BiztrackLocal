@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -76,7 +76,7 @@ const summaryFormSchema = z.object({
 
 type SummaryFormValues = z.infer<typeof summaryFormSchema>;
 
-export default function DailySummaryPage() {
+const DailySummaryPageComponent = () => {
   const [summaries, setSummaries] = useState<DailySummary[]>(initialSummaries);
   const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 1));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -280,4 +280,10 @@ export default function DailySummaryPage() {
       </AlertDialog>
     </div>
   );
+}
+
+const MemoizedDailySummaryPage = memo(DailySummaryPageComponent);
+
+export default function DailySummaryPage() {
+  return <MemoizedDailySummaryPage />;
 }

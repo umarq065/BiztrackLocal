@@ -1,5 +1,7 @@
+
 "use client";
 
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function BusinessProfilePage() {
+const BusinessProfilePageComponent = () => {
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
@@ -52,4 +54,10 @@ export default function BusinessProfilePage() {
       </Card>
     </main>
   );
+}
+
+const MemoizedBusinessProfilePage = memo(BusinessProfilePageComponent);
+
+export default function BusinessProfilePage() {
+  return <MemoizedBusinessProfilePage />;
 }

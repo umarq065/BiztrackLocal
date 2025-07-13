@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
@@ -21,7 +21,7 @@ import { initialIncomeSources } from "@/lib/data/incomes-data";
 
 const incomeSourceNames = initialIncomeSources.map((s) => s.name);
 
-export default function DetailedMetricsPage() {
+const DetailedMetricsPageComponent = () => {
   const [date, setDate] = useState<DateRange | undefined>();
   const [source, setSource] = useState("all");
 
@@ -65,4 +65,10 @@ export default function DetailedMetricsPage() {
       </div>
     </main>
   );
+}
+
+const MemoizedDetailedMetricsPage = memo(DetailedMetricsPageComponent);
+
+export default function DetailedMetricsPage() {
+  return <MemoizedDetailedMetricsPage />;
 }

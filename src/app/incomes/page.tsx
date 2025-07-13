@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -126,7 +125,7 @@ const addGigDataFormSchema = z.object({
 type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
 
-export default function IncomesPage() {
+const IncomesPageComponent = () => {
   const [incomeSources, setIncomeSources] =
     useState<IncomeSource[]>(initialIncomeSources);
   const [open, setOpen] = useState(false);
@@ -1151,4 +1150,10 @@ export default function IncomesPage() {
       </Dialog>
     </main>
   );
+}
+
+const MemoizedIncomesPage = memo(IncomesPageComponent);
+
+export default function IncomesPage() {
+  return <MemoizedIncomesPage />;
 }

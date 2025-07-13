@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { ClientsTable } from "@/components/clients/clients-table";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
 
 
-export default function ClientsPage() {
+const ClientsPageComponent = () => {
     const [clients, setClients] = useState<Client[]>(initialClients);
     const [open, setOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -201,4 +201,10 @@ export default function ClientsPage() {
       )}
     </main>
   );
+}
+
+const MemoizedClientsPage = memo(ClientsPageComponent);
+
+export default function ClientsPage() {
+  return <MemoizedClientsPage />;
 }

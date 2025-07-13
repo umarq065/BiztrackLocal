@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -132,7 +132,7 @@ const initialCompetitors: Competitor[] = [
 ];
 
 
-export default function CompetitorsPage() {
+const CompetitorsPageComponent = () => {
     const [competitors, setCompetitors] = useState<Competitor[]>(initialCompetitors);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingCompetitor, setEditingCompetitor] = useState<Competitor | null>(null);
@@ -655,4 +655,9 @@ export default function CompetitorsPage() {
   );
 }
 
+const MemoizedCompetitorsPage = memo(CompetitorsPageComponent);
+
+export default function CompetitorsPage() {
+    return <MemoizedCompetitorsPage />;
+}
     

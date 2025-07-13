@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -86,7 +86,7 @@ const noteFormSchema = z.object({
 
 type NoteFormValues = z.infer<typeof noteFormSchema>;
 
-export default function BusinessNotesPage() {
+const BusinessNotesPageComponent = () => {
   const [notes, setNotes] = useState<BusinessNote[]>(() => 
     initialNotesData.map(note => ({
       ...note,
@@ -376,4 +376,10 @@ export default function BusinessNotesPage() {
       </AlertDialog>
     </div>
   );
+}
+
+const MemoizedBusinessNotesPage = memo(BusinessNotesPageComponent);
+
+export default function BusinessNotesPage() {
+  return <MemoizedBusinessNotesPage />;
 }

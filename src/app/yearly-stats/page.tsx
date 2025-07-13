@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Suspense, lazy, useState, useMemo } from "react";
+import { Suspense, lazy, useState, useMemo, memo } from "react";
 import {
   Card,
   CardContent,
@@ -24,7 +24,7 @@ const MonthlyRevenueVsTargetChart = lazy(() => import("@/components/yearly-stats
 const YearlySummaryTable = lazy(() => import("@/components/yearly-stats/yearly-summary-table"));
 
 
-export default function YearlyStatsPage() {
+const YearlyStatsPageComponent = () => {
     const availableYears = useMemo(() => Object.keys(yearlyStatsData).map(Number).sort((a,b) => b-a), []);
     const [selectedYears, setSelectedYears] = useState<number[]>([availableYears[0]]);
     
@@ -107,4 +107,10 @@ export default function YearlyStatsPage() {
       </Suspense>
     </main>
   );
+}
+
+const MemoizedYearlyStatsPage = memo(YearlyStatsPageComponent);
+
+export default function YearlyStatsPage() {
+  return <MemoizedYearlyStatsPage />;
 }

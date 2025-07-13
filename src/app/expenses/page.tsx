@@ -1,5 +1,15 @@
+
+"use client";
+
+import { memo } from "react";
 import { ExpensesDashboard } from "@/components/expenses/expenses-dashboard";
 
-export default function ExpensesPage() {
+const ExpensesPageComponent = () => {
   return <ExpensesDashboard />;
+}
+
+const MemoizedExpensesPage = memo(ExpensesPageComponent);
+
+export default function ExpensesPage() {
+  return <MemoizedExpensesPage />;
 }
