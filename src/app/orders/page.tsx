@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -85,6 +85,7 @@ import { DateFilter } from "@/components/dashboard/date-filter";
 import { Textarea } from "@/components/ui/textarea";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
 import { initialOrders as staticOrders, type Order } from "@/lib/data/orders-data";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const clients = [
@@ -121,19 +122,6 @@ const orderFormSchema = z.object({
 
 type OrderFormValues = z.infer<typeof orderFormSchema>;
 
-const cancelOrderFormSchema = z.object({
-  cancellationReasons: z.array(z.string()).optional(),
-  customCancellationReason: z.string().optional(),
-}).refine(
-  (data) => (data.cancellationReasons?.length ?? 0) > 0 || (data.customCancellationReason?.trim() ?? "") !== "",
-  {
-    message: "At least one cancellation reason must be provided.",
-    path: ["cancellationReasons"],
-  }
-);
-type CancelOrderFormValues = z.infer<typeof cancelOrderFormSchema>;
-
-
 const cancellationReasonsList = [
     "Cancelled without requirements",
     "Expectations beyond requirements",
@@ -165,12 +153,114 @@ const importFormSchema = z.object({
     file: z.any().optional(),
 });
 
-export default function OrdersPage() {
+interface OrdersTableProps {
+    orders: (Order & { dateObj: Date })[];
+    onEdit: (order: Order) => void;
+    onDelete: (order: Order) => void;
+    onCancel: (order: Order) => void;
+}
+
+const OrdersTable = ({ orders, onEdit, onDelete, onCancel }: OrdersTableProps) => {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Gig</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {orders.length > 0 ? (
+                    orders.map((order) => (
+                        <TableRow key={order.id}>
+                            <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
+                            <TableCell className="font-medium">{order.id}</TableCell>
+                            <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
+                            <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
+                            <TableCell>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="inline-block max-w-[120px] truncate">
+                                                {order.source}
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{order.source}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </TableCell>
+                            <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
+                            <TableCell>
+                                <StarDisplay rating={order.rating} />
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
+                                    {order.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Toggle menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(order); }}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        {order.status !== 'Cancelled' && (
+                                            <DropdownMenuItem
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onCancel(order);
+                                                }}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                Mark as Cancelled
+                                            </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuItem
+                                            className="text-destructive focus:text-destructive"
+                                            onClick={(e) => { e.stopPropagation(); onDelete(order); }}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center">
+                            No orders found.
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+        </Table>
+    );
+};
+
+const OrdersPageComponent = () => {
     const [orders, setOrders] = useState<Order[]>(staticOrders);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-    const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
     const { toast } = useToast();
     
@@ -246,14 +336,6 @@ export default function OrdersPage() {
         }
     });
 
-    const cancelForm = useForm<CancelOrderFormValues>({
-        resolver: zodResolver(cancelOrderFormSchema),
-        defaultValues: {
-            cancellationReasons: [],
-            customCancellationReason: "",
-        },
-    });
-    
     const importForm = useForm<z.infer<typeof importFormSchema>>({
         resolver: zodResolver(importFormSchema),
     });
@@ -350,9 +432,7 @@ export default function OrdersPage() {
         setEditingOrder(null);
     }
     
-    function onCancelSubmit(values: CancelOrderFormValues) {
-        if (!orderToCancel) return;
-
+    function onCancelSubmit(orderToCancel: Order, values: OrderFormValues) {
         let finalCancellationReasons: string[] = [];
         if (values.cancellationReasons) {
             finalCancellationReasons = [...values.cancellationReasons];
@@ -372,8 +452,7 @@ export default function OrdersPage() {
             title: "Order Cancelled",
             description: `Order ${orderToCancel.id} has been marked as cancelled.`,
         });
-        setOrderToCancel(null);
-        cancelForm.reset();
+        setDialogOpen(false);
     }
 
     const handleDeleteOrder = () => {
@@ -461,6 +540,11 @@ export default function OrdersPage() {
         }
         return sortableItems;
     }, [filteredOrders, sortConfig]);
+    
+    const inProgressOrders = useMemo(() => sortedOrders.filter(o => o.status === 'In Progress'), [sortedOrders]);
+    const completedOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Completed'), [sortedOrders]);
+    const cancelledOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Cancelled'), [sortedOrders]);
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -485,130 +569,37 @@ export default function OrdersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('date')}>
-                        Date {getSortIndicator('date')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('id')}>
-                        Order ID {getSortIndicator('id')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('clientUsername')}>
-                        Client {getSortIndicator('clientUsername')}
-                    </Button>
-                </TableHead>
-                <TableHead className="text-right">
-                    <Button variant="ghost" onClick={() => requestSort('amount')}>
-                        Amount {getSortIndicator('amount')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                     <Button variant="ghost" onClick={() => requestSort('source')}>
-                        Source {getSortIndicator('source')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('gig')}>
-                        Gig {getSortIndicator('gig')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('rating')}>
-                        Rating {getSortIndicator('rating')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('status')}>
-                        Status {getSortIndicator('status')}
-                    </Button>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedOrders.length > 0 ? (
-                sortedOrders.map((order) => (
-                    <TableRow key={order.id}>
-                    <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{clients.find(c => c.username === order.clientUsername)?.name || order.clientUsername}</TableCell>
-                    <TableCell className="text-right">${order.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                        <TooltipProvider>
-                            <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="inline-block max-w-[120px] truncate">
-                                {order.source}
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{order.source}</p>
-                            </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </TableCell>
-                    <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
-                    <TableCell>
-                        <StarDisplay rating={order.rating} />
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
-                        {order.status}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenDialog(order); }}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                            </DropdownMenuItem>
-                            {order.status !== 'Cancelled' && (
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        cancelForm.reset();
-                                        setOrderToCancel(order);
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    Mark as Cancelled
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                                className="text-destructive focus:text-destructive" 
-                                onClick={(e) => { e.stopPropagation(); setOrderToDelete(order); }}
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                        No orders found for the selected period.
-                    </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+            <Tabs defaultValue="in-progress">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="in-progress">In Progress ({inProgressOrders.length})</TabsTrigger>
+                    <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
+                    <TabsTrigger value="cancelled">Cancelled ({cancelledOrders.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="in-progress" className="mt-4">
+                    <OrdersTable
+                        orders={inProgressOrders}
+                        onEdit={handleOpenDialog}
+                        onDelete={setOrderToDelete}
+                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
+                    />
+                </TabsContent>
+                <TabsContent value="completed" className="mt-4">
+                    <OrdersTable
+                        orders={completedOrders}
+                        onEdit={handleOpenDialog}
+                        onDelete={setOrderToDelete}
+                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
+                    />
+                </TabsContent>
+                <TabsContent value="cancelled" className="mt-4">
+                     <OrdersTable
+                        orders={cancelledOrders}
+                        onEdit={handleOpenDialog}
+                        onDelete={setOrderToDelete}
+                        onCancel={(order) => { handleOpenDialog(order); form.setValue('status', 'Cancelled'); }}
+                    />
+                </TabsContent>
+            </Tabs>
         </CardContent>
       </Card>
 
@@ -670,7 +661,7 @@ export default function OrdersPage() {
                                         name="id"
                                         render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Order ID</FormLabel>
+                                            <FormLabel>Order ID*</FormLabel>
                                             <FormControl>
                                             <Input placeholder="e.g., ORD006" {...field} disabled={!!editingOrder} />
                                             </FormControl>
@@ -953,78 +944,6 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
 
-
-      <Dialog open={!!orderToCancel} onOpenChange={(isOpen) => { if (!isOpen) setOrderToCancel(null); }}>
-        <DialogContent>
-            <DialogHeader>
-            <DialogTitle>Cancel Order: {orderToCancel?.id}</DialogTitle>
-            <DialogDescription>
-                Please provide the reason(s) for cancelling this order. This action cannot be undone.
-            </DialogDescription>
-            </DialogHeader>
-            <Form {...cancelForm}>
-            <form onSubmit={cancelForm.handleSubmit(onCancelSubmit)} className="space-y-4">
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1 pr-4">
-                <FormField
-                    control={cancelForm.control}
-                    name="cancellationReasons"
-                    render={() => (
-                    <FormItem>
-                        <div className="mb-4">
-                        <FormLabel>Reason for Cancellation</FormLabel>
-                        <FormDescription>Select any applicable reasons.</FormDescription>
-                        </div>
-                        <div className="space-y-2">
-                        {cancellationReasonsList.map((reason) => (
-                            <FormField
-                            key={reason}
-                            control={cancelForm.control}
-                            name="cancellationReasons"
-                            render={({ field }) => (
-                                <FormItem key={reason} className="flex flex-row items-start space-x-3 space-y-0">
-                                <FormControl>
-                                    <Checkbox
-                                    checked={field.value?.includes(reason)}
-                                    onCheckedChange={(checked) => {
-                                        return checked
-                                        ? field.onChange([...(field.value || []), reason])
-                                        : field.onChange(field.value?.filter((value) => value !== reason));
-                                    }}
-                                    />
-                                </FormControl>
-                                <FormLabel className="font-normal">{reason}</FormLabel>
-                                </FormItem>
-                            )}
-                            />
-                        ))}
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={cancelForm.control}
-                    name="customCancellationReason"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Other Reason</FormLabel>
-                        <FormControl>
-                        <Textarea placeholder="If other, please specify reason for cancellation..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                </div>
-                <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setOrderToCancel(null)}>Cancel</Button>
-                <Button type="submit" variant="destructive">Confirm Cancellation</Button>
-                </DialogFooter>
-            </form>
-            </Form>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -1043,4 +962,11 @@ export default function OrdersPage() {
       </AlertDialog>
     </main>
   );
+}
+
+
+const MemoizedOrdersPage = memo(OrdersPageComponent);
+
+export default function OrdersPage() {
+  return <MemoizedOrdersPage />;
 }
