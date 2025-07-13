@@ -91,7 +91,7 @@ export default function MonthlyOrdersVsCompetitorsChart({ allYearlyData, selecte
             });
         });
 
-        return { chartData: data, chartConfig: config, metricKeys: tempMetricKeys, legendStats: legendData, isYoy };
+        return { chartData: data, chartConfig: config, metricKeys: tempMetricKeys, legendStats: legendData, isYoy: yoy };
 
     }, [selectedYears, allYearlyData]);
     
