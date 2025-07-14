@@ -38,7 +38,7 @@ export const formSchema = z.object({
         name: z.string().min(2, {
           message: "Gig name must be at least 2 characters.",
         }),
-        date: z.string({
+        date: z.date({
           required_error: "A date for the gig is required.",
         }),
       })
