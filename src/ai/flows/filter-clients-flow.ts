@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview An AI flow for filtering clients based on natural language queries.
+ * @fileOverview An AI flow for filtering clients based on a natural language queries.
  * 
  * - filterClients - A function that handles the client filtering process.
  * - ClientFilters - The return type for the filterClients function, defining the filter criteria.
@@ -18,7 +18,7 @@ const ClientFiltersSchema = z.object({
     dateRange: z.object({
         from: z.string().optional().describe("The start date for the filter in 'YYYY-MM-DD' format."),
         to: z.string().optional().describe("The end date for the filter in 'YYYY-MM-DD' format.")
-    }).optional().describe("A date range to filter clients by their last order date. Today's date is " + new Date().toISOString().split('T')[0]),
+    }).optional().describe("A date range to filter clients by their last order date."),
     minTotalOrders: z.number().optional().describe('The minimum number of total orders a client has made.')
 });
 export type ClientFilters = z.infer<typeof ClientFiltersSchema>;
