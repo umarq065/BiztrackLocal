@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowUpDown, Search, Sparkles, X } from "lucide-react";
+import { ArrowUpDown, Search, Sparkles, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { initialClients, incomeSources, type Client } from "@/lib/data/clients-data";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
@@ -40,6 +48,17 @@ const ClientsPageComponent = () => {
     const sortParam = useMemo(() => searchParams.get('sort'), [searchParams]);
 
     const [localSearch, setLocalSearch] = useState(searchQuery);
+
+    const [columnVisibility, setColumnVisibility] = useState({
+        status: true,
+        clientType: true,
+        source: true,
+        totalEarning: true,
+        totalOrders: true,
+        clientSince: true,
+        lastOrder: true,
+        social: true,
+    });
 
     useEffect(() => {
       setLocalSearch(searchQuery);
@@ -256,6 +275,41 @@ const ClientsPageComponent = () => {
                     onChange={handleSearchChange}
                 />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Columns <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Object.entries({
+                  status: "Status",
+                  clientType: "Type",
+                  source: "Source",
+                  totalEarning: "Earning",
+                  totalOrders: "Orders",
+                  clientSince: "Client Since",
+                  lastOrder: "Last Order",
+                  social: "Social",
+                }).map(([key, label]) => (
+                  <DropdownMenuCheckboxItem
+                    key={key}
+                    className="capitalize"
+                    checked={columnVisibility[key as keyof typeof columnVisibility]}
+                    onCheckedChange={(value) =>
+                      setColumnVisibility((prev) => ({
+                        ...prev,
+                        [key]: !!value,
+                      }))
+                    }
+                  >
+                    {label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           <Select value={filterSource} onValueChange={handleFilterChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by source" />
@@ -328,6 +382,7 @@ const ClientsPageComponent = () => {
         requestSort={requestSort}
         getSortIndicator={getSortIndicator}
         onEdit={(client) => setEditingClient(client)}
+        columnVisibility={columnVisibility}
       />
 
       {editingClient && (
