@@ -48,6 +48,18 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 /**
+ * Checks if an order ID already exists in the database.
+ * @param orderId - The ID to check.
+ * @returns A promise that resolves to true if the order exists, false otherwise.
+ */
+export async function checkOrderExists(orderId: string): Promise<boolean> {
+  const ordersCollection = await getOrdersCollection();
+  const count = await ordersCollection.countDocuments({ id: orderId });
+  return count > 0;
+}
+
+
+/**
  * Adds a new order to the database.
  * @param orderData - The data for the new order, validated against the form schema.
  * @returns The newly created order object.

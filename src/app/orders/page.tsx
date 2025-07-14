@@ -99,7 +99,7 @@ const clients = [
 ];
 
 const StarDisplay = ({ rating }: { rating?: number | null }) => {
-    if (rating == null) return <span className="text-muted-foreground">N/A</span>;
+    if (rating === undefined || rating === null) return <span className="text-muted-foreground">N/A</span>;
     return (
         <div className="flex items-center gap-1">
             <Star className="h-4 w-4 text-primary" />
@@ -234,6 +234,8 @@ const OrdersPageComponent = () => {
     const [localSearch, setLocalSearch] = useState(searchQuery);
 
     const [visibleOrdersCount, setVisibleOrdersCount] = useState(ORDERS_TO_LOAD);
+    
+    const idCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const [date, setDate] = useState<DateRange | undefined>(() => {
         const fromParam = searchParams.get('from');
@@ -353,12 +355,52 @@ const OrdersPageComponent = () => {
 
     const orderStatus = form.watch("status");
     const selectedSource = form.watch("source");
+    const orderIdValue = form.watch("id");
 
     const availableGigs = useMemo(() => {
         if (!selectedSource) return [];
         const sourceData = incomeSources.find(s => s.name === selectedSource);
         return sourceData ? sourceData.gigs : [];
     }, [selectedSource, incomeSources]);
+    
+    const handleOrderIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const newId = e.target.value;
+        form.setValue("id", newId, { shouldValidate: true });
+
+        if (idCheckTimeout.current) {
+            clearTimeout(idCheckTimeout.current);
+        }
+
+        if (newId.trim() === "" || (editingOrder && newId === editingOrder.id)) {
+            form.clearErrors("id");
+            return;
+        }
+
+        idCheckTimeout.current = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/orders/exists/${encodeURIComponent(newId)}`);
+                const data = await response.json();
+                if (data.exists) {
+                    form.setError("id", {
+                        type: "manual",
+                        message: "This Order ID already exists. Please use a unique ID.",
+                    });
+                } else {
+                    form.clearErrors("id");
+                }
+            } catch (error) {
+                console.error("Failed to check order ID uniqueness", error);
+            }
+        }, 500);
+    }, [form, editingOrder]);
+
+    useEffect(() => {
+        return () => {
+            if (idCheckTimeout.current) {
+                clearTimeout(idCheckTimeout.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (selectedSource) {
@@ -764,7 +806,12 @@ const OrdersPageComponent = () => {
                                         <FormItem>
                                             <FormLabel>Order ID*</FormLabel>
                                             <FormControl>
-                                            <Input placeholder="Manually enter order ID" {...field} />
+                                            <Input
+                                                placeholder="Manually enter order ID"
+                                                {...field}
+                                                onChange={handleOrderIdChange}
+                                                disabled={!!editingOrder}
+                                            />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
