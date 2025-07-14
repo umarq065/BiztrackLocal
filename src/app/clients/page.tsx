@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database } from "lucide-react";
+import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -36,7 +36,7 @@ const ClientsPageComponent = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [open, setOpen] = useState(false);
+    const [isAddClientOpen, setIsAddClientOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [aiFilters, setAiFilters] = useState<ClientFilters | null>(null);
     const [aiSearchQuery, setAiSearchQuery] = useState("");
@@ -79,7 +79,7 @@ const ClientsPageComponent = () => {
             } catch (e) {
                 console.error(e);
                 setError('Could not connect to the database. Please ensure the connection string in .env is correct and the server is running.');
-                setClients(staticClients); // Fallback to static data on error
+                setClients(staticClients as Client[]); // Fallback to static data on error
             } finally {
                 setIsLoading(false);
             }
@@ -170,8 +170,7 @@ const ClientsPageComponent = () => {
     };
 
     const handleClientAdded = (newClient: Client) => {
-        // In a real app, this would also post to the server
-        setClients([newClient, ...clients]);
+        setClients(prevClients => [newClient, ...prevClients]);
     };
 
     const handleClientUpdated = (updatedClient: Client) => {
@@ -369,7 +368,7 @@ const ClientsPageComponent = () => {
               {incomeSources.map(source => <SelectItem key={source} value={source.toLowerCase().replace(/\s+/g, '-')}>{source}</SelectItem>)}
             </SelectContent>
           </Select>
-          <AddClientDialog open={open} onOpenChange={setOpen} onClientAdded={handleClientAdded}>
+          <AddClientDialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen} onClientAdded={handleClientAdded}>
             <Button>Add New Client</Button>
           </AddClientDialog>
         </div>
@@ -399,7 +398,7 @@ const ClientsPageComponent = () => {
                 />
             </div>
             <Button type="submit" disabled={isAiSearching || !aiSearchQuery.trim()}>
-                {isAiSearching ? "Searching..." : "Ask AI"}
+                {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Ask AI"}
             </Button>
         </form>
          {aiFilters && (

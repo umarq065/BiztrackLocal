@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +47,7 @@ interface AddClientDialogProps {
 
 export function AddClientDialog({ open, onOpenChange, onClientAdded, children }: AddClientDialogProps) {
     const { toast } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<ClientFormValues>({
         resolver: zodResolver(clientFormSchema),
@@ -67,25 +69,38 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded, children }:
         name: "socialLinks",
     });
 
-    function onSubmit(values: ClientFormValues) {
-        const newClient: Client = {
-            id: `client-${Date.now()}`,
-            ...values,
-            avatarUrl: values.avatarUrl || undefined,
-            tags: values.tags ? values.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-            clientType: 'New',
-            clientSince: new Date().toISOString().split('T')[0],
-            totalOrders: 0,
-            totalEarning: 0,
-            lastOrder: 'N/A',
-        };
-        onClientAdded(newClient);
-        toast({
-            title: "Client Added",
-            description: `${values.name || values.username} has been added to your client list.`,
-        });
-        form.reset();
-        onOpenChange(false);
+    async function onSubmit(values: ClientFormValues) {
+        setIsSubmitting(true);
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(values),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add client');
+            }
+
+            const newClient = await response.json();
+            onClientAdded(newClient);
+
+            toast({
+                title: "Client Added",
+                description: `${values.name || values.username} has been added to your client list.`,
+            });
+            form.reset();
+            onOpenChange(false);
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not add client. Please try again.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
     
     return (
@@ -303,7 +318,10 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded, children }:
                                 Cancel
                             </Button>
                             </DialogClose>
-                            <Button type="submit">Add Client</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Add Client
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>
