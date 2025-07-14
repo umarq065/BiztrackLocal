@@ -42,12 +42,16 @@ const SettingsPageComponent = () => {
         const allTimezones = Intl.supportedValuesOf('timeZone');
         setTimezones(allTimezones);
 
-        // Set selected timezone from DB or default
-        if (savedSettings.timezone && allTimezones.includes(savedSettings.timezone)) {
+        // Set selected timezone from DB or default to browser's timezone
+        if (savedSettings?.timezone && allTimezones.includes(savedSettings.timezone)) {
           setSelectedTimezone(savedSettings.timezone);
-        } else if (allTimezones.length > 0) {
+        } else {
            const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-           setSelectedTimezone(allTimezones.includes(userTimezone) ? userTimezone : allTimezones[0]);
+           if (allTimezones.includes(userTimezone)) {
+             setSelectedTimezone(userTimezone);
+           } else if (allTimezones.length > 0) {
+             setSelectedTimezone(allTimezones[0]);
+           }
         }
       } catch (error) {
         console.error("Failed to load settings:", error);
@@ -81,7 +85,8 @@ const SettingsPageComponent = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save settings');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save settings');
       }
 
       toast({
@@ -93,7 +98,7 @@ const SettingsPageComponent = () => {
        toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not save settings. Please try again.",
+        description: (error as Error).message || "Could not save settings. Please try again.",
       });
     } finally {
       setIsSaving(false);

@@ -20,15 +20,16 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const json = await request.json();
-    const parsedData = settingsSchema.parse(json);
+    const parsedData = settingsSchema.safeParse(json);
 
-    await updateSettings(parsedData);
+    if (!parsedData.success) {
+      return NextResponse.json({ error: 'Invalid input data', details: parsedData.error.errors }, { status: 400 });
+    }
+
+    await updateSettings(parsedData.data);
 
     return NextResponse.json({ message: 'Settings updated successfully' }, { status: 200 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input data', details: error.errors }, { status: 400 });
-    }
     console.error('API POST Error:', error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }

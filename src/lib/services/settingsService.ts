@@ -3,7 +3,7 @@ import clientPromise, { getDbName } from '@/lib/mongodb';
 import { z } from 'zod';
 
 const settingsSchema = z.object({
-  timezone: z.string(),
+  timezone: z.string().optional(),
 });
 
 type Settings = z.infer<typeof settingsSchema>;
@@ -17,20 +17,24 @@ async function getDb() {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const db = await getDb();
-  const settings = await db.collection('settings').findOne({ _id: SETTINGS_ID });
+  try {
+    const db = await getDb();
+    const settings = await db.collection('settings').findOne({ _id: SETTINGS_ID });
 
-  if (settings) {
-    // Ensure we have a valid timezone, even if the DB returns null/undefined
-    return {
-      timezone: settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
+    if (settings) {
+      // Return what's in the DB, or an empty object.
+      return {
+        timezone: settings.timezone,
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching settings from DB:', error);
+    // On error, return an empty object to let the client handle defaults.
+    return {};
   }
 
-  // Return default settings if none are found in the DB
-  return {
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
+  // Return empty object if no settings are found.
+  return {};
 }
 
 export async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
