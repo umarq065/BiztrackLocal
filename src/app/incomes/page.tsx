@@ -663,7 +663,6 @@ const IncomesPageComponent = () => {
                             )}
                             <TableHead>Gig Name</TableHead>
                             <TableHead>Date Added</TableHead>
-                            <TableHead>Messages</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -688,9 +687,6 @@ const IncomesPageComponent = () => {
                             </TableCell>
                             <TableCell>
                                 {format(new Date(gig.date.replace(/-/g, '/')), "PPP")}
-                            </TableCell>
-                            <TableCell>
-                                {gig.messages ?? <span className="text-muted-foreground">N/A</span>}
                             </TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-1">
