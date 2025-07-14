@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { Facebook, Twitter, Linkedin, Github, Globe } from "lucide-react";
 import { differenceInMonths } from "date-fns";
@@ -66,8 +67,6 @@ export const initialClients: Omit<Client, '_id'>[] = [
   { id: "4", name: "William Kim", username: "will.k", email: "will@email.com", source: "Comprehensive Web Design & Development for Enterprise", clientType: "Repeat", clientSince: "2023-08-20", totalOrders: 3, totalEarning: 6200, lastOrder: "2024-04-30", socialLinks: [{platform: "Website", url: "#"}], isVip: true, tags: ["Enterprise", "Long-term"], notes: "Communication needs to be top-notch as they are a reseller." },
   { id: "5", name: "Sofia Davis", username: "sofia.d", email: "sofia.davis@email.com", source: "SEO Services and Digital Marketing Campaigns", clientType: "New", clientSince: "2024-04-01", totalOrders: 2, totalEarning: 1800, lastOrder: "2024-05-24", socialLinks: [{platform: "Facebook", url: "#"}, {platform: "Twitter", url: "#"}], tags: ["Social Media Focus"], notes: "" },
 ];
-
-export const incomeSources = ["Comprehensive Web Design & Development for Enterprise", "Consulting", "Logo Design", "SEO Services and Digital Marketing Campaigns", "Maintenance"];
 
 export const socialPlatforms = [
     { value: "Facebook", icon: Facebook },

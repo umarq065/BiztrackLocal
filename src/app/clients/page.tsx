@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { incomeSources, type Client } from "@/lib/data/clients-data";
+import type { Client } from "@/lib/data/clients-data";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
 import { ClientsTable } from "@/components/clients/clients-table";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
@@ -40,10 +40,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import type { IncomeSource } from "@/lib/data/incomes-data";
 
 
 const ClientsPageComponent = () => {
     const [clients, setClients] = useState<Client[]>([]);
+    const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -80,24 +82,36 @@ const ClientsPageComponent = () => {
     });
     
     useEffect(() => {
-        async function fetchClients() {
+        async function fetchData() {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetch('/api/clients');
-                if (!response.ok) {
+                const [clientsRes, incomesRes] = await Promise.all([
+                    fetch('/api/clients'),
+                    fetch('/api/incomes')
+                ]);
+
+                if (!clientsRes.ok) {
                     throw new Error('Failed to fetch clients from the server.');
                 }
-                const data = await response.json();
-                setClients(data);
+                 if (!incomesRes.ok) {
+                    throw new Error('Failed to fetch income sources from the server.');
+                }
+
+                const clientsData = await clientsRes.json();
+                const incomesData = await incomesRes.json();
+                
+                setClients(clientsData);
+                setIncomeSources(incomesData);
+
             } catch (e) {
                 console.error(e);
-                setError('Could not connect to the database. Please ensure the connection string in .env is correct and the server is running.');
+                setError('Could not connect to the database or fetch data. Please ensure the connection string in .env is correct and the server is running.');
             } finally {
                 setIsLoading(false);
             }
         }
-        fetchClients();
+        fetchData();
     }, []);
 
     useEffect(() => {
@@ -403,10 +417,15 @@ const ClientsPageComponent = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sources</SelectItem>
-              {incomeSources.map(source => <SelectItem key={source} value={source.toLowerCase().replace(/\s+/g, '-')}>{source}</SelectItem>)}
+              {incomeSources.map(source => <SelectItem key={source.id} value={source.name.toLowerCase().replace(/\s+/g, '-')}>{source.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <AddClientDialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen} onClientAdded={handleClientAdded}>
+          <AddClientDialog 
+            open={isAddClientOpen} 
+            onOpenChange={setIsAddClientOpen} 
+            onClientAdded={handleClientAdded}
+            incomeSources={incomeSources.map(s => s.name)}
+          >
             <Button>Add New Client</Button>
           </AddClientDialog>
         </div>
@@ -482,6 +501,7 @@ const ClientsPageComponent = () => {
           onOpenChange={(isOpen) => !isOpen && setEditingClient(null)}
           client={editingClient}
           onClientUpdated={handleClientUpdated}
+          incomeSources={incomeSources.map(s => s.name)}
         />
       )}
 

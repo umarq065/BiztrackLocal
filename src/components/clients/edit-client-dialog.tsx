@@ -35,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { incomeSources, socialPlatforms, clientFormSchema, type ClientFormValues, type Client } from "@/lib/data/clients-data";
+import { socialPlatforms, clientFormSchema, type ClientFormValues, type Client } from "@/lib/data/clients-data";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
@@ -44,10 +44,11 @@ interface EditClientDialogProps {
     onOpenChange: (open: boolean) => void;
     onClientUpdated: (client: Client) => void;
     client: Client;
+    incomeSources: string[];
     children?: React.ReactNode;
 }
 
-export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, children }: EditClientDialogProps) {
+export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, incomeSources, children }: EditClientDialogProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 

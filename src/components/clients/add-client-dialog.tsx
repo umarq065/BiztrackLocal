@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { incomeSources, socialPlatforms, clientFormSchema, type ClientFormValues, type Client } from "@/lib/data/clients-data";
+import { socialPlatforms, clientFormSchema, type ClientFormValues, type Client } from "@/lib/data/clients-data";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
@@ -42,10 +43,11 @@ interface AddClientDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onClientAdded: (client: Client) => void;
+    incomeSources: string[];
     children: React.ReactNode;
 }
 
-export function AddClientDialog({ open, onOpenChange, onClientAdded, children }: AddClientDialogProps) {
+export function AddClientDialog({ open, onOpenChange, onClientAdded, incomeSources, children }: AddClientDialogProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
