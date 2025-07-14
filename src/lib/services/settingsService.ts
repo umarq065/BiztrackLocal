@@ -19,22 +19,16 @@ async function getDb() {
 export async function getSettings(): Promise<Settings> {
   try {
     const db = await getDb();
-    const settings = await db.collection('settings').findOne({ _id: SETTINGS_ID });
-
-    if (settings) {
-      // Return what's in the DB, or an empty object.
-      return {
-        timezone: settings.timezone,
-      };
-    }
+    const settingsCollection = db.collection('settings');
+    const settings = await settingsCollection.findOne({ _id: SETTINGS_ID });
+    
+    // Return only what's in the DB, or an empty object.
+    return settings ? { timezone: settings.timezone } : {};
   } catch (error) {
     console.error('Error fetching settings from DB:', error);
     // On error, return an empty object to let the client handle defaults.
     return {};
   }
-
-  // Return empty object if no settings are found.
-  return {};
 }
 
 export async function updateSettings(newSettings: Partial<Settings>): Promise<void> {
