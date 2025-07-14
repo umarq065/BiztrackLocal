@@ -6,6 +6,10 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
+
+// Append tlsAllowInvalidCertificates=true to the connection string
+const modifiedUri = `${uri}${uri.includes('?') ? '&' : '?'}tlsAllowInvalidCertificates=true`;
+
 const options = {};
 
 let client: MongoClient;
@@ -19,13 +23,13 @@ if (process.env.NODE_ENV === 'development') {
   }
 
   if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
+    client = new MongoClient(modifiedUri, options);
     globalWithMongo._mongoClientPromise = client.connect();
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
   // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
+  client = new MongoClient(modifiedUri, options);
   clientPromise = client.connect();
 }
 
