@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import NProgressLink from "@/components/layout/nprogress-link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -146,6 +146,9 @@ const IncomesPageComponent = () => {
   const [gigToDelete, setGigToDelete] = useState<{ gig: Gig, sourceId: string } | null>(null);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  
+  const [sourceToDelete, setSourceToDelete] = useState<IncomeSource | null>(null);
+  const [isDeletingSource, setIsDeletingSource] = useState(false);
   
   const form = useForm<z.infer<typeof incomesFormSchema>>({
     resolver: zodResolver(incomesFormSchema),
@@ -460,6 +463,35 @@ const IncomesPageComponent = () => {
       setEditGigDialogOpen(true);
   };
 
+  const handleDeleteSource = async () => {
+    if (!sourceToDelete) return;
+    setIsDeletingSource(true);
+    try {
+        const response = await fetch(`/api/incomes/${sourceToDelete.id}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete income source');
+        }
+        
+        setIncomeSources(prev => prev.filter(s => s.id !== sourceToDelete.id));
+        toast({ title: "Success", description: `Income source "${sourceToDelete.name}" deleted.` });
+
+    } catch (error) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not delete the income source. Please try again.",
+        });
+    } finally {
+        setIsDeletingSource(false);
+        setSourceToDelete(null);
+    }
+  };
+
+
   if (isLoading) {
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -653,11 +685,16 @@ const IncomesPageComponent = () => {
                         <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
                     </div>
                     </AccordionTrigger>
-                    <Button variant="outline" size="sm" asChild onClick={(e) => e.stopPropagation()}>
-                        <NProgressLink href={`/incomes/${source.id}`}>
-                            Analytics
-                        </NProgressLink>
-                    </Button>
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                        <Button variant="outline" size="sm" asChild>
+                            <NProgressLink href={`/incomes/${source.id}`}>
+                                Analytics
+                            </NProgressLink>
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => setSourceToDelete(source)}>
+                            Delete Source
+                        </Button>
+                    </div>
                 </div>
                 <AccordionContent className="px-4">
                   <div className="flex justify-end gap-2 mb-4">
@@ -805,6 +842,24 @@ const IncomesPageComponent = () => {
         </CardContent>
       </Card>
       
+      <AlertDialog open={!!sourceToDelete} onOpenChange={() => setSourceToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the income source "{sourceToDelete?.name}" and all of its associated gigs and data. This action cannot be undone.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSource} disabled={isDeletingSource} className={cn(buttonVariants({ variant: "destructive" }))}>
+                    {isDeletingSource ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Delete
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={!!gigToDelete} onOpenChange={(open) => !open && closeDeleteDialog()}>
         <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
