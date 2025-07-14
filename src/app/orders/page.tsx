@@ -411,7 +411,7 @@ const OrdersPageComponent = () => {
             const response = await fetch(endpoint, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({...values, date: format(values.date, "yyyy-MM-dd")}),
+                body: JSON.stringify(values),
             });
 
             if (!response.ok) {
@@ -958,7 +958,7 @@ const OrdersPageComponent = () => {
                                                 <FormItem>
                                                     <FormLabel>Other Reason</FormLabel>
                                                     <FormControl>
-                                                        <Textarea placeholder="If other, please specify reason for cancellation..." {...field} />
+                                                        <Textarea placeholder="If other, please specify reason for cancellation..." {...field} value={field.value ?? ''} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
