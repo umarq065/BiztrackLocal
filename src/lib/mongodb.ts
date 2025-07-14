@@ -30,10 +30,14 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export function getDbName() {
-  const url = new URL(uri);
-  // The database name is the first part of the pathname, after the leading slash.
-  const dbName = url.pathname.substring(1).split('/')[0];
-  return dbName || 'biztrack-pro'; // Fallback to a default name if not in URI
+  try {
+    const url = new URL(uri);
+    const dbName = url.pathname.slice(1).split('/')[0];
+    return dbName || 'biztrack-pro'; // Fallback to a default name if not in URI
+  } catch (e) {
+    console.error("Could not parse MONGODB_URI, using default DB name.", e);
+    return 'biztrack-pro';
+  }
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a

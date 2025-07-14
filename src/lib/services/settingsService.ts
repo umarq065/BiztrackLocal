@@ -21,6 +21,7 @@ export async function getSettings(): Promise<Settings> {
   const settings = await db.collection('settings').findOne({ _id: SETTINGS_ID });
 
   if (settings) {
+    // Ensure we have a valid timezone, even if the DB returns null/undefined
     return {
       timezone: settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
