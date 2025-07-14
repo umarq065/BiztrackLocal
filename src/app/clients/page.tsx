@@ -83,6 +83,10 @@ const ClientsPageComponent = () => {
         if (!aiSearchQuery.trim()) return;
 
         setIsAiSearching(true);
+        // Clear manual search when AI search is used
+        setLocalSearch(""); 
+        router.push(`${pathname}?${createQueryString({ q: null })}`);
+
         try {
             const filters = await filterClients(aiSearchQuery);
             setAiFilters(filters);
@@ -107,6 +111,9 @@ const ClientsPageComponent = () => {
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalSearch(e.target.value);
+        if (aiFilters) {
+            clearAiFilters();
+        }
     };
     
     const handleFilterChange = (value: string) => {
@@ -144,31 +151,24 @@ const ClientsPageComponent = () => {
         let clientsToFilter = [...clients];
 
         if (aiFilters) {
-            clientsToFilter = clientsToFilter.filter(client => {
-                // Name or Username filter
+            return clientsToFilter.filter(client => {
                 if (aiFilters.nameOrUsername && !`${client.name || ''} ${client.username}`.toLowerCase().includes(aiFilters.nameOrUsername.toLowerCase())) {
                     return false;
                 }
-                // Source filter
                 if (aiFilters.source && client.source.toLowerCase() !== aiFilters.source.toLowerCase()) {
                     return false;
                 }
-                // Client Type filter
                 if (aiFilters.clientType && client.clientType !== aiFilters.clientType) {
                     return false;
                 }
-                // VIP filter
                 if (aiFilters.isVip !== undefined && client.isVip !== aiFilters.isVip) {
                     return false;
                 }
-                // Minimum Total Orders filter
                 if (aiFilters.minTotalOrders !== undefined && client.totalOrders < aiFilters.minTotalOrders) {
                     return false;
                 }
-                 // Date Range filter
                 if (aiFilters.dateRange) {
                     if (client.lastOrder === 'N/A') return false;
-                    // Use UTC dates to avoid timezone issues during comparison
                     const clientDate = new Date(client.lastOrder + 'T00:00:00Z');
                     if (aiFilters.dateRange.from) {
                         const fromDate = new Date(aiFilters.dateRange.from + 'T00:00:00Z');
@@ -183,20 +183,21 @@ const ClientsPageComponent = () => {
             });
         }
         
+        // Manual filters apply only if AI filters are not active
         if (filterSource !== 'all') {
             clientsToFilter = clientsToFilter.filter(client => client.source.toLowerCase().replace(/\s+/g, '-') === filterSource);
         }
-
-        if (searchQuery.trim() !== "") {
+        if (searchQuery) {
             const lowercasedQuery = searchQuery.toLowerCase();
             clientsToFilter = clientsToFilter.filter(client => 
-                client.name?.toLowerCase().includes(lowercasedQuery) ||
+                (client.name || '').toLowerCase().includes(lowercasedQuery) ||
                 client.username.toLowerCase().includes(lowercasedQuery)
             );
         }
 
         return clientsToFilter;
     }, [clients, filterSource, searchQuery, aiFilters]);
+
 
     const sortedClients = useMemo(() => {
         let sortableItems = [...filteredClients];
