@@ -4,7 +4,7 @@ import { getSettings, updateSettings } from '@/lib/services/settingsService';
 import { z } from 'zod';
 
 const settingsSchema = z.object({
-  timezone: z.string(),
+  timezone: z.string().optional(),
 });
 
 export async function GET() {
