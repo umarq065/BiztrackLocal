@@ -12,7 +12,7 @@ const SETTINGS_ID = 'user_settings'; // Use a consistent ID for the settings doc
 
 async function getSettingsCollection() {
   const client = await clientPromise;
-  const db = client.db(); // When no db name is in the URI, this defaults to the one configured in Atlas
+  const db = client.db("biztrack-pro"); // Explicitly use the database name
   return db.collection<Settings>('settings');
 }
 

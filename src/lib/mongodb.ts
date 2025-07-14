@@ -29,16 +29,6 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect();
 }
 
-export function getDbName() {
-  try {
-    const dbName = new URL(uri).pathname.substring(1);
-    return dbName || 'biztrack-pro'; // Fallback to a default name if not in URI
-  } catch (e) {
-    console.error("Could not parse MONGODB_URI, using default DB name.", e);
-    return 'biztrack-pro';
-  }
-}
-
 // Export a module-scoped MongoClient promise. By doing this in a
 // separate module, the client can be shared across functions.
 export default clientPromise;
