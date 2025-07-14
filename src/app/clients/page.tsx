@@ -83,9 +83,9 @@ const ClientsPageComponent = () => {
         if (!aiSearchQuery.trim()) return;
 
         setIsAiSearching(true);
-        // Clear manual search when AI search is used
+        // Clear manual search and its query param when AI search is used
         setLocalSearch(""); 
-        router.push(`${pathname}?${createQueryString({ q: null })}`);
+        router.push(`${pathname}?${createQueryString({ q: null, source: filterSource === 'all' ? null : filterSource })}`, { scroll: false });
 
         try {
             const filters = await filterClients(aiSearchQuery);
@@ -118,6 +118,9 @@ const ClientsPageComponent = () => {
     
     const handleFilterChange = (value: string) => {
         router.push(`${pathname}?${createQueryString({ source: value === 'all' ? null : value })}`);
+        if (aiFilters) {
+          clearAiFilters();
+        }
     };
 
     const handleClientAdded = (newClient: Client) => {
@@ -169,7 +172,9 @@ const ClientsPageComponent = () => {
                 }
                 if (aiFilters.dateRange) {
                     if (client.lastOrder === 'N/A') return false;
+                    
                     const clientDate = new Date(client.lastOrder + 'T00:00:00Z');
+                    
                     if (aiFilters.dateRange.from) {
                         const fromDate = new Date(aiFilters.dateRange.from + 'T00:00:00Z');
                         if (clientDate < fromDate) return false;
