@@ -7,7 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 async function testDbConnection() {
   try {
     const client = await clientPromise;
-    const db = client.db("biztrack-pro");
+    // Explicitly connect to the "biztrack-pro" database
+    const db = client.db("biztrack-pro"); 
     const clientsCollection = db.collection('clients');
     const count = await clientsCollection.countDocuments();
     return { success: true, count };

@@ -12,7 +12,7 @@ const SETTINGS_ID = 'user_settings'; // Use a consistent ID for the settings doc
 
 async function getSettingsCollection() {
   const client = await clientPromise;
-  const db = client.db("biztrack-pro"); // Explicitly use the database name
+  const db = client.db("biztrack-pro");
   return db.collection<Settings>('settings');
 }
 
