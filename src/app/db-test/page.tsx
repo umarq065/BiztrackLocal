@@ -2,15 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import clientPromise from '@/lib/mongodb';
-
-// A simple utility to get the collection without needing the service, for a direct test.
-async function getClientsCollection() {
-    const client = await clientPromise;
-    // Explicitly use the database name we expect to exist.
-    const db = client.db('biztrack-pro');
-    return db.collection('clients');
-}
 
 export default function DbTestPage() {
     const [connectionStatus, setConnectionStatus] = useState<string>('Testing connection...');
@@ -20,14 +11,24 @@ export default function DbTestPage() {
     useEffect(() => {
         async function testDbConnection() {
             try {
-                const clientsCollection = await getClientsCollection();
-                const count = await clientsCollection.countDocuments();
-                setClientCount(count);
-                setConnectionStatus('Success');
+                const response = await fetch('/api/db-test');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch test results.');
+                }
+
+                if (data.status === 'Success') {
+                    setConnectionStatus('Success');
+                    setClientCount(data.count);
+                } else {
+                    setConnectionStatus('Failed');
+                    setErrorDetails(data.error || 'An unknown error occurred.');
+                }
             } catch (error: any) {
                 setConnectionStatus('Failed');
                 setErrorDetails(error.message || 'An unknown error occurred.');
-                console.error("DB Connection Error:", error);
+                console.error("DB Connection Test Error:", error);
             }
         }
         testDbConnection();
@@ -72,6 +73,7 @@ export default function DbTestPage() {
                                 <li>Is the <strong>`MONGODB_URI`</strong> in your <strong>`.env`</strong> file correct?</li>
                                 <li>Is your password URL-encoded if it contains special characters like <strong>`@`</strong>, <strong>`:`</strong>, <strong>`?`</strong>, etc.?</li>
                                 <li>Is your current IP address whitelisted in MongoDB Atlas under "Network Access"?</li>
+                                <li>Have you created the 'biztrack-pro' database and 'clients' collection in Atlas?</li>
                             </ul>
                             <div className="mt-4">
                                 <h3 className="text-sm font-semibold">Error Details:</h3>
