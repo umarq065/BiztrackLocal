@@ -6,7 +6,9 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
-const options = {};
+const options = {
+  tlsDisableOCSPEndpointCheck: true,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
