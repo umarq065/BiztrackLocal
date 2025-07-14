@@ -147,8 +147,6 @@ const IncomesPageComponent = () => {
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   
-  const [sourceToDelete, setSourceToDelete] = useState<IncomeSource | null>(null);
-
   const form = useForm<z.infer<typeof incomesFormSchema>>({
     resolver: zodResolver(incomesFormSchema),
     defaultValues: {
@@ -452,36 +450,6 @@ const IncomesPageComponent = () => {
           setIsSubmitting(false);
       }
   };
-
-    async function handleDeleteSource() {
-        if (!sourceToDelete) return;
-        setIsSubmitting(true);
-        try {
-            const response = await fetch(`/api/incomes/${sourceToDelete.id}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete income source');
-            }
-            
-            setIncomeSources(prev => prev.filter(s => s.id !== sourceToDelete.id));
-            toast({
-                title: "Income Source Deleted",
-                description: `"${sourceToDelete.name}" and all its gigs have been removed.`,
-            });
-            setSourceToDelete(null);
-        } catch (error) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Could not delete the income source. Please try again.",
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
-    }
 
   const handleOpenEditGigDialog = (gig: Gig, sourceId: string) => {
       setEditingGigInfo({ sourceId, gig });
@@ -837,24 +805,6 @@ const IncomesPageComponent = () => {
         </CardContent>
       </Card>
       
-      <AlertDialog open={!!sourceToDelete} onOpenChange={(open) => !open && setSourceToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the income source "{sourceToDelete?.name}" and all of its associated gigs and data.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteSource} disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Delete
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <Dialog open={!!gigToDelete} onOpenChange={(open) => !open && closeDeleteDialog()}>
         <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
