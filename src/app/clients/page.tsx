@@ -154,7 +154,7 @@ const ClientsPageComponent = () => {
         let clientsToFilter = [...clients];
 
         if (aiFilters) {
-            return clientsToFilter.filter(client => {
+            clientsToFilter = clientsToFilter.filter(client => {
                 if (aiFilters.nameOrUsername && !`${client.name || ''} ${client.username}`.toLowerCase().includes(aiFilters.nameOrUsername.toLowerCase())) {
                     return false;
                 }
@@ -172,32 +172,31 @@ const ClientsPageComponent = () => {
                 }
                 if (aiFilters.dateRange) {
                     if (client.lastOrder === 'N/A') return false;
-                    
-                    const clientDate = new Date(client.lastOrder + 'T00:00:00Z');
+                    const clientDate = new Date(client.lastOrder.replace(/-/g, '/'));
                     
                     if (aiFilters.dateRange.from) {
-                        const fromDate = new Date(aiFilters.dateRange.from + 'T00:00:00Z');
+                        const fromDate = new Date(aiFilters.dateRange.from.replace(/-/g, '/'));
                         if (clientDate < fromDate) return false;
                     }
                     if (aiFilters.dateRange.to) {
-                        const toDate = new Date(aiFilters.dateRange.to + 'T00:00:00Z');
+                        const toDate = new Date(aiFilters.dateRange.to.replace(/-/g, '/'));
                         if (clientDate > toDate) return false;
                     }
                 }
                 return true;
             });
-        }
-        
-        // Manual filters apply only if AI filters are not active
-        if (filterSource !== 'all') {
-            clientsToFilter = clientsToFilter.filter(client => client.source.toLowerCase().replace(/\s+/g, '-') === filterSource);
-        }
-        if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            clientsToFilter = clientsToFilter.filter(client => 
-                (client.name || '').toLowerCase().includes(lowercasedQuery) ||
-                client.username.toLowerCase().includes(lowercasedQuery)
-            );
+        } else {
+            // Manual filters apply only if AI filters are not active
+            if (filterSource !== 'all') {
+                clientsToFilter = clientsToFilter.filter(client => client.source.toLowerCase().replace(/\s+/g, '-') === filterSource);
+            }
+            if (searchQuery) {
+                const lowercasedQuery = searchQuery.toLowerCase();
+                clientsToFilter = clientsToFilter.filter(client => 
+                    (client.name || '').toLowerCase().includes(lowercasedQuery) ||
+                    client.username.toLowerCase().includes(lowercasedQuery)
+                );
+            }
         }
 
         return clientsToFilter;
