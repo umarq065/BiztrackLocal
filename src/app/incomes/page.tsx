@@ -75,7 +75,25 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import type { IncomeSource, Gig, SourceDataPoint } from "@/lib/data/incomes-data";
-import { initialIncomeSources, formSchema } from "@/lib/data/incomes-data";
+import { initialIncomeSources } from "@/lib/data/incomes-data";
+
+const formSchema = z.object({
+  sourceName: z.string().min(2, {
+    message: "Source name must be at least 2 characters.",
+  }),
+  gigs: z
+    .array(
+      z.object({
+        name: z.string().min(2, {
+          message: "Gig name must be at least 2 characters.",
+        }),
+        date: z.date({
+          required_error: "A date for the gig is required.",
+        }),
+      })
+    )
+    .min(1, { message: "You must add at least one gig." }),
+});
 
 const staticDate = new Date("2024-01-01T12:00:00Z");
 
@@ -184,10 +202,19 @@ const IncomesPageComponent = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
+      // Convert Date objects to ISO strings before sending
+      const payload = {
+        ...values,
+        gigs: values.gigs.map(gig => ({
+          ...gig,
+          date: gig.date.toISOString(),
+        })),
+      };
+      
       const response = await fetch('/api/incomes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -606,11 +633,11 @@ const IncomesPageComponent = () => {
                         <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
                     </div>
                     </AccordionTrigger>
-                    <NProgressLink href={`/incomes/${source.id}`} className="ml-auto">
-                        <Button variant="outline" size="sm" onClick={e => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" asChild onClick={(e) => e.stopPropagation()}>
+                        <NProgressLink href={`/incomes/${source.id}`}>
                             Analytics
-                        </Button>
-                    </NProgressLink>
+                        </NProgressLink>
+                    </Button>
                 </div>
                 <AccordionContent className="px-4">
                   <div className="flex justify-end gap-2 mb-4">
