@@ -73,7 +73,7 @@ export default function ClientDetailsPage() {
     async function fetchData() {
       if (!username) {
         setIsLoading(false);
-        notFound();
+        // Do not call notFound() here, let the render logic handle it
         return;
       }
       setIsLoading(true);
@@ -84,7 +84,7 @@ export default function ClientDetailsPage() {
         ]);
         
         if (clientRes.status === 404) {
-          setIsLoading(false);
+          // Explicitly trigger notFound only when API confirms it
           notFound();
           return;
         }
@@ -100,7 +100,11 @@ export default function ClientDetailsPage() {
 
       } catch (err) {
         console.error("Failed to fetch client details:", err);
-        setClient(null); // Set client to null on error to prevent rendering with stale data
+        // If it's a notFound error that was thrown, re-throw it.
+        if ((err as any).digest?.startsWith('NEXT_NOT_FOUND')) {
+          throw err;
+        }
+        setClient(null); 
       } finally {
         setIsLoading(false);
       }
@@ -192,7 +196,7 @@ export default function ClientDetailsPage() {
   }
   
   if (!client) {
-    // This case handles errors after loading, where client is null but it's not a 404.
+    // This case now correctly handles general errors after loading has finished
     return (
       <div className="flex h-full items-center justify-center p-8">
         <Card className="w-full max-w-md">
