@@ -199,3 +199,5 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit 
 }
 
 export const ClientsTable = memo(ClientsTableComponent);
+
+    
