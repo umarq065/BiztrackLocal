@@ -1,24 +1,11 @@
 
-import { MongoClient, MongoClientOptions } from 'mongodb';
+import { MongoClient, type MongoClientOptions } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
 }
 
-let uri = process.env.MONGODB_URI;
-
-// For development environments experiencing persistent SSL handshake errors,
-// we can bypass TLS by appending a query parameter to the URI.
-// This is a more reliable method than using the options object.
-if (process.env.NODE_ENV === 'development') {
-    if (uri.includes('?')) {
-        uri = `${uri}&tls=false`;
-    } else {
-        uri = `${uri}?tls=false`;
-    }
-}
-
-
+const uri = process.env.MONGODB_URI;
 const options: MongoClientOptions = {};
 
 let client: MongoClient;
