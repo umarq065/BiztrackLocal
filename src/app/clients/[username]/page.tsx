@@ -67,18 +67,17 @@ export default function ClientDetailsPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [clientFound, setClientFound] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       if (!username) {
         setIsLoading(false);
-        setError(true);
+        setClientFound(false);
         return;
       }
       setIsLoading(true);
-      setError(false);
       try {
         const [clientRes, incomesRes] = await Promise.all([
           fetch(`/api/clients/by-username/${username}`),
@@ -86,7 +85,7 @@ export default function ClientDetailsPage() {
         ]);
         
         if (clientRes.status === 404) {
-          setError(true);
+          setClientFound(false);
           return;
         }
 
@@ -97,11 +96,12 @@ export default function ClientDetailsPage() {
         const incomesData: IncomeSource[] = await incomesRes.json();
         
         setClient(currentClient);
+        setClientFound(true);
         setIncomeSources(incomesData);
 
       } catch (err) {
         console.error("Failed to fetch client details:", err);
-        setError(true);
+        setClientFound(false);
       } finally {
         setIsLoading(false);
       }
@@ -192,13 +192,14 @@ export default function ClientDetailsPage() {
     )
   }
 
-  if (error) {
+  if (!clientFound) {
     notFound();
   }
   
   if (!client) {
-    // This case should ideally not be hit if loading and error are handled,
-    // but it's a safe fallback.
+    // This case will be hit if loading is done but client is still null,
+    // which shouldn't happen if notFound() is called correctly.
+    // It's a safe fallback.
     return (
       <div className="flex h-full items-center justify-center">
         <p>Client could not be loaded.</p>
