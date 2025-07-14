@@ -99,7 +99,7 @@ export default function SourceAnalyticsPage() {
   };
   
   const { chartDataForRender, sourceStats } = useMemo(
-    () => processSourceData(source, date, expenses), 
+    () => processSourceData(source, date), 
     [source, date]
   );
   

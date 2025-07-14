@@ -3,7 +3,9 @@
 
 import { type DateRange } from "react-day-picker";
 import { type IncomeSource } from "@/lib/data/incomes-data";
-import { initialExpenses as expenses } from "@/lib/data/expenses-data";
+import { initialExpenses } from "@/lib/data/expenses-data";
+
+const expenses = initialExpenses;
 
 const calculateMetricsForPeriod = (source: IncomeSource, periodFrom?: Date, periodTo?: Date) => {
     if (!periodFrom || !periodTo) {
