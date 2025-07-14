@@ -34,7 +34,7 @@ import { ThemeToggle } from "./theme-toggle";
 import NProgressLink from "./nprogress-link";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/incomes", icon: DollarSign, label: "Incomes" },
   { href: "/clients", icon: Users, label: "Clients" },
   { href: "/orders", icon: ShoppingCart, label: "Orders" },
