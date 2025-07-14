@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Facebook, Twitter, Linkedin, Github, Globe } from "lucide-react";
 import { differenceInMonths } from "date-fns";
+import type { ObjectId } from 'mongodb';
 
 export const socialLinkSchema = z.object({
   platform: z.string().min(1, "Platform is required."),
@@ -22,7 +23,8 @@ export const clientFormSchema = z.object({
 export type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 export interface Client {
-    id: string;
+    _id: ObjectId; // From MongoDB
+    id: string; // String version of _id
     username: string;
     name?: string;
     email?: string;
@@ -57,7 +59,7 @@ export const getClientStatus = (lastOrderDateString: string): { text: 'Active' |
 };
 
 
-export const initialClients: Client[] = [
+export const initialClients: Omit<Client, '_id'>[] = [
   { id: "1", name: "Olivia Martin", username: "olivia.m", email: "olivia.martin@email.com", avatarUrl: "https://placehold.co/100x100.png", source: "Comprehensive Web Design & Development for Enterprise", clientType: "Repeat", clientSince: "2023-01-15", totalOrders: 5, totalEarning: 8500, lastOrder: "2024-05-20", socialLinks: [{platform: "LinkedIn", url: "#"}, {platform: "Twitter", url: "#"}], isVip: true, tags: ["Reseller", "Minimalist Design"], notes: "Prefers quick, daily updates on order progress. Tends to ask for one major revision, so plan for it." },
   { id: "2", name: "Jackson Lee", username: "jackson.l", email: "jackson.lee@email.com", source: "Consulting", clientType: "New", clientSince: "2024-03-10", totalOrders: 1, totalEarning: 1200, lastOrder: "2024-03-21", socialLinks: [{platform: "GitHub", url: "#"}], tags: ["Tech Startup"], notes: "" },
   { id: "3", name: "Isabella Nguyen", username: "isabella.n", email: "isabella.nguyen@email.com", source: "Logo Design", clientType: "Repeat", clientSince: "2022-11-05", totalOrders: 8, totalEarning: 4500, lastOrder: "2023-05-18", socialLinks: [], isVip: false, tags: [], notes: "Loves bold fonts." },

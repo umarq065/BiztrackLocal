@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowUpDown, Search, Sparkles, X, ChevronDown } from "lucide-react";
+import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,16 +21,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { initialClients, incomeSources, type Client } from "@/lib/data/clients-data";
+import { initialClients as staticClients, incomeSources, type Client } from "@/lib/data/clients-data";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
 import { ClientsTable } from "@/components/clients/clients-table";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
 import { filterClients, type ClientFilters } from "@/ai/flows/filter-clients-flow";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 const ClientsPageComponent = () => {
-    const [clients, setClients] = useState<Client[]>(initialClients);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [open, setOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [aiFilters, setAiFilters] = useState<ClientFilters | null>(null);
@@ -59,6 +64,28 @@ const ClientsPageComponent = () => {
         lastOrder: true,
         social: true,
     });
+    
+    useEffect(() => {
+        async function fetchClients() {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await fetch('/api/clients');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch clients from the server.');
+                }
+                const data = await response.json();
+                setClients(data);
+            } catch (e) {
+                console.error(e);
+                setError('Could not connect to the database. Please ensure the connection string in .env is correct and the server is running.');
+                setClients(staticClients); // Fallback to static data on error
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchClients();
+    }, []);
 
     useEffect(() => {
       setLocalSearch(searchQuery);
@@ -143,10 +170,12 @@ const ClientsPageComponent = () => {
     };
 
     const handleClientAdded = (newClient: Client) => {
+        // In a real app, this would also post to the server
         setClients([newClient, ...clients]);
     };
 
     const handleClientUpdated = (updatedClient: Client) => {
+        // In a real app, this would also post to the server
         setClients(prevClients => 
             prevClients.map(c => (c.id === updatedClient.id ? updatedClient : c))
         );
@@ -257,6 +286,27 @@ const ClientsPageComponent = () => {
       if (!aiFilters) return 0;
       return Object.values(aiFilters).filter(v => v !== undefined && v !== null && v !== "" && !(typeof v === 'object' && Object.keys(v).length === 0)).length;
     }, [aiFilters]);
+    
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            );
+        }
+
+        return (
+             <ClientsTable 
+                clients={sortedClients}
+                requestSort={requestSort}
+                getSortIndicator={getSortIndicator}
+                onEdit={(client) => setEditingClient(client)}
+                columnVisibility={columnVisibility}
+            />
+        )
+    }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -324,6 +374,16 @@ const ClientsPageComponent = () => {
           </AddClientDialog>
         </div>
       </div>
+
+       {error && (
+            <Alert variant="destructive">
+                <Database className="h-4 w-4" />
+                <AlertTitle>Database Connection Error</AlertTitle>
+                <AlertDescription>
+                    {error} Using fallback data.
+                </AlertDescription>
+            </Alert>
+        )}
       
       <div className="space-y-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
         <form onSubmit={handleAiSearch} className="flex gap-2">
@@ -377,13 +437,7 @@ const ClientsPageComponent = () => {
         )}
       </div>
 
-      <ClientsTable 
-        clients={sortedClients}
-        requestSort={requestSort}
-        getSortIndicator={getSortIndicator}
-        onEdit={(client) => setEditingClient(client)}
-        columnVisibility={columnVisibility}
-      />
+      {renderContent()}
 
       {editingClient && (
         <EditClientDialog
