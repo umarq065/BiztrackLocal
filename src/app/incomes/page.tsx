@@ -12,6 +12,7 @@ import {
   Trash2,
   BarChart,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import NProgressLink from "@/components/layout/nprogress-link";
 
@@ -75,8 +76,8 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import type { IncomeSource, Gig, SourceDataPoint } from "@/lib/data/incomes-data";
-import { initialIncomeSources } from "@/lib/data/incomes-data";
-import { formSchema as incomesFormSchema } from "@/lib/services/incomesService";
+import { formSchema as incomesFormSchema } from "@/lib/data/incomes-data";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const addGigFormSchema = z.object({
@@ -108,8 +109,8 @@ type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
 
 const IncomesPageComponent = () => {
-  const [incomeSources, setIncomeSources] =
-    useState<IncomeSource[]>(initialIncomeSources);
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,9 +133,7 @@ const IncomesPageComponent = () => {
   const [isAddGigDataDialogOpen, setIsAddGigDataDialogOpen] = useState(false);
   const [updatingGigInfo, setUpdatingGigInfo] = useState<{sourceId: string; gigId: string} | null>(null);
 
-  const [gigToDelete, setGigToDelete] = useState<Gig | null>(null);
-  const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [gigToDelete, setGigToDelete] = useState<{ gig: Gig, sourceId: string } | null>(null);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
 
@@ -181,11 +180,29 @@ const IncomesPageComponent = () => {
     },
   });
   
+  const fetchIncomeSources = async () => {
+    setIsLoading(true);
+    try {
+        const response = await fetch('/api/incomes');
+        if (!response.ok) {
+            throw new Error('Failed to fetch income sources');
+        }
+        const data = await response.json();
+        setIncomeSources(data);
+    } catch (error) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not load income sources. Please try again later.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // In a real app with a DB, you'd fetch initial data here.
-    // For our file-based persistence, we can re-read if needed,
-    // but for now, we'll rely on the API to update the store and
-    // the local state to reflect the UI changes.
+    fetchIncomeSources();
   }, []);
 
   async function onSubmit(values: z.infer<typeof incomesFormSchema>) {
@@ -202,7 +219,7 @@ const IncomesPageComponent = () => {
       }
 
       const { source: newSource } = await response.json();
-
+      
       setIncomeSources(prev => [newSource, ...prev]);
 
       toast({
@@ -226,128 +243,110 @@ const IncomesPageComponent = () => {
     }
   }
 
-  function onAddGigSubmit(values: AddGigFormValues) {
+  async function onAddGigSubmit(values: AddGigFormValues) {
     if (!addingToSourceId) return;
+    setIsSubmitting(true);
+    try {
+        const response = await fetch(`/api/incomes/${addingToSourceId}/gigs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
 
-    const newGig: Gig = {
-      id: `g-${Date.now()}`,
-      name: values.name,
-      date: format(values.date, "yyyy-MM-dd"),
-      analytics: [],
-    };
-
-    setIncomeSources(prevSources => 
-      prevSources.map(source => {
-        if (source.id === addingToSourceId) {
-          return { ...source, gigs: [newGig, ...source.gigs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) };
+        if (!response.ok) {
+            throw new Error('Failed to add gig');
         }
-        return source;
-      })
-    );
-    
-    toast({
-      title: "Gig Added",
-      description: `Added "${values.name}" to the income source.`,
-    });
-    addGigForm.reset({ name: "", date: new Date() });
-    setAddGigDialogOpen(false);
+        
+        const { gig: newGig } = await response.json();
+
+        setIncomeSources(prev => 
+            prev.map(source => {
+                if (source.id === addingToSourceId) {
+                    return { ...source, gigs: [...source.gigs, newGig].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) };
+                }
+                return source;
+            })
+        );
+        
+        toast({
+            title: "Gig Added",
+            description: `Added "${values.name}" to the income source.`,
+        });
+        addGigForm.reset({ name: "", date: new Date() });
+        setAddGigDialogOpen(false);
+    } catch (error) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not add the gig. Please try again.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
-  function onEditGigSubmit(values: EditGigFormValues) {
+  async function onEditGigSubmit(values: EditGigFormValues) {
     if (!editingGigInfo) return;
+    setIsSubmitting(true);
 
     const { sourceId, gig } = editingGigInfo;
 
-    const updatedGig: Gig = {
-        ...gig,
-        name: values.name,
-        date: format(values.date, "yyyy-MM-dd"),
-    };
+    try {
+        const response = await fetch(`/api/incomes/${sourceId}/gigs/${gig.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values),
+        });
 
-    setIncomeSources(prevSources => 
-      prevSources.map(source => {
-        if (source.id === sourceId) {
-            return {
-                ...source,
-                gigs: source.gigs.map(g => g.id === gig.id ? updatedGig : g),
-            };
+        if (!response.ok) {
+            throw new Error('Failed to update gig');
         }
-        return source;
-      })
-    );
 
-    toast({
-      title: "Gig Updated",
-      description: `Gig "${values.name}" has been updated.`,
-    });
-    setEditGigDialogOpen(false);
+        const { gig: updatedGig } = await response.json();
+
+        setIncomeSources(prev => 
+            prev.map(source => {
+                if (source.id === sourceId) {
+                    return {
+                        ...source,
+                        gigs: source.gigs.map(g => g.id === gig.id ? updatedGig : g),
+                    };
+                }
+                return source;
+            })
+        );
+
+        toast({
+            title: "Gig Updated",
+            description: `Gig "${values.name}" has been updated.`,
+        });
+        setEditGigDialogOpen(false);
+    } catch (error) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not update the gig. Please try again.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   function onAddDataSubmit(values: AddDataFormValues) {
+    // This function will need a corresponding API endpoint
     if (!updatingSourceId) return;
-
-    const newDataPoint: SourceDataPoint = {
-        date: format(values.date, "yyyy-MM-dd"),
-        messages: values.messages,
-    };
-
-    setIncomeSources(prevSources => 
-      prevSources.map(source => {
-        if (source.id === updatingSourceId) {
-          const updatedDataPoints = [...(source.dataPoints || []), newDataPoint];
-          updatedDataPoints.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          return { ...source, dataPoints: updatedDataPoints };
-        }
-        return source;
-      })
-    );
-    
-    toast({
-      title: "Data Added",
-      description: `Added new data point to the income source.`,
-    });
-    addDataForm.reset({ date: new Date(), messages: 0 });
+    console.log("Adding data to source:", updatingSourceId, values);
+    toast({ title: "Data Added (Simulated)" });
     setIsAddDataDialogOpen(false);
   }
 
   function onAddGigDataSubmit(values: AddGigDataFormValues) {
+    // This function will need a corresponding API endpoint
     if (!updatingGigInfo) return;
-
-    const { sourceId, gigId } = updatingGigInfo;
-
-    const newDataPoint = {
-        date: format(values.date, "yyyy-MM-dd"),
-        impressions: values.impressions,
-        clicks: values.clicks,
-        ctr: values.ctr,
-        orders: 0,
-        revenue: 0,
-    };
-
-    setIncomeSources(prevSources => 
-      prevSources.map(source => {
-        if (source.id === sourceId) {
-          return { 
-              ...source, 
-              gigs: source.gigs.map(gig => {
-                  if (gig.id === gigId) {
-                      const updatedAnalytics = [...(gig.analytics || []), newDataPoint];
-                      updatedAnalytics.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                      return { ...gig, analytics: updatedAnalytics };
-                  }
-                  return gig;
-              })
-          };
-        }
-        return source;
-      })
-    );
-    
-    toast({
-      title: "Gig Data Added",
-      description: `Added new performance data to the gig.`,
-    });
-    addGigDataForm.reset({ date: new Date(), impressions: 0, clicks: 0, ctr: 0 });
+    console.log("Adding data to gig:", updatingGigInfo, values);
+    toast({ title: "Gig Data Added (Simulated)" });
     setIsAddGigDataDialogOpen(false);
   }
 
@@ -367,28 +366,12 @@ const IncomesPageComponent = () => {
   };
   
   const handleConfirmMerge = () => {
+    // This will require an API endpoint
     if (!mainGigId || !mergingSourceId) return;
-
-    setIncomeSources(prevSources => 
-      prevSources.map(source => {
-        if (source.id === mergingSourceId) {
-          const gigsToKeep = source.gigs.filter(gig => !selectedGigs[gig.id] || gig.id === mainGigId);
-          return { ...source, gigs: gigsToKeep };
-        }
-        return source;
-      })
-    );
-
-    toast({
-      title: "Gigs Merged",
-      description: "The selected gigs have been successfully merged.",
-    });
-
+    console.log("Merging gigs into:", mainGigId);
+    toast({ title: "Gigs Merged (Simulated)" });
     setIsMergeConfirmOpen(false);
     setMergingSourceId(null);
-    setSelectedGigs({});
-    setGigsForMergeConfirmation([]);
-    setMainGigId(null);
   };
   
   const handleSelectAllGigs = (gigs: Gig[]) => (checked: boolean) => {
@@ -400,40 +383,62 @@ const IncomesPageComponent = () => {
   };
 
   const openDeleteDialog = (gig: Gig, sourceId: string) => {
-    setGigToDelete(gig);
-    setDeleteSourceId(sourceId);
+    setGigToDelete({ gig, sourceId });
     setDeleteStep(1);
-    setIsDeleteConfirmOpen(true);
   };
 
   const closeDeleteDialog = () => {
-    setIsDeleteConfirmOpen(false);
+    setGigToDelete(null);
     setTimeout(() => {
-        setGigToDelete(null);
-        setDeleteSourceId(null);
         setDeleteStep(0);
         setDeleteConfirmInput("");
     }, 300);
   };
 
-  const handleDeleteGig = () => {
-      if (!gigToDelete || !deleteSourceId || deleteConfirmInput !== gigToDelete.name) return;
+  async function handleDeleteGig() {
+      if (!gigToDelete) return;
+      const { gig, sourceId } = gigToDelete;
 
-      setIncomeSources(prevSources => 
-          prevSources.map(source => {
-              if (source.id === deleteSourceId) {
-                  return { ...source, gigs: source.gigs.filter(g => g.id !== gigToDelete.id) };
-              }
-              return source;
-          })
-      );
+      if (deleteConfirmInput !== gig.name) {
+          toast({ variant: "destructive", title: "Error", description: "The typed name does not match." });
+          return;
+      }
+      setIsSubmitting(true);
       
-      toast({
-          title: "Gig Deleted",
-          description: `"${gigToDelete.name}" has been permanently removed.`,
-      });
+      try {
+          const response = await fetch(`/api/incomes/${sourceId}/gigs/${gig.id}`, {
+              method: 'DELETE',
+          });
 
-      closeDeleteDialog();
+          if (!response.ok) {
+              throw new Error('Failed to delete gig');
+          }
+
+          setIncomeSources(prev => 
+              prev.map(source => {
+                  if (source.id === sourceId) {
+                      return { ...source, gigs: source.gigs.filter(g => g.id !== gig.id) };
+                  }
+                  return source;
+              })
+          );
+      
+          toast({
+              title: "Gig Deleted",
+              description: `"${gig.name}" has been permanently removed.`,
+          });
+
+          closeDeleteDialog();
+      } catch (error) {
+          console.error(error);
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Could not delete the gig. Please try again.",
+          });
+      } finally {
+          setIsSubmitting(false);
+      }
   };
 
   const handleOpenEditGigDialog = (gig: Gig, sourceId: string) => {
@@ -445,6 +450,28 @@ const IncomesPageComponent = () => {
       setEditGigDialogOpen(true);
   };
 
+  if (isLoading) {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <Skeleton className="h-9 w-48" />
+                <Skeleton className="ml-auto h-10 w-32" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-72" />
+                    <Skeleton className="h-4 w-96 mt-2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </CardContent>
+            </Card>
+        </main>
+    )
+  }
+
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
@@ -454,7 +481,7 @@ const IncomesPageComponent = () => {
         <div className="ml-auto">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button>Add New Source</Button>
+              <Button onClick={() => form.reset({ sourceName: "", gigs: [{ name: "", date: new Date() }] })}>Add New Source</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
               <DialogHeader>
@@ -584,6 +611,7 @@ const IncomesPageComponent = () => {
                       </Button>
                     </DialogClose>
                     <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       {isSubmitting ? "Saving..." : "Save Source"}
                     </Button>
                   </DialogFooter>
@@ -767,7 +795,7 @@ const IncomesPageComponent = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+      <Dialog open={!!gigToDelete} onOpenChange={(open) => !open && closeDeleteDialog()}>
         <DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
             <DialogHeader>
                 <DialogTitle>
@@ -776,9 +804,9 @@ const IncomesPageComponent = () => {
                     {deleteStep === 3 && "Final Confirmation"}
                 </DialogTitle>
                 <DialogDescription>
-                    {deleteStep === 1 && `You are about to delete the gig "${gigToDelete?.name}". This cannot be undone.`}
-                    {deleteStep === 2 && `All data for "${gigToDelete?.name}" will be permanently removed. This is your second warning.`}
-                    {deleteStep === 3 && <>To confirm, please type <strong className="text-foreground">{gigToDelete?.name}</strong> below.</>}
+                    {deleteStep === 1 && `You are about to delete the gig "${gigToDelete?.gig.name}". This cannot be undone.`}
+                    {deleteStep === 2 && `All data for "${gigToDelete?.gig.name}" will be permanently removed. This is your second warning.`}
+                    {deleteStep === 3 && <>To confirm, please type <strong className="text-foreground">{gigToDelete?.gig.name}</strong> below.</>}
                 </DialogDescription>
             </DialogHeader>
             {deleteStep === 3 && (
@@ -793,7 +821,10 @@ const IncomesPageComponent = () => {
                 <Button variant="outline" onClick={closeDeleteDialog}>Cancel</Button>
                 {deleteStep === 1 && <Button onClick={() => setDeleteStep(2)}>Continue</Button>}
                 {deleteStep === 2 && <Button variant="destructive" onClick={() => setDeleteStep(3)}>I Understand, Delete</Button>}
-                {deleteStep === 3 && <Button variant="destructive" disabled={deleteConfirmInput !== gigToDelete?.name} onClick={handleDeleteGig}>Delete Permanently</Button>}
+                {deleteStep === 3 && <Button variant="destructive" disabled={deleteConfirmInput !== gigToDelete?.gig.name || isSubmitting} onClick={handleDeleteGig}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Delete Permanently
+                </Button>}
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -890,7 +921,10 @@ const IncomesPageComponent = () => {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">Add Gig</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Add Gig
+                        </Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -962,7 +996,10 @@ const IncomesPageComponent = () => {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Save Changes
+                        </Button>
                     </DialogFooter>
                 </form>
             </Form>

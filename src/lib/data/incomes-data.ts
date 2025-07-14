@@ -1,32 +1,7 @@
+
 import { z } from "zod";
 import { format } from "date-fns";
-
-export interface Gig {
-  id: string;
-  name: string;
-  date: string;
-  messages?: number;
-  analytics?: {
-    date: string;
-    impressions: number;
-    clicks: number;
-    ctr: number;
-    orders: number;
-    revenue: number;
-  }[];
-}
-
-export interface SourceDataPoint {
-  date: string;
-  messages: number;
-}
-
-export interface IncomeSource {
-  id: string;
-  name: string;
-  gigs: Gig[];
-  dataPoints?: SourceDataPoint[];
-}
+import type { ObjectId } from 'mongodb';
 
 export const formSchema = z.object({
   sourceName: z.string().min(2, {
@@ -46,6 +21,33 @@ export const formSchema = z.object({
     .min(1, { message: "You must add at least one gig." }),
 });
 
+export interface Gig {
+  id: string; // Should be unique within the source, maybe a short random string or nanoid
+  name: string;
+  date: string;
+  messages?: number;
+  analytics?: {
+    date: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    orders: number;
+    revenue: number;
+  }[];
+}
+
+export interface SourceDataPoint {
+  date: string;
+  messages: number;
+}
+
+export interface IncomeSource {
+  _id?: ObjectId; // From MongoDB
+  id: string; // String version of _id or a separate unique ID
+  name: string;
+  gigs: Gig[];
+  dataPoints?: SourceDataPoint[];
+}
 
 const generateAnalytics = (startDate: Date, days: number, baseImpressions: number, baseClicks: number, baseOrders: number, baseRevenuePerOrder: number) => {
     return Array.from({ length: days }, (_, i) => {
@@ -77,9 +79,9 @@ const generateMessages = (startDate: Date, days: number, baseMessages: number) =
     });
 };
 
-export const initialIncomeSources: IncomeSource[] = [
+// This initial data will only be used if the database is empty.
+export const initialIncomeSources: Omit<IncomeSource, '_id' | 'id'>[] = [
   {
-    id: "1",
     name: "Web Design",
     gigs: [
       { id: "g1", name: "Acme Corp Redesign", date: "2023-01-15", messages: 125, analytics: generateAnalytics(new Date("2024-04-01"), 60, 500, 40, 5, 450) },
@@ -89,30 +91,14 @@ export const initialIncomeSources: IncomeSource[] = [
     dataPoints: generateMessages(new Date("2024-04-01"), 60, 15),
   },
   {
-    id: "2",
     name: "Consulting",
     gigs: [{ id: "g4", name: "Q1 Strategy Session", date: "2023-01-20", messages: 30, analytics: generateAnalytics(new Date("2024-04-01"), 60, 150, 10, 1, 1200) }],
     dataPoints: generateMessages(new Date("2024-04-01"), 60, 5),
   },
   {
-    id: "3",
     name: "Logo Design",
     gigs: [
       { id: "g5", name: "Brand Identity for 'Innovate'", date: "2023-02-01", messages: 15, analytics: generateAnalytics(new Date("2024-04-01"), 60, 200, 15, 3, 250) },
-    ],
-    dataPoints: [],
-  },
-  {
-    id: "4",
-    name: "SEO Services",
-    gigs: [{ id: "g6", name: "Monthly SEO Retainer", date: "2023-02-10", messages: 88, analytics: generateAnalytics(new Date("2024-04-01"), 60, 400, 25, 4, 150) }],
-    dataPoints: generateMessages(new Date("2024-04-01"), 60, 8),
-  },
-  {
-    id: "5",
-    name: "Maintenance",
-    gigs: [
-      { id: "g7", name: "Website Support Package", date: "2023-02-15", messages: 5, analytics: [] },
     ],
     dataPoints: [],
   },
