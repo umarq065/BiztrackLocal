@@ -1,7 +1,7 @@
 
 "use client";
 
-import { lazy, Suspense, useState, useMemo } from "react";
+import { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import NProgressLink from "@/components/layout/nprogress-link";
 import { notFound, useParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,15 +22,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import StatCard from "@/components/dashboard/stat-card";
-import { Facebook, Twitter, Linkedin, Github, Globe, DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse } from "lucide-react";
+import { Facebook, Twitter, Linkedin, Github, Globe, DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse, Loader2 } from "lucide-react";
 import type { Stat } from "@/lib/placeholder-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { getClientStatus, initialClients as staticClients, type Client } from "@/lib/data/clients-data";
+import { getClientStatus, type Client } from "@/lib/data/clients-data";
 import { initialOrders as staticOrdersData, type Order } from "@/lib/data/orders-data";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
 import { cn } from "@/lib/utils";
+import type { IncomeSource } from "@/lib/data/incomes-data";
 
 const ClientOrderHistoryChart = lazy(() => import("@/components/clients/client-order-history-chart"));
 
@@ -51,6 +52,9 @@ const SocialIcon = ({ platform }: { platform: string }) => {
 
 // A more robust date parsing function to avoid performance issues.
 const parseDateString = (dateString: string): Date => {
+  if (!dateString || dateString === 'N/A') {
+    return new Date(0); // Return a default date for invalid strings
+  }
   const [year, month, day] = dateString.split('-').map(Number);
   // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
   return new Date(year, month - 1, day);
@@ -59,26 +63,51 @@ const parseDateString = (dateString: string): Date => {
 export default function ClientDetailsPage() {
   const params = useParams();
   const clientId = params.clientId as string;
-  const [clients, setClients] = useState<Client[]>(staticClients);
+  
+  const [client, setClient] = useState<Client | null>(null);
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const client = clients.find(c => c.id === clientId);
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        const [clientsRes, incomesRes] = await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/incomes')
+        ]);
+        if (!clientsRes.ok || !incomesRes.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const allClients: Client[] = await clientsRes.json();
+        const incomesData: IncomeSource[] = await incomesRes.json();
+        
+        const currentClient = allClients.find(c => c.id === clientId);
+        setClient(currentClient || null);
+        setIncomeSources(incomesData);
+
+      } catch (error) {
+        console.error("Failed to fetch client details:", error);
+        setClient(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, [clientId]);
+
 
   const initialOrders = useMemo(() => {
     return staticOrdersData.map(o => ({ ...o, dateObj: parseDateString(o.date) }));
   }, []);
   
-  if (!client) {
-    notFound();
-  }
-
   const handleClientUpdated = (updatedClient: Client) => {
-      setClients(prevClients => 
-          prevClients.map(c => (c.id === updatedClient.id ? updatedClient : c))
-      );
+      setClient(updatedClient);
   };
   
   const clientOrders = useMemo(() => {
+    if (!client) return [];
     return initialOrders.filter(o => o.clientUsername === client?.username);
   }, [initialOrders, client]);
   
@@ -122,11 +151,38 @@ export default function ClientDetailsPage() {
       {
         icon: "Calendar",
         title: "Client Since",
-        value: format(parseDateString(client.clientSince), "PPP"),
-        description: `Last order on ${format(parseDateString(client.lastOrder), "PPP")}`,
+        value: client.clientSince !== 'N/A' ? format(parseDateString(client.clientSince), "PPP") : "N/A",
+        description: client.lastOrder !== 'N/A' ? `Last order on ${format(parseDateString(client.lastOrder), "PPP")}` : "No orders yet",
       },
     ];
   }, [client, clientStatus]);
+  
+  if (isLoading) {
+    return (
+       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="h-10 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-64 w-full" />
+       </main>
+    )
+  }
+
+  if (!client) {
+    notFound();
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -162,6 +218,7 @@ export default function ClientDetailsPage() {
               onOpenChange={setIsEditDialogOpen}
               client={client}
               onClientUpdated={handleClientUpdated}
+              incomeSources={incomeSources.map(s => s.name)}
             >
                 <Button variant="outline">
                     <Pencil className="mr-2 h-4 w-4" />
