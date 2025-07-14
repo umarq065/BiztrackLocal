@@ -159,7 +159,7 @@ const ClientsPageComponent = () => {
             if (aiFilters.isVip !== undefined) {
                  clientsToFilter = clientsToFilter.filter(c => c.isVip === aiFilters.isVip);
             }
-            if (aiFilters.minTotalOrders) {
+            if (aiFilters.minTotalOrders !== undefined && aiFilters.minTotalOrders > 0) {
                 clientsToFilter = clientsToFilter.filter(c => c.totalOrders >= aiFilters.minTotalOrders!);
             }
             if (aiFilters.dateRange?.from) {
