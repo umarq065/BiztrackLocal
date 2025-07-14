@@ -159,15 +159,15 @@ const ClientsPageComponent = () => {
             if (aiFilters.isVip !== undefined) {
                  clientsToFilter = clientsToFilter.filter(c => c.isVip === aiFilters.isVip);
             }
-            if (aiFilters.minTotalOrders !== undefined && aiFilters.minTotalOrders > 0) {
+            if (aiFilters.minTotalOrders) {
                 clientsToFilter = clientsToFilter.filter(c => c.totalOrders >= aiFilters.minTotalOrders!);
             }
             if (aiFilters.dateRange?.from) {
-                const fromDate = new Date(aiFilters.dateRange.from);
+                const fromDate = new Date(`${aiFilters.dateRange.from}T00:00:00Z`);
                 clientsToFilter = clientsToFilter.filter(c => c.lastOrder !== 'N/A' && new Date(c.lastOrder) >= fromDate);
             }
             if (aiFilters.dateRange?.to) {
-                const toDate = new Date(aiFilters.dateRange.to);
+                const toDate = new Date(`${aiFilters.dateRange.to}T23:59:59Z`);
                 clientsToFilter = clientsToFilter.filter(c => c.lastOrder !== 'N/A' && new Date(c.lastOrder) <= toDate);
             }
         } else {
