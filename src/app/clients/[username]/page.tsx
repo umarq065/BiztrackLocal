@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { getClientStatus, type Client } from "@/lib/data/clients-data";
-import { initialOrders as staticOrdersData, type Order } from "@/lib/data/orders-data";
+import { type Order } from "@/lib/data/orders-data";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
 import { cn } from "@/lib/utils";
 import type { IncomeSource } from "@/lib/data/incomes-data";
@@ -65,6 +65,7 @@ export default function ClientDetailsPage() {
   const username = params.username as string;
   
   const [client, setClient] = useState<Client | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -78,9 +79,10 @@ export default function ClientDetailsPage() {
       }
       setIsLoading(true);
       try {
-        const [clientRes, incomesRes] = await Promise.all([
+        const [clientRes, incomesRes, ordersRes] = await Promise.all([
           fetch(`/api/clients/by-username/${username}`),
-          fetch('/api/incomes')
+          fetch('/api/incomes'),
+          fetch('/api/orders')
         ]);
         
         if (clientRes.status === 404) {
@@ -89,14 +91,16 @@ export default function ClientDetailsPage() {
           return;
         }
 
-        if (!clientRes.ok || !incomesRes.ok) {
+        if (!clientRes.ok || !incomesRes.ok || !ordersRes.ok) {
           throw new Error('Failed to fetch data');
         }
         const currentClient: Client = await clientRes.json();
         const incomesData: IncomeSource[] = await incomesRes.json();
+        const ordersData: Order[] = await ordersRes.json();
         
         setClient(currentClient);
         setIncomeSources(incomesData);
+        setOrders(ordersData);
 
       } catch (err) {
         console.error("Failed to fetch client details:", err);
@@ -112,19 +116,16 @@ export default function ClientDetailsPage() {
     fetchData();
   }, [username]);
 
-
-  const initialOrders = useMemo(() => {
-    return staticOrdersData.map(o => ({ ...o, dateObj: parseDateString(o.date) }));
-  }, []);
-  
   const handleClientUpdated = (updatedClient: Client) => {
       setClient(updatedClient);
   };
   
   const clientOrders = useMemo(() => {
     if (!client) return [];
-    return initialOrders.filter(o => o.clientUsername === client?.username);
-  }, [initialOrders, client]);
+    return orders
+        .filter(o => o.clientUsername === client?.username)
+        .map(o => ({ ...o, dateObj: parseDateString(o.date) }));
+  }, [orders, client]);
   
   const clientStatus = useMemo(() => {
     if (!client) return { text: "Inactive", color: "bg-red-500" };
