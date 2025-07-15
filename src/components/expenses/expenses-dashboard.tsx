@@ -296,13 +296,11 @@ const MemoizedExpensesDashboard = () => {
       }
   };
 
-  const filteredData = useMemo(() => {
-    if (!date) { // "All Time" is selected or initial state
-        return { filteredExpenses: expenses, previousPeriodExpenses: [] };
-    }
+  const { filteredExpenses, previousPeriodExpenses } = useMemo(() => {
+    const { from, to } = date || {};
 
-    const { from, to } = date;
-    if (!from || !to) { // Should not happen with current logic but good practice
+    // If no valid date range, return all expenses for the current period
+    if (!from || !to) {
         return { filteredExpenses: expenses, previousPeriodExpenses: [] };
     }
 
@@ -324,8 +322,6 @@ const MemoizedExpensesDashboard = () => {
 
     return { filteredExpenses: filtered, previousPeriodExpenses: previousFiltered };
   }, [expenses, date]);
-
-  const { filteredExpenses, previousPeriodExpenses } = filteredData;
   
   const kpiData = useMemo(() => {
     const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0);
@@ -508,15 +504,16 @@ const MemoizedExpensesDashboard = () => {
               />
           </Suspense>
 
-           <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
               <ExpensesTable
                   expenses={filteredExpenses}
                   onEdit={handleOpenDialog}
                   onDelete={setDeletingExpense}
               />
           </Suspense>
-
-          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+        
+         <div className="w-full">
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 {pieChartData.length > 0 ? (
                     <ExpenseChart data={pieChartData} />
                 ) : (
@@ -524,7 +521,8 @@ const MemoizedExpensesDashboard = () => {
                         <p className="text-muted-foreground">No expense category data for this period.</p>
                     </div>
                 )}
-            </Suspense>          
+            </Suspense>
+          </div>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
