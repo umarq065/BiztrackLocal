@@ -117,7 +117,7 @@ export function AddSourceDataDialog({ open, onOpenChange, source, onDataAdded }:
                             control={form.control}
                             name="date"
                             render={({ field }) => (
-                                <FormItem className="flex flex-col">
+                                <FormItem>
                                 <FormLabel>Date</FormLabel>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -125,7 +125,7 @@ export function AddSourceDataDialog({ open, onOpenChange, source, onDataAdded }:
                                         <Button
                                         variant={"outline"}
                                         className={cn(
-                                            "pl-3 text-left font-normal",
+                                            "w-full justify-start text-left font-normal mt-2",
                                             !field.value && "text-muted-foreground"
                                         )}
                                         >
