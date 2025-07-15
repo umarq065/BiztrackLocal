@@ -40,8 +40,8 @@ import { useToast } from "@/hooks/use-toast";
 interface IncomeSourceAccordionProps {
   incomeSources: IncomeSource[];
   onAddGig: (sourceId: string) => void;
-  onAddSourceData: (sourceId: string) => void;
-  onAddGigData: (sourceId: string, gigId: string) => void;
+  onAddSourceData: (source: IncomeSource) => void;
+  onAddGigData: (source: IncomeSource, gig: Gig) => void;
   onEditGig: (sourceId: string, gig: Gig) => void;
   onDeleteGig: (sourceId: string, gig: Gig) => void;
   onDeleteSource: (source: IncomeSource) => void;
@@ -131,7 +131,7 @@ export function IncomeSourceAccordion({
                     Merge Gigs
                   </Button>
                 )}
-                 <Button variant="secondary" onClick={() => onAddSourceData(source.id)}>
+                 <Button variant="secondary" onClick={() => onAddSourceData(source)}>
                     Add Messages Data
                 </Button>
                  <Button variant="outline" onClick={() => onAddGig(source.id)}>
@@ -189,7 +189,7 @@ export function IncomeSourceAccordion({
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => onAddGigData(source.id, gig.id)}
+                                    onClick={() => onAddGigData(source, gig)}
                                 >
                                     <BarChart className="h-4 w-4" />
                                     <span className="sr-only">Add Data</span>

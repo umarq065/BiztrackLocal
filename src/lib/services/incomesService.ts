@@ -205,7 +205,7 @@ export async function deleteIncomeSource(sourceId: string): Promise<boolean> {
 }
 
 /**
- * Adds a new analytics data point to a specific gig.
+ * Adds or updates an analytics data point for a specific gig on a specific date.
  * @param sourceId The ID of the income source.
  * @param gigId The ID of the gig to update.
  * @param analyticsData The new analytics data point.
@@ -213,19 +213,25 @@ export async function deleteIncomeSource(sourceId: string): Promise<boolean> {
  */
 export async function addAnalyticsToGig(sourceId: string, gigId: string, analyticsData: AddGigDataFormValues): Promise<Gig | null> {
     const incomesCollection = await getIncomesCollection();
+    const dateString = format(analyticsData.date, "yyyy-MM-dd");
 
-    const newAnalyticPoint = {
-        ...analyticsData,
-        date: format(analyticsData.date, "yyyy-MM-dd"),
-    };
-
-    const result = await incomesCollection.updateOne(
-        { _id: new ObjectId(sourceId), "gigs.id": gigId },
-        { $push: { "gigs.$.analytics": newAnalyticPoint } }
+    // First, try to update an existing entry for this date
+    const updateResult = await incomesCollection.updateOne(
+        { _id: new ObjectId(sourceId), "gigs.id": gigId, "gigs.analytics.date": dateString },
+        { $set: { 
+            "gigs.$[gig].analytics.$[analytic].impressions": analyticsData.impressions,
+            "gigs.$[gig].analytics.$[analytic].clicks": analyticsData.clicks,
+        } },
+        { arrayFilters: [{ "gig.id": gigId }, { "analytic.date": dateString }] }
     );
 
-    if (result.modifiedCount === 0) {
-        throw new Error('Gig not found or failed to add analytics data.');
+    // If no document was updated, it means no entry for this date exists, so we add it
+    if (updateResult.matchedCount === 0) {
+        const newAnalyticPoint = { ...analyticsData, date: dateString };
+        await incomesCollection.updateOne(
+            { _id: new ObjectId(sourceId), "gigs.id": gigId },
+            { $push: { "gigs.$.analytics": newAnalyticPoint } }
+        );
     }
 
     const updatedSource = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
@@ -233,32 +239,43 @@ export async function addAnalyticsToGig(sourceId: string, gigId: string, analyti
 }
 
 /**
- * Adds a new general data point to an income source.
+ * Adds or updates a general data point for an income source on a specific date.
  * @param sourceId The ID of the income source.
- * @param dataPoint The new data point (date and messages).
+ * @param dataPoint The data point (date and messages).
  * @returns The updated income source.
  */
 export async function addDataToSource(sourceId: string, dataPoint: AddSourceDataFormValues): Promise<IncomeSource | null> {
     const incomesCollection = await getIncomesCollection();
     const _id = new ObjectId(sourceId);
+    const dateString = format(dataPoint.date, "yyyy-MM-dd");
 
-    const newDataPoint: SourceDataPoint = {
-        date: format(dataPoint.date, "yyyy-MM-dd"),
+    const newDataPoint = {
+        date: dateString,
         messages: dataPoint.messages,
     };
-
-    const result = await incomesCollection.findOneAndUpdate(
-        { _id },
-        { $push: { dataPoints: newDataPoint } },
-        { returnDocument: 'after' }
+    
+    // First, try to update an existing entry for this date
+    const updateResult = await incomesCollection.updateOne(
+        { _id, "dataPoints.date": dateString },
+        { $set: { "dataPoints.$.messages": dataPoint.messages } }
     );
+    
+    // If no document was updated, it means no entry for this date exists, so we add it
+    if (updateResult.matchedCount === 0) {
+        await incomesCollection.updateOne(
+            { _id },
+            { $push: { dataPoints: newDataPoint } }
+        );
+    }
 
-    if (!result) {
+    const updatedSource = await incomesCollection.findOne({ _id });
+    
+    if (!updatedSource) {
         return null;
     }
     
     return {
-        ...result,
-        id: result._id.toString(),
+        ...updatedSource,
+        id: updatedSource._id.toString(),
     } as IncomeSource;
 }

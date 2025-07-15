@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,11 +45,11 @@ type AddDataFormValues = z.infer<typeof addDataFormSchema>;
 interface AddSourceDataDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    sourceId: string;
+    source: IncomeSource | null;
     onDataAdded: (updatedSource: IncomeSource) => void;
 }
 
-export function AddSourceDataDialog({ open, onOpenChange, sourceId, onDataAdded }: AddSourceDataDialogProps) {
+export function AddSourceDataDialog({ open, onOpenChange, source, onDataAdded }: AddSourceDataDialogProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -61,10 +61,21 @@ export function AddSourceDataDialog({ open, onOpenChange, sourceId, onDataAdded 
         },
     });
 
+    const selectedDate = form.watch("date");
+
+    useEffect(() => {
+        if (source && selectedDate) {
+            const dateString = format(selectedDate, "yyyy-MM-dd");
+            const existingData = source.dataPoints?.find(dp => dp.date === dateString);
+            form.setValue("messages", existingData?.messages || 0);
+        }
+    }, [selectedDate, source, form]);
+
     async function onSubmit(values: AddDataFormValues) {
+        if (!source) return;
         setIsSubmitting(true);
         try {
-            const response = await fetch(`/api/incomes/${sourceId}/data`, {
+            const response = await fetch(`/api/incomes/${source.id}/data`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(values),
@@ -76,7 +87,7 @@ export function AddSourceDataDialog({ open, onOpenChange, sourceId, onDataAdded 
 
             const { source: updatedSource } = await response.json();
             onDataAdded(updatedSource);
-            toast({ title: "Data Added", description: "New message data point saved." });
+            toast({ title: "Data Saved", description: `Message data for ${format(values.date, "PPP")} has been saved.` });
             onOpenChange(false);
         } catch (error) {
             console.error(error);
@@ -94,9 +105,9 @@ export function AddSourceDataDialog({ open, onOpenChange, sourceId, onDataAdded 
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Add Data to Income Source</DialogTitle>
+                    <DialogTitle>Add Data to &quot;{source?.name}&quot;</DialogTitle>
                     <DialogDescription>
-                        Add a new data point for messages and date for this source.
+                        Add or update the number of messages for a specific date.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -160,7 +171,7 @@ export function AddSourceDataDialog({ open, onOpenChange, sourceId, onDataAdded 
                             </DialogClose>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Add Data
+                                Save Data
                             </Button>
                         </DialogFooter>
                     </form>

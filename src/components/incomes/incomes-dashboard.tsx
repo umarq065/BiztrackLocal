@@ -51,10 +51,10 @@ export function IncomesDashboard() {
   const [editingGigInfo, setEditingGigInfo] = useState<{sourceId: string; gig: Gig} | null>(null);
   
   const [isAddDataDialogOpen, setIsAddDataDialogOpen] = useState(false);
-  const [updatingSourceId, setUpdatingSourceId] = useState<string | null>(null);
+  const [updatingSource, setUpdatingSource] = useState<IncomeSource | null>(null);
   
   const [isAddGigDataDialogOpen, setIsAddGigDataDialogOpen] = useState(false);
-  const [updatingGigInfo, setUpdatingGigInfo] = useState<{sourceId: string; gigId: string} | null>(null);
+  const [updatingGigInfo, setUpdatingGigInfo] = useState<{source: IncomeSource; gig: Gig} | null>(null);
   
   const [gigToDelete, setGigToDelete] = useState<{ gig: Gig, sourceId: string } | null>(null);
   
@@ -84,7 +84,7 @@ export function IncomesDashboard() {
 
   useEffect(() => {
     fetchIncomeSources();
-  }, []);
+  }, [toast]);
 
   const handleSourceAdded = (newSource: IncomeSource) => {
     setIncomeSources(prev => [newSource, ...prev]);
@@ -119,17 +119,9 @@ export function IncomesDashboard() {
     setIncomeSources(prev => prev.map(s => s.id === updatedSource.id ? updatedSource : s));
   };
   
-  const handleGigDataAdded = (updatedGig: Gig, sourceId: string) => {
+  const handleGigDataAdded = (updatedSourceWithGig: IncomeSource) => {
     setIncomeSources(prev => 
-        prev.map(source => {
-            if (source.id === sourceId) {
-                return {
-                    ...source,
-                    gigs: source.gigs.map(g => g.id === updatedGig.id ? updatedGig : g),
-                };
-            }
-            return source;
-        })
+        prev.map(source => source.id === updatedSourceWithGig.id ? updatedSourceWithGig : source)
     );
   }
 
@@ -215,8 +207,8 @@ export function IncomesDashboard() {
           <IncomeSourceAccordion
             incomeSources={incomeSources}
             onAddGig={(sourceId) => { setAddingToSourceId(sourceId); setAddGigDialogOpen(true); }}
-            onAddSourceData={(sourceId) => { setUpdatingSourceId(sourceId); setIsAddDataDialogOpen(true); }}
-            onAddGigData={(sourceId, gigId) => { setUpdatingGigInfo({ sourceId, gigId }); setIsAddGigDataDialogOpen(true); }}
+            onAddSourceData={(source) => { setUpdatingSource(source); setIsAddDataDialogOpen(true); }}
+            onAddGigData={(source, gig) => { setUpdatingGigInfo({ source, gig }); setIsAddGigDataDialogOpen(true); }}
             onEditGig={(sourceId, gig) => { setEditingGigInfo({ sourceId, gig }); setEditGigDialogOpen(true); }}
             onDeleteGig={(sourceId, gig) => setGigToDelete({ sourceId, gig })}
             onDeleteSource={setSourceToDelete}
@@ -246,11 +238,11 @@ export function IncomesDashboard() {
         />
       )}
 
-      {updatingSourceId && (
+      {updatingSource && (
         <AddSourceDataDialog 
             open={isAddDataDialogOpen}
             onOpenChange={setIsAddDataDialogOpen}
-            sourceId={updatingSourceId}
+            source={updatingSource}
             onDataAdded={handleSourceDataAdded}
         />
       )}

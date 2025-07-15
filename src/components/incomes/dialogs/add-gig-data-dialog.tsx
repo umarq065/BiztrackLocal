@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,7 +34,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { Gig } from "@/lib/data/incomes-data";
+import type { Gig, IncomeSource } from "@/lib/data/incomes-data";
 
 const addGigDataFormSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
@@ -46,8 +46,8 @@ type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 interface AddGigDataDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    updatingGigInfo: { sourceId: string; gigId: string };
-    onGigDataAdded: (updatedGig: Gig, sourceId: string) => void;
+    updatingGigInfo: { source: IncomeSource; gig: Gig };
+    onGigDataAdded: (updatedSource: IncomeSource) => void;
 }
 
 export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDataAdded }: AddGigDataDialogProps) {
@@ -63,13 +63,25 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
         },
     });
 
+    const selectedDate = form.watch("date");
+
+    useEffect(() => {
+        if (updatingGigInfo && selectedDate) {
+            const dateString = format(selectedDate, "yyyy-MM-dd");
+            const existingData = updatingGigInfo.gig.analytics?.find(a => a.date === dateString);
+            
+            form.setValue("impressions", existingData?.impressions || 0);
+            form.setValue("clicks", existingData?.clicks || 0);
+        }
+    }, [selectedDate, updatingGigInfo, form]);
+
     async function onSubmit(values: AddGigDataFormValues) {
         if (!updatingGigInfo) return;
         setIsSubmitting(true);
-        const { sourceId, gigId } = updatingGigInfo;
+        const { source, gig } = updatingGigInfo;
 
         try {
-            const response = await fetch(`/api/incomes/${sourceId}/gigs/${gigId}/analytics`, {
+            const response = await fetch(`/api/incomes/${source.id}/gigs/${gig.id}/analytics`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(values),
@@ -80,11 +92,15 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
             }
             
             const { gig: updatedGig } = await response.json();
-            onGigDataAdded(updatedGig, sourceId);
+            const updatedSource = {
+                ...source,
+                gigs: source.gigs.map(g => g.id === updatedGig.id ? updatedGig : g),
+            };
+            onGigDataAdded(updatedSource);
             
             toast({
-                title: "Analytics Data Added",
-                description: `New performance data added for the gig.`,
+                title: "Analytics Data Saved",
+                description: `Performance data for ${format(values.date, "PPP")} has been saved.`,
             });
             onOpenChange(false);
         } catch (error) {
@@ -92,7 +108,7 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Could not add performance data. Please try again.",
+                description: "Could not save performance data. Please try again.",
             });
         } finally {
             setIsSubmitting(false);
@@ -103,9 +119,9 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                    <DialogTitle>Add Gig Performance Data</DialogTitle>
+                    <DialogTitle>Add Gig Performance Data for &quot;{updatingGigInfo?.gig.name}&quot;</DialogTitle>
                     <DialogDescription>
-                        Enter the performance metrics for this gig on a specific date.
+                        Enter or update the performance metrics for this gig on a specific date.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -182,7 +198,7 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
                             </DialogClose>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Add Data
+                                Save Data
                             </Button>
                         </DialogFooter>
                     </form>
