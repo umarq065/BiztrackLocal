@@ -131,8 +131,8 @@ export function IncomeSourceAccordion({
                     Merge Gigs
                   </Button>
                 )}
-                 <Button variant="outline" onClick={() => onAddSourceData(source.id)}>
-                    Add Source Data
+                 <Button variant="secondary" onClick={() => onAddSourceData(source.id)}>
+                    Add Messages Data
                 </Button>
                  <Button variant="outline" onClick={() => onAddGig(source.id)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
