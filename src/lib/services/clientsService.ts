@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import clientPromise from '@/lib/mongodb';
-import { type Client, type ClientFormValues, initialClients } from '@/lib/data/clients-data';
+import { type Client, type ClientFormValues } from '@/lib/data/clients-data';
 import { ObjectId } from 'mongodb';
 import { format } from 'date-fns';
 
@@ -16,30 +16,12 @@ async function getClientsCollection() {
 }
 
 /**
- * Seeds the database with initial data if the collection is empty.
- */
-async function seedDatabase() {
-    const clientsCollection = await getClientsCollection();
-    const count = await clientsCollection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'clients' collection...");
-        // initialClients doesn't have _id, so we can insert it directly.
-        // MongoDB will auto-generate the _id.
-        const clientsToInsert = initialClients.map(({ id, ...client }) => ({
-            ...client,
-        }));
-        await clientsCollection.insertMany(clientsToInsert as any[]);
-    }
-}
-
-/**
  * Retrieves all clients from the database.
  * @returns A promise that resolves to an array of all clients.
  */
 export async function getClients(): Promise<Client[]> {
   try {
     const clientsCollection = await getClientsCollection();
-    await seedDatabase();
     // find({}).toArray() returns all documents in the collection
     const clients = await clientsCollection.find({}).sort({ clientSince: -1 }).toArray();
     

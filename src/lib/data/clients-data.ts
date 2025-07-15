@@ -59,15 +59,6 @@ export const getClientStatus = (lastOrderDateString: string): { text: 'Active' |
     return { text: 'Inactive', color: 'bg-red-500' };
 };
 
-
-export const initialClients: Omit<Client, '_id'>[] = [
-  { id: "1", name: "Olivia Martin", username: "olivia.m", email: "olivia.martin@email.com", avatarUrl: "https://placehold.co/100x100.png", source: "Comprehensive Web Design & Development for Enterprise", clientType: "Repeat", clientSince: "2023-01-15", totalOrders: 5, totalEarning: 8500, lastOrder: "2024-05-20", socialLinks: [{platform: "LinkedIn", url: "#"}, {platform: "Twitter", url: "#"}], isVip: true, tags: ["Reseller", "Minimalist Design"], notes: "Prefers quick, daily updates on order progress. Tends to ask for one major revision, so plan for it." },
-  { id: "2", name: "Jackson Lee", username: "jackson.l", email: "jackson.lee@email.com", source: "Consulting", clientType: "New", clientSince: "2024-03-10", totalOrders: 1, totalEarning: 1200, lastOrder: "2024-03-21", socialLinks: [{platform: "GitHub", url: "#"}], tags: ["Tech Startup"], notes: "" },
-  { id: "3", name: "Isabella Nguyen", username: "isabella.n", email: "isabella.nguyen@email.com", source: "Logo Design", clientType: "Repeat", clientSince: "2022-11-05", totalOrders: 8, totalEarning: 4500, lastOrder: "2023-05-18", socialLinks: [], isVip: false, tags: [], notes: "Loves bold fonts." },
-  { id: "4", name: "William Kim", username: "will.k", email: "will@email.com", source: "Comprehensive Web Design & Development for Enterprise", clientType: "Repeat", clientSince: "2023-08-20", totalOrders: 3, totalEarning: 6200, lastOrder: "2024-04-30", socialLinks: [{platform: "Website", url: "#"}], isVip: true, tags: ["Enterprise", "Long-term"], notes: "Communication needs to be top-notch as they are a reseller." },
-  { id: "5", name: "Sofia Davis", username: "sofia.d", email: "sofia.davis@email.com", source: "SEO Services and Digital Marketing Campaigns", clientType: "New", clientSince: "2024-04-01", totalOrders: 2, totalEarning: 1800, lastOrder: "2024-05-24", socialLinks: [{platform: "Facebook", url: "#"}, {platform: "Twitter", url: "#"}], tags: ["Social Media Focus"], notes: "" },
-];
-
 export const socialPlatforms = [
     { value: "Facebook", icon: Facebook },
     { value: "Twitter", icon: Twitter },
