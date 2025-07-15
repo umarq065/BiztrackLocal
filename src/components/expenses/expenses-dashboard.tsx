@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, memo, useEffect, lazy, Suspense } from "react";
+import { useState, memo, useEffect, lazy, Suspense, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, subDays, differenceInDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, Pencil, Trash2, Loader2 } from "lucide-react";
 
@@ -85,6 +85,10 @@ const MemoizedExpensesDashboard = () => {
   
   const [editingCategory, setEditingCategory] = useState<{ oldName: string; newName: string } | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+  
+  const [chartView, setChartView] = useState('daily');
+  const [chartType, setChartType] = useState('line');
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -122,7 +126,7 @@ const MemoizedExpensesDashboard = () => {
     const from = new Date(today.getFullYear(), today.getMonth(), 1);
     setDate({ from, to: today });
   }, []);
-
+  
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
@@ -292,7 +296,102 @@ const MemoizedExpensesDashboard = () => {
       }
   };
 
-  const filteredExpenses = expenses; 
+ const filteredData = useMemo(() => {
+    if (!date?.from || !date?.to) return { filteredExpenses: [], previousPeriodExpenses: [] };
+
+    const fromDate = date.from;
+    const toDate = date.to;
+
+    const filtered = expenses.filter(exp => {
+      const expDate = new Date(exp.date.replace(/-/g, '/'));
+      return expDate >= fromDate && expDate <= toDate;
+    });
+
+    const duration = differenceInDays(toDate, fromDate);
+    const prevToDate = subDays(fromDate, 1);
+    const prevFromDate = subDays(prevToDate, duration);
+
+    const previousFiltered = expenses.filter(exp => {
+      const expDate = new Date(exp.date.replace(/-/g, '/'));
+      return expDate >= prevFromDate && expDate <= prevToDate;
+    });
+    
+    return { filteredExpenses: filtered, previousPeriodExpenses: previousFiltered };
+
+  }, [expenses, date]);
+
+  const { filteredExpenses, previousPeriodExpenses } = filteredData;
+  
+  const kpiData = useMemo(() => {
+    const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+    const prevTotalExpenses = previousPeriodExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+    const totalExpensesChange = prevTotalExpenses > 0 ? ((totalExpenses - prevTotalExpenses) / prevTotalExpenses) * 100 : null;
+    
+    const daysInPeriod = date?.from && date?.to ? differenceInDays(date.to, date.from) + 1 : 1;
+    const avgDailyBurn = totalExpenses / daysInPeriod;
+    const prevDaysInPeriod = date?.from && date?.to ? differenceInDays(subDays(date.from, 1), subDays(subDays(date.from, 1), daysInPeriod - 1)) + 1 : 1;
+    const prevAvgDailyBurn = prevTotalExpenses / (prevDaysInPeriod || 1);
+    const avgDailyBurnChange = prevAvgDailyBurn > 0 ? ((avgDailyBurn - prevAvgDailyBurn) / prevAvgDailyBurn) * 100 : null;
+
+    const categoryTotals = filteredExpenses.reduce((acc, { category, amount }) => {
+        acc[category] = (acc[category] || 0) + amount;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const topSpendingCategory = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a)[0] || ["N/A", 0];
+
+    const largestSingleExpense = [...filteredExpenses].sort((a, b) => b.amount - a.amount)[0] || { type: 'N/A', amount: 0 };
+    
+    const totalRecurringCost = filteredExpenses.filter(e => e.recurring).reduce((acc, exp) => acc + exp.amount, 0);
+    const fixedCostRatio = totalExpenses > 0 ? (totalRecurringCost / totalExpenses) * 100 : 0;
+
+    return {
+        totalExpenses,
+        totalExpensesChange: totalExpensesChange ? { value: totalExpensesChange.toFixed(1), type: totalExpensesChange >= 0 ? 'increase' : 'decrease' } : null,
+        avgDailyBurn,
+        avgDailyBurnChange: avgDailyBurnChange ? { value: avgDailyBurnChange.toFixed(1), type: avgDailyBurnChange >= 0 ? 'increase' : 'decrease' } : null,
+        previousPeriodDescription: `vs. previous ${daysInPeriod} days`,
+        topSpendingCategory: { name: topSpendingCategory[0], amount: topSpendingCategory[1] },
+        largestSingleExpense: { type: largestSingleExpense.type, amount: largestSingleExpense.amount },
+        momExpenseGrowth: totalExpensesChange ? { value: totalExpensesChange.toFixed(1), type: totalExpensesChange >= 0 ? 'increase' : 'decrease' } : null,
+        totalRecurringCost,
+        fixedCostRatio: { value: fixedCostRatio.toFixed(1) + '%' }
+    };
+  }, [filteredExpenses, previousPeriodExpenses, date]);
+
+  const pieChartData = useMemo(() => {
+    const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+    const categoryTotals = filteredExpenses.reduce((acc, { category, amount }) => {
+        acc[category] = (acc[category] || 0) + amount;
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categoryTotals)
+        .map(([name, amount], index) => ({
+            name,
+            amount,
+            fill: colors[index % colors.length]
+        }))
+        .sort((a, b) => b.amount - a.amount);
+  }, [filteredExpenses]);
+
+ const trendChartData = useMemo(() => {
+    const dataMap = new Map<string, number>();
+    filteredExpenses.forEach(exp => {
+        const dateKey = format(new Date(exp.date.replace(/-/g, '/')), 'yyyy-MM-dd');
+        dataMap.set(dateKey, (dataMap.get(dateKey) || 0) + exp.amount);
+    });
+    return Array.from(dataMap.entries()).map(([date, amount]) => ({ date, amount })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+ }, [filteredExpenses]);
+
+ const previousTrendChartData = useMemo(() => {
+    const dataMap = new Map<string, number>();
+    previousPeriodExpenses.forEach(exp => {
+        const dateKey = format(new Date(exp.date.replace(/-/g, '/')), 'yyyy-MM-dd');
+        dataMap.set(dateKey, (dataMap.get(dateKey) || 0) + exp.amount);
+    });
+    return Array.from(dataMap.entries()).map(([date, amount]) => ({ date, amount })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+ }, [previousPeriodExpenses]);
 
   if (isLoading) {
     return (
@@ -388,6 +487,28 @@ const MemoizedExpensesDashboard = () => {
                 </AlertDescription>
             </Alert>
         )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-2 space-y-6">
+            <ExpensesKpiCards {...kpiData} />
+        </div>
+        <div className="lg:col-span-3 grid gap-6">
+             <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                 <ExpenseTrendChart
+                    data={trendChartData}
+                    previousData={previousTrendChartData}
+                    showComparison={showComparison}
+                    onShowComparisonChange={setShowComparison}
+                    chartView={chartView}
+                    onChartViewChange={setChartView}
+                    chartType={chartType}
+                    onChartTypeChange={setChartType}
+                 />
+            </Suspense>
+             <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                {pieChartData.length > 0 && <ExpenseChart data={pieChartData} />}
+            </Suspense>
+        </div>
+      </div>
       <div className="grid gap-4">
         <ExpensesTable
             expenses={filteredExpenses}
@@ -562,5 +683,3 @@ const MemoizedExpensesDashboard = () => {
 }
 
 export const ExpensesDashboard = memo(MemoizedExpensesDashboard);
-
-    
