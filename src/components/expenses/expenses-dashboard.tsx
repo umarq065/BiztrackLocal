@@ -14,15 +14,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
+  AlertDialogDescription as AlertDialogDesc,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -57,7 +59,7 @@ import { Switch } from "@/components/ui/switch";
 import { expenseFormSchema, type Expense, type ExpenseFormValues } from "@/lib/data/expenses-data";
 import { ExpensesKpiCards } from "./expenses-kpi-cards";
 import { ExpensesTable } from "./expenses-table";
-import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const ExpenseChart = lazy(() => import("@/components/expenses/expense-chart"));
 const ExpenseTrendChart = lazy(() => import("@/components/expenses/expense-trend-chart"));
@@ -118,10 +120,12 @@ const MemoizedExpensesDashboard = () => {
 
 
   useEffect(() => {
-    const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    setDate({ from, to: today });
-  }, []);
+    if(!date) {
+        const today = new Date();
+        const from = new Date(today.getFullYear(), today.getMonth(), 1);
+        setDate({ from, to: today });
+    }
+  }, [date]);
   
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -296,9 +300,9 @@ const MemoizedExpensesDashboard = () => {
     let filtered = expenses;
     let previousFiltered: Expense[] = [];
 
-    if (date?.from && date?.to) {
+    if (date?.from) {
         const fromDate = date.from;
-        const toDate = date.to;
+        const toDate = date.to || new Date();
 
         filtered = expenses.filter(exp => {
             const expDate = new Date(exp.date.replace(/-/g, '/'));
@@ -482,13 +486,14 @@ const MemoizedExpensesDashboard = () => {
             <Alert variant="destructive">
                 <Database className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDesc>
+                <AlertDescription>
                     {error}
-                </AlertDesc>
+                </AlertDescription>
             </Alert>
         )}
       <div className="grid grid-cols-1 gap-6">
           <ExpensesKpiCards {...kpiData} />
+          
           <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
               <ExpenseTrendChart
                   data={trendChartData}
@@ -501,20 +506,25 @@ const MemoizedExpensesDashboard = () => {
                   onChartTypeChange={setChartType}
               />
           </Suspense>
-          <ExpensesTable
-              expenses={filteredExpenses}
-              onEdit={handleOpenDialog}
-              onDelete={setDeletingExpense}
-          />
+
           <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-              {pieChartData.length > 0 ? (
-                  <ExpenseChart data={pieChartData} />
-              ) : (
-                  <div className="flex h-full items-center justify-center rounded-lg border min-h-[300px]">
-                      <p className="text-muted-foreground">No expense category data for this period.</p>
-                  </div>
-              )}
+                {pieChartData.length > 0 ? (
+                    <ExpenseChart data={pieChartData} />
+                ) : (
+                    <div className="flex h-full items-center justify-center rounded-lg border min-h-[300px]">
+                        <p className="text-muted-foreground">No expense category data for this period.</p>
+                    </div>
+                )}
+            </Suspense>
+
+          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+            <ExpensesTable
+                expenses={filteredExpenses}
+                onEdit={handleOpenDialog}
+                onDelete={setDeletingExpense}
+            />
           </Suspense>
+          
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -619,7 +629,6 @@ const MemoizedExpensesDashboard = () => {
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                 <div className="space-y-0.5">
                                     <FormLabel>Recurring Expense</FormLabel>
-                                    <FormMessage />
                                 </div>
                                 <FormControl>
                                     <Switch
@@ -647,9 +656,9 @@ const MemoizedExpensesDashboard = () => {
         <AlertDialogContent>
             <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDesc>
                 This action cannot be undone. This will permanently delete the expense "{deletingExpense?.type}".
-            </AlertDialogDescription>
+            </AlertDialogDesc>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
@@ -664,9 +673,9 @@ const MemoizedExpensesDashboard = () => {
         <AlertDialogContent>
             <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDesc>
                 This will permanently delete the category "{deletingCategory}". This action cannot be undone.
-            </AlertDialogDescription>
+            </AlertDialogDesc>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
