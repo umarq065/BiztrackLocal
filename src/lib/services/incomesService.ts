@@ -27,8 +27,6 @@ const addGigDataFormSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
     impressions: z.coerce.number().int().min(0),
     clicks: z.coerce.number().int().min(0),
-    ctr: z.coerce.number().min(0),
-    orders: z.coerce.number().int().min(0),
 });
 type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 

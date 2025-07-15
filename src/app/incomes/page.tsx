@@ -113,8 +113,6 @@ const addGigDataFormSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
     impressions: z.coerce.number().int().min(0, { message: "Impressions must be a non-negative number." }),
     clicks: z.coerce.number().int().min(0, { message: "Clicks must be a non-negative number." }),
-    ctr: z.coerce.number().min(0, { message: "CTR must be a non-negative number." }),
-    orders: z.coerce.number().int().min(0, "Orders must be a non-negative number."),
 });
 type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
@@ -190,8 +188,6 @@ const IncomesPageComponent = () => {
         date: new Date(),
         impressions: 0,
         clicks: 0,
-        ctr: 0,
-        orders: 0,
     },
   });
   
@@ -825,7 +821,7 @@ const IncomesPageComponent = () => {
                                             sourceId: source.id,
                                             gigId: gig.id,
                                         });
-                                        addGigDataForm.reset({date: new Date(), impressions: 0, clicks: 0, ctr: 0, orders: 0});
+                                        addGigDataForm.reset({date: new Date(), impressions: 0, clicks: 0});
                                         setIsAddGigDataDialogOpen(true);
                                         }}
                                     >
@@ -1256,32 +1252,6 @@ const IncomesPageComponent = () => {
                                     <FormLabel>Clicks</FormLabel>
                                     <FormControl>
                                         <Input type="number" min="0" placeholder="e.g., 980" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={addGigDataForm.control}
-                            name="ctr"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>CTR (%)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" min="0" step="0.01" placeholder="e.g., 7.87" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={addGigDataForm.control}
-                            name="orders"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Orders</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" min="0" placeholder="e.g., 10" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
