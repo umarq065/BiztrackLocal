@@ -490,31 +490,29 @@ const MemoizedExpensesDashboard = () => {
         )}
       <div className="grid grid-cols-1 gap-6">
           <ExpensesKpiCards {...kpiData} />
-          
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                  <ExpenseTrendChart
-                      data={trendChartData}
-                      previousData={previousTrendChartData}
-                      showComparison={showComparison}
-                      onShowComparisonChange={setShowComparison}
-                      chartView={chartView}
-                      onChartViewChange={setChartView}
-                      chartType={chartType}
-                      onChartTypeChange={setChartType}
-                  />
-              </Suspense>
-              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                  {pieChartData.length > 0 ? (
-                      <ExpenseChart data={pieChartData} />
-                  ) : (
-                      <div className="flex h-full items-center justify-center rounded-lg border">
-                          <p className="text-muted-foreground">No expense category data for this period.</p>
-                      </div>
-                  )}
-              </Suspense>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <ExpenseTrendChart
+                    data={trendChartData}
+                    previousData={previousTrendChartData}
+                    showComparison={showComparison}
+                    onShowComparisonChange={setShowComparison}
+                    chartView={chartView}
+                    onChartViewChange={setChartView}
+                    chartType={chartType}
+                    onChartTypeChange={setChartType}
+                />
+            </Suspense>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                {pieChartData.length > 0 ? (
+                    <ExpenseChart data={pieChartData} />
+                ) : (
+                    <div className="flex h-full items-center justify-center rounded-lg border">
+                        <p className="text-muted-foreground">No expense category data for this period.</p>
+                    </div>
+                )}
+            </Suspense>
           </div>
-          
           <ExpensesTable
               expenses={filteredExpenses}
               onEdit={handleOpenDialog}
