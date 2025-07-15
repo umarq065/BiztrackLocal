@@ -32,6 +32,7 @@ import {
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -59,7 +60,7 @@ import { Switch } from "@/components/ui/switch";
 import { expenseFormSchema, type Expense, type ExpenseFormValues } from "@/lib/data/expenses-data";
 import { ExpensesKpiCards } from "./expenses-kpi-cards";
 import { ExpensesTable } from "./expenses-table";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/ui/alert";
 import { Database } from "lucide-react";
 
 const ExpenseChart = lazy(() => import("@/components/expenses/expense-chart"));
@@ -482,9 +483,9 @@ const MemoizedExpensesDashboard = () => {
             <Alert variant="destructive">
                 <Database className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
+                <AlertDesc>
                     {error}
-                </AlertDescription>
+                </AlertDesc>
             </Alert>
         )}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
