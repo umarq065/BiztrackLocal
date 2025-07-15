@@ -115,7 +115,6 @@ const addGigDataFormSchema = z.object({
     clicks: z.coerce.number().int().min(0, { message: "Clicks must be a non-negative number." }),
     ctr: z.coerce.number().min(0, { message: "CTR must be a non-negative number." }),
     orders: z.coerce.number().int().min(0, "Orders must be a non-negative number."),
-    revenue: z.coerce.number().min(0, "Revenue must be a non-negative number."),
 });
 type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
@@ -193,7 +192,6 @@ const IncomesPageComponent = () => {
         clicks: 0,
         ctr: 0,
         orders: 0,
-        revenue: 0,
     },
   });
   
@@ -827,7 +825,7 @@ const IncomesPageComponent = () => {
                                             sourceId: source.id,
                                             gigId: gig.id,
                                         });
-                                        addGigDataForm.reset({date: new Date(), impressions: 0, clicks: 0, ctr: 0, orders: 0, revenue: 0});
+                                        addGigDataForm.reset({date: new Date(), impressions: 0, clicks: 0, ctr: 0, orders: 0});
                                         setIsAddGigDataDialogOpen(true);
                                         }}
                                     >
@@ -1290,19 +1288,6 @@ const IncomesPageComponent = () => {
                             )}
                         />
                     </div>
-                    <FormField
-                        control={addGigDataForm.control}
-                        name="revenue"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Revenue</FormLabel>
-                                <FormControl>
-                                    <Input type="number" min="0" step="0.01" placeholder="e.g., 1500.00" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>

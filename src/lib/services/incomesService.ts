@@ -29,7 +29,6 @@ const addGigDataFormSchema = z.object({
     clicks: z.coerce.number().int().min(0),
     ctr: z.coerce.number().min(0),
     orders: z.coerce.number().int().min(0),
-    revenue: z.coerce.number().min(0),
 });
 type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
