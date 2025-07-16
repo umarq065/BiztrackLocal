@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
 
 interface ExpenseTrendData {
   date: string;
@@ -99,16 +100,17 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                   A summary of your expenses for the selected period.
                 </CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-                <Select value={chartType} onValueChange={onChartTypeChange}>
-                    <SelectTrigger className="w-[120px]">
-                        <SelectValue placeholder="Chart Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="line">Line</SelectItem>
-                        <SelectItem value="bar">Bar</SelectItem>
-                    </SelectContent>
-                </Select>
+            <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center space-x-2">
+                    <Label htmlFor="chart-type-toggle" className="text-sm font-normal">Line</Label>
+                    <Switch
+                        id="chart-type-toggle"
+                        checked={chartType === 'bar'}
+                        onCheckedChange={(checked) => onChartTypeChange(checked ? 'bar' : 'line')}
+                        aria-label="Toggle between line and bar chart"
+                    />
+                    <Label htmlFor="chart-type-toggle" className="text-sm font-normal">Bar</Label>
+                </div>
                 <Select value={chartView} onValueChange={onChartViewChange}>
                     <SelectTrigger className="w-[120px]">
                         <SelectValue placeholder="Select view" />
