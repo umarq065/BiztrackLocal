@@ -42,6 +42,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { expenseFormSchema, type Expense, type ExpenseFormValues } from "@/lib/data/expenses-data";
+import { useToast } from "@/hooks/use-toast";
 
 interface ExpenseFormDialogProps {
     open: boolean;
@@ -53,6 +54,7 @@ interface ExpenseFormDialogProps {
 
 export function ExpenseFormDialog({ open, onOpenChange, editingExpense, onExpenseSaved, expenseCategories }: ExpenseFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -106,9 +108,14 @@ export function ExpenseFormDialog({ open, onOpenChange, editingExpense, onExpens
 
         const savedExpense = await response.json();
         onExpenseSaved(savedExpense);
+        onOpenChange(false); // Close dialog on success
     } catch (error) {
         console.error(error);
-        // Toast is handled in the parent component
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: (error as Error).message || "An unexpected error occurred.",
+        });
     } finally {
         setIsSubmitting(false);
     }

@@ -46,7 +46,7 @@ const MemoizedExpensesDashboard = () => {
   
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   
-  const [date, setDate] = useState<DateRange | undefined>();
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
   
   const [chartView, setChartView] = useState('daily');
   const [chartType, setChartType] = useState('line');
@@ -101,7 +101,6 @@ const MemoizedExpensesDashboard = () => {
         setExpenses(prev => [savedExpense, ...prev]);
         toast({ title: "Expense Added" });
     }
-    setIsFormOpen(false);
   };
 
   const handleDeleteExpense = async () => {
@@ -233,7 +232,7 @@ const MemoizedExpensesDashboard = () => {
                     key = format(startOfMonth(expDate), 'yyyy-MM-dd');
                     break;
                 case 'quarterly':
-                    key = format(startOfQuarter(expDate), 'yyyy-MM-dd');
+                    key = format(startOfQuarter(expDate), 'yyyy');
                     break;
                 case 'yearly':
                     key = format(startOfYear(expDate), 'yyyy');
