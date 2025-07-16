@@ -299,7 +299,6 @@ const MemoizedExpensesDashboard = () => {
   const { filteredExpenses, previousPeriodExpenses } = useMemo(() => {
     const { from, to } = date || {};
 
-    // If no valid date range, return all expenses for the current period
     if (!from || !to) {
         return { filteredExpenses: expenses, previousPeriodExpenses: [] };
     }
@@ -310,7 +309,7 @@ const MemoizedExpensesDashboard = () => {
         toDateEnd.setHours(23, 59, 59, 999);
         return expDate >= from && expDate <= toDateEnd;
     });
-
+    
     const duration = differenceInDays(to, from);
     const prevToDate = subDays(from, 1);
     const prevFromDate = subDays(prevToDate, duration);
@@ -504,15 +503,15 @@ const MemoizedExpensesDashboard = () => {
               />
           </Suspense>
 
-          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-              <ExpensesTable
-                  expenses={filteredExpenses}
-                  onEdit={handleOpenDialog}
-                  onDelete={setDeletingExpense}
-              />
-          </Suspense>
-        
-         <div className="w-full">
+          <div className="grid grid-cols-1 gap-6">
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <ExpensesTable
+                    expenses={filteredExpenses}
+                    onEdit={handleOpenDialog}
+                    onDelete={setDeletingExpense}
+                />
+            </Suspense>
+            
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 {pieChartData.length > 0 ? (
                     <ExpenseChart data={pieChartData} />
@@ -627,9 +626,9 @@ const MemoizedExpensesDashboard = () => {
                             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                 <div className="space-y-0.5">
                                     <FormLabel>Recurring Expense</FormLabel>
-                                    <FormDescription>
+                                    <DialogDescription>
                                         Mark this if it's a regular, predictable cost.
-                                    </FormDescription>
+                                    </DialogDescription>
                                 </div>
                                 <FormControl>
                                     <Switch
