@@ -20,7 +20,17 @@ interface ExpenseDistributionBarChartProps {
   data: ExpenseDistributionData[];
 }
 
-const chartColors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--primary))"];
+const chartColors = [
+    "hsl(var(--chart-1))", 
+    "hsl(var(--chart-2))", 
+    "hsl(var(--chart-3))", 
+    "hsl(var(--chart-4))", 
+    "hsl(var(--chart-5))", 
+    "hsl(var(--primary))",
+    "hsl(262 82% 56%)",
+    "hsl(340 76% 51%)",
+    "hsl(24 9.8% 10%)"
+];
 
 const ExpenseDistributionBarChart = ({ data }: ExpenseDistributionBarChartProps) => {
     
@@ -55,8 +65,9 @@ const ExpenseDistributionBarChart = ({ data }: ExpenseDistributionBarChartProps)
                     <BarChart
                         layout="vertical"
                         data={chartData}
-                        margin={{ top: 20, right: 0, left: 20, bottom: 20 }}
+                        margin={{ top: 20, right: 0, left: 0, bottom: 20 }}
                         barSize={30}
+                        barCategoryGap="0%"
                     >
                         <XAxis type="number" hide />
                         <YAxis type="category" dataKey="name" hide />
