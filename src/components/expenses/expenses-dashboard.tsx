@@ -502,15 +502,6 @@ const MemoizedExpensesDashboard = () => {
             <div className="grid grid-cols-1 gap-6">
                 <div className="col-span-1">
                     <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                        <ExpensesTable
-                            expenses={filteredExpenses}
-                            onEdit={handleOpenDialog}
-                            onDelete={setDeletingExpense}
-                        />
-                    </Suspense>
-                </div>
-                 <div className="col-span-1">
-                    <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                         {distributionChartData.length > 0 ? (
                             <ExpenseDistributionBarChart data={distributionChartData} />
                         ) : (
@@ -518,6 +509,15 @@ const MemoizedExpensesDashboard = () => {
                                 <p className="text-muted-foreground">No expense category data for this period.</p>
                             </div>
                         )}
+                    </Suspense>
+                </div>
+                <div className="col-span-1">
+                    <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                        <ExpensesTable
+                            expenses={filteredExpenses}
+                            onEdit={handleOpenDialog}
+                            onDelete={setDeletingExpense}
+                        />
                     </Suspense>
                 </div>
           </div>
@@ -689,6 +689,3 @@ const MemoizedExpensesDashboard = () => {
 }
 
 export const ExpensesDashboard = memo(MemoizedExpensesDashboard);
-
-
-    

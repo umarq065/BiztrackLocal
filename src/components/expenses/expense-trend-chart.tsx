@@ -155,6 +155,7 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                   tickFormatter={tickFormatter}
                 />
                 <YAxis
+                  domain={[0, 'dataMax']}
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
@@ -166,7 +167,7 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                 />
                 <Line
                   dataKey="amount"
-                  type="natural"
+                  type="monotone"
                   stroke="var(--color-amount)"
                   strokeWidth={2}
                   dot={false}
@@ -176,7 +177,7 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                     <Line
                         dataKey="previousAmount"
                         name="Previous Expenses"
-                        type="natural"
+                        type="monotone"
                         stroke="var(--color-previousAmount)"
                         strokeWidth={2}
                         strokeDasharray="3 3"
@@ -204,6 +205,7 @@ export default function ExpenseTrendChart({ data, previousData, showComparison, 
                   tickFormatter={tickFormatter}
                 />
                 <YAxis
+                  domain={[0, 'dataMax']}
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}

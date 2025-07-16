@@ -55,7 +55,8 @@ const ExpenseDistributionBarChart = ({ data }: ExpenseDistributionBarChartProps)
                     <BarChart
                         layout="vertical"
                         data={chartData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                        margin={{ top: 20, right: 0, left: 20, bottom: 20 }}
+                        barSize={30}
                     >
                         <XAxis type="number" hide />
                         <YAxis type="category" dataKey="name" hide />
