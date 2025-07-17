@@ -6,6 +6,7 @@ import { SetTargetDialog } from "./set-target-dialog";
 import type { DateRange } from "react-day-picker";
 import { CalendarDays, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 interface DashboardHeaderProps {
     date: DateRange | undefined;
