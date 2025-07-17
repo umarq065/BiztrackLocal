@@ -120,6 +120,19 @@ const CompetitorsPageComponent = () => {
         },
     });
 
+    const selectedMonth = addDataForm.watch("month");
+    const selectedYear = addDataForm.watch("year");
+
+    useEffect(() => {
+        if (updatingCompetitor) {
+            const existingData = updatingCompetitor.monthlyData?.find(
+                d => d.month === parseInt(selectedMonth) && d.year === parseInt(selectedYear)
+            );
+            addDataForm.setValue("orders", existingData?.orders || 0);
+            addDataForm.setValue("reviews", existingData?.reviews || 0);
+        }
+    }, [selectedMonth, selectedYear, updatingCompetitor, addDataForm]);
+
     const fetchCompetitors = async () => {
       setIsLoading(true);
       setError(null);
@@ -175,11 +188,16 @@ const CompetitorsPageComponent = () => {
     
     const handleOpenDataDialog = (competitor: Competitor) => {
         setUpdatingCompetitor(competitor);
+        const currentMonth = String(new Date().getMonth() + 1);
+        const currentYear = String(new Date().getFullYear());
+        
+        const existingData = competitor.monthlyData?.find(d => d.month === parseInt(currentMonth) && d.year === parseInt(currentYear));
+
         addDataForm.reset({
-            month: String(new Date().getMonth() + 1),
-            year: String(new Date().getFullYear()),
-            orders: 0,
-            reviews: 0,
+            month: currentMonth,
+            year: currentYear,
+            orders: existingData?.orders || 0,
+            reviews: existingData?.reviews || 0,
         });
         setAddDataDialogOpen(true);
     };
