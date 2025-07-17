@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState, useMemo, useCallback, lazy, Suspense, memo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { format, addMonths, subMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2, Database } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,14 +14,16 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogClose,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -43,28 +46,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { summaryFormSchema, type DailySummary, type SummaryFormValues } from "@/lib/data/daily-summary-data";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
 
 const CalendarView = lazy(() => import("@/components/daily-summary/calendar-view"));
 
-const parseDateString = (dateString: string | Date): Date => {
-  if (dateString instanceof Date) {
-    return dateString;
-  }
-  if (!dateString) return new Date();
+export interface DailySummary {
+  id: number;
+  date: Date;
+  content: string;
+}
+
+const parseDateString = (dateString: string): Date => {
   const [year, month, day] = dateString.split('-').map(Number);
+  // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
   return new Date(Date.UTC(year, month - 1, day));
 };
 
-const DailySummaryPageComponent = () => {
-  const [summaries, setSummaries] = useState<DailySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const initialSummariesData: { id: number; date: string; content: string }[] = [
+    { id: 1, date: "2024-05-20", content: "Finalized Q3 marketing plan. Key focus on social media engagement and influencer outreach." },
+    { id: 2, date: "2024-05-18", content: "Client 'Innovate Web' project milestone 2 completed ahead of schedule. Team did a great job." },
+    { id: 3, date: "2024-05-15", content: "Team meeting to discuss performance. Need to improve our lead conversion rate for consulting services." },
+];
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+const summaryFormSchema = z.object({
+  content: z.string().min(3, { message: "Summary must be at least 3 characters." }),
+});
+
+type SummaryFormValues = z.infer<typeof summaryFormSchema>;
+
+const DailySummaryPageComponent = () => {
+  const [summaries, setSummaries] = useState<DailySummary[]>(() =>
+    initialSummariesData.map(summary => ({
+      ...summary,
+      date: parseDateString(summary.date),
+    }))
+  );
+  const [currentDate, setCurrentDate] = useState(new Date("2024-05-01T12:00:00Z"));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingSummary, setEditingSummary] = useState<DailySummary | null>(null);
@@ -72,27 +88,10 @@ const DailySummaryPageComponent = () => {
   const [visibleSummariesCount, setVisibleSummariesCount] = useState(10);
   const { toast } = useToast();
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/daily-summaries');
-      if (!response.ok) {
-        throw new Error('Failed to fetch daily summaries.');
-      }
-      const data = await response.json();
-      setSummaries(data.map((s: DailySummary) => ({...s, date: parseDateString(s.date)})));
-    } catch(e) {
-      console.error(e);
-      setError((e as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Set to the user's current date on the client after initial render
+    setCurrentDate(new Date());
+  }, []);
 
   const form = useForm<SummaryFormValues>({
     resolver: zodResolver(summaryFormSchema),
@@ -108,83 +107,47 @@ const DailySummaryPageComponent = () => {
   
   const handleSummaryClick = (summary: DailySummary) => {
     setEditingSummary(summary);
-    setSelectedDate(parseDateString(summary.date));
+    setSelectedDate(summary.date);
     form.reset({ content: summary.content });
     setDialogOpen(true);
   }
 
-  const onSubmit = async (values: SummaryFormValues) => {
-    setIsSubmitting(true);
-    const apiEndpoint = editingSummary ? `/api/daily-summaries/${editingSummary.id}` : '/api/daily-summaries';
-    const method = editingSummary ? 'PUT' : 'POST';
-
-    const dateForPayload = editingSummary ? parseDateString(editingSummary.date) : selectedDate;
+  const onSubmit = (values: SummaryFormValues) => {
+    const dateForPayload = editingSummary ? editingSummary.date : selectedDate;
     if (!dateForPayload) {
         toast({ variant: 'destructive', title: "Error", description: "No date selected."});
-        setIsSubmitting(false);
         return;
     }
-    
-    // Always send date as 'yyyy-MM-dd' string to avoid timezone issues.
-    const payload = {
+
+    if (editingSummary) {
+      const updatedSummary = { ...editingSummary, content: values.content };
+      setSummaries(summaries.map(s => s.id === editingSummary.id ? updatedSummary : s));
+      toast({ title: "Summary Updated" });
+    } else {
+      const newSummary: DailySummary = {
+        id: Date.now(),
+        date: dateForPayload,
         content: values.content,
-        date: format(dateForPayload, 'yyyy-MM-dd'), 
-    };
-
-    try {
-        const response = await fetch(apiEndpoint, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to save summary.');
-        }
-
-        const savedSummary = await response.json();
-        
-        if (editingSummary) {
-            setSummaries(prev => prev.map(s => s.id === savedSummary.id ? {...savedSummary, date: parseDateString(savedSummary.date)} : s));
-            toast({ title: "Summary Updated" });
-        } else {
-            setSummaries(prev => [{...savedSummary, date: parseDateString(savedSummary.date)}, ...prev]);
-            toast({ title: "Summary Added" });
-        }
-        
-        setDialogOpen(false);
-        setEditingSummary(null);
-        setSelectedDate(null);
-
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Error", description: (e as Error).message });
-    } finally {
-        setIsSubmitting(false);
+      };
+      setSummaries([...summaries, newSummary]);
+      toast({ title: "Summary Added" });
     }
+
+    setDialogOpen(false);
+    setEditingSummary(null);
+    setSelectedDate(null);
   };
   
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deletingSummary) return;
-    setIsSubmitting(true);
 
-    try {
-      const response = await fetch(`/api/daily-summaries/${deletingSummary.id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        throw new Error("Failed to delete summary.");
-      }
-      setSummaries(summaries.filter(s => s.id !== deletingSummary.id));
-      toast({ title: "Summary Deleted" });
-      
-      if(editingSummary && editingSummary.id === deletingSummary.id) {
+    const summaryToDelete = deletingSummary;
+    setSummaries(summaries.filter(s => s.id !== summaryToDelete.id));
+    toast({ title: "Summary Deleted" });
+    setDeletingSummary(null);
+    if(editingSummary && editingSummary.id === summaryToDelete.id) {
         setDialogOpen(false);
         setEditingSummary(null);
-      }
-    } catch(e) {
-       toast({ variant: 'destructive', title: "Error", description: (e as Error).message });
-    } finally {
-      setIsSubmitting(false);
-      setDeletingSummary(null);
     }
   }
 
@@ -203,21 +166,14 @@ const DailySummaryPageComponent = () => {
   const dialogTitle = useMemo(() => {
     const dateForTitle = editingSummary?.date || selectedDate;
     if (dateForTitle) {
-      const dateObject = parseDateString(dateForTitle);
-      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(dateObject, 'PPP')}`;
+      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(dateForTitle, 'PPP')}`;
     }
     return "Summary";
   }, [editingSummary, selectedDate]);
 
-
   const sortedSummaries = useMemo(() => {
-    const summariesWithDateObjects = summaries.map(s => ({
-      ...s,
-      dateObj: parseDateString(s.date)
-    }));
-    return summariesWithDateObjects.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    return [...summaries].sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [summaries]);
-
 
   return (
     <div className="flex h-full flex-col">
@@ -254,49 +210,32 @@ const DailySummaryPageComponent = () => {
         </main>
         <section className="px-4 py-8 md:px-8">
           <h2 className="text-2xl font-semibold mb-4">Recent Summaries</h2>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+          <div className="space-y-4">
+            {sortedSummaries.slice(0, visibleSummariesCount).map((summary) => (
+              <Card key={summary.id}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-medium">{format(summary.date, 'PPP')}</CardTitle>
+                  <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleSummaryClick(summary)}>Edit</Button>
+                      <Button variant="destructive" size="sm" onClick={() => setDeletingSummary(summary)}>Delete</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{summary.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {sortedSummaries.length > visibleSummariesCount && (
+            <div className="mt-6 flex justify-center">
+              <Button onClick={() => setVisibleSummariesCount(prev => prev + 10)}>
+                Load More
+              </Button>
             </div>
-          ) : error ? (
-             <Alert variant="destructive">
-                <Database className="h-4 w-4" />
-                <AlertTitle>Error Loading Summaries</AlertTitle>
-                <AlertDescription>
-                    {error}
-                </AlertDescription>
-            </Alert>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {sortedSummaries.slice(0, visibleSummariesCount).map((summary) => (
-                  <Card key={summary.id}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-base font-medium">{format(summary.dateObj, 'PPP')}</CardTitle>
-                      <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleSummaryClick(summary as DailySummary)}>Edit</Button>
-                          <Button variant="destructive" size="sm" onClick={() => setDeletingSummary(summary as DailySummary)}>Delete</Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{summary.content}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              {sortedSummaries.length > visibleSummariesCount && (
-                <div className="mt-6 flex justify-center">
-                  <Button onClick={() => setVisibleSummariesCount(prev => prev + 10)}>
-                    Load More
-                  </Button>
-                </div>
-              )}
-               {sortedSummaries.length === 0 && (
-                  <div className="py-12 text-center text-muted-foreground">No summaries found. Click on a date in the calendar to add one.</div>
-                )}
-            </>
           )}
+           {sortedSummaries.length === 0 && (
+              <div className="py-12 text-center text-muted-foreground">No summaries found. Click on a date in the calendar to add one.</div>
+            )}
         </section>
       </div>
 
@@ -333,10 +272,7 @@ const DailySummaryPageComponent = () => {
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {editingSummary ? 'Save Changes' : 'Save Summary'}
-                    </Button>
+                    <Button type="submit">{editingSummary ? 'Save Changes' : 'Save Summary'}</Button>
                 </div>
               </DialogFooter>
             </form>
@@ -354,10 +290,7 @@ const DailySummaryPageComponent = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Delete
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleDelete} className={cn(buttonVariants({ variant: "destructive" }))}>Delete</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
