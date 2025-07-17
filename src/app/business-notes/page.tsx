@@ -4,9 +4,9 @@
 import { useState, useMemo, useEffect, lazy, Suspense, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { format, addMonths, subMonths } from "date-fns";
-import { ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
+import { toZonedTime } from 'date-fns-tz';
+import { ChevronLeft, ChevronRight, CalendarIcon, Loader2, Database } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -54,68 +54,54 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type BusinessNote, noteFormSchema, type NoteFormValues } from "@/lib/data/business-notes-data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const CalendarView = lazy(() => import("@/components/business-notes/calendar-view"));
 
-export interface BusinessNote {
-  id: number;
-  date: Date;
-  title: string;
-  content: string;
-}
-
-const parseDateString = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
-  return new Date(Date.UTC(year, month - 1, day));
-};
-
-const initialNotesData: { id: number; date: string; title: string; content: string }[] = [
-    { id: 1, date: "2024-05-20", title: "Q3 Marketing Ideas", content: "- Launch social media campaign for new service.\n- Collaborate with influencer in our niche.\n- Offer a time-limited discount." },
-    { id: 2, date: "2024-05-15", title: "Website Redesign V2 Feedback", content: "- Client loves the new homepage layout.\n- Needs changes to the color scheme in the contact page.\n- Add testimonials section." },
-    { id: 3, date: "2024-05-10", title: "New Feature Brainstorm", content: "- AI-powered analytics.\n- Client portal for project tracking.\n- Integration with popular accounting software." },
-];
-
-const noteFormSchema = z.object({
-  date: z.date({
-    required_error: "A date for the note is required.",
-  }),
-  title: z.string().min(3, { message: "Title must be at least 3 characters." }),
-  content: z.string().min(3, { message: "Note content must be at least 3 characters." }),
-});
-
-type NoteFormValues = z.infer<typeof noteFormSchema>;
-
 const BusinessNotesPageComponent = () => {
-  const [notes, setNotes] = useState<BusinessNote[]>(() => 
-    initialNotesData.map(note => ({
-      ...note,
-      date: parseDateString(note.date),
-    }))
-  );
-  const [currentDate, setCurrentDate] = useState(new Date("2024-05-01T12:00:00Z"));
+  const [notes, setNotes] = useState<BusinessNote[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingNote, setEditingNote] = useState<BusinessNote | null>(null);
   const [deletingNote, setDeletingNote] = useState<BusinessNote | null>(null);
   const [visibleNotesCount, setVisibleNotesCount] = useState(10);
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Set to the user's current date on the client after initial render
-    setCurrentDate(new Date());
-  }, []);
-
+  
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
-    // IMPORTANT: Avoid `new Date()` here to prevent hydration mismatch.
-    // The date is set dynamically when the dialog opens.
     defaultValues: {
       date: undefined,
       title: "",
       content: "",
     }
   });
+
+  const fetchNotes = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/business-notes');
+      if (!res.ok) throw new Error('Failed to fetch notes from the server.');
+      const data = await res.json();
+      setNotes(data.map((note: BusinessNote & {date: string}) => ({...note, date: toZonedTime(note.date, 'UTC')})));
+    } catch (e) {
+      console.error(e);
+      setError('Could not connect to the database or fetch data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotes();
+  }, []);
 
   const handleDateClick = (date: Date) => {
     setEditingNote(null);
@@ -126,7 +112,7 @@ const BusinessNotesPageComponent = () => {
   
   const handleNoteClick = (note: BusinessNote) => {
     setEditingNote(note);
-    setSelectedDate(note.date);
+    setSelectedDate(null);
     form.reset({ date: note.date, title: note.title, content: note.content });
     setDialogOpen(true);
   }
@@ -142,37 +128,63 @@ const BusinessNotesPageComponent = () => {
     setDialogOpen(true);
   };
 
-  const onSubmit = (values: NoteFormValues) => {
-    if (editingNote) {
-      const updatedNote = { ...editingNote, ...values };
-      setNotes(notes.map(n => n.id === editingNote.id ? updatedNote : n));
-      toast({ title: "Note Updated" });
-    } else {
-      const newNote: BusinessNote = {
-        id: Date.now(),
-        date: values.date,
-        title: values.title,
-        content: values.content,
-      };
-      setNotes([...notes, newNote]);
-      toast({ title: "Note Added" });
-    }
+  const onSubmit = async (values: NoteFormValues) => {
+    setIsSubmitting(true);
+    try {
+        const payload = { ...values, date: editingNote?.date || selectedDate || values.date };
+        const response = editingNote 
+            ? await fetch(`/api/business-notes/${editingNote.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              })
+            : await fetch('/api/business-notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'An unexpected error occurred.');
+        }
 
-    setDialogOpen(false);
-    setEditingNote(null);
-    setSelectedDate(null);
+        const savedNote = await response.json();
+        savedNote.date = toZonedTime(savedNote.date, 'UTC');
+
+        if (editingNote) {
+            setNotes(notes.map(n => n.id === editingNote.id ? savedNote : n));
+            toast({ title: "Note Updated" });
+        } else {
+            setNotes([...notes, savedNote]);
+            toast({ title: "Note Added" });
+        }
+        setDialogOpen(false);
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: "Error", description: err.message });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingNote) return;
-
-    const noteToDelete = deletingNote;
-    setNotes(notes.filter(s => s.id !== noteToDelete.id));
-    toast({ title: "Note Deleted" });
-    setDeletingNote(null);
-    if(editingNote && editingNote.id === noteToDelete.id) {
+    setIsSubmitting(true);
+    try {
+        const response = await fetch(`/api/business-notes/${deletingNote.id}`, { method: 'DELETE' });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete note.');
+        }
+        setNotes(notes.filter(s => s.id !== deletingNote.id));
+        toast({ title: "Note Deleted" });
+        if(editingNote?.id === deletingNote.id) setEditingNote(null);
+    } catch (err: any) {
+        toast({ variant: 'destructive', title: "Error", description: err.message });
+    } finally {
+        setIsSubmitting(false);
+        setDeletingNote(null);
         setDialogOpen(false);
-        setEditingNote(null);
     }
   }
 
@@ -190,9 +202,10 @@ const BusinessNotesPageComponent = () => {
 
   const dialogTitle = useMemo(() => {
     if (editingNote) return `Edit Note`;
-    if (selectedDate) return `Add Note for ${format(selectedDate, 'PPP')}`;
+    const dateForTitle = selectedDate || form.getValues('date');
+    if (dateForTitle) return `Add Note for ${format(toZonedTime(dateForTitle, 'UTC'), 'PPP')}`;
     return "Add New Note";
-  }, [editingNote, selectedDate]);
+  }, [editingNote, selectedDate, form]);
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -221,15 +234,27 @@ const BusinessNotesPageComponent = () => {
         </div>
       </header>
       
+      {error && (
+        <div className="p-4">
+            <Alert variant="destructive">
+                <Database className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        </div>
+      )}
+      
       <div className="flex-1 overflow-y-auto">
         <main>
           <Suspense fallback={<Skeleton className="h-[500px] w-full" />}>
-            <CalendarView 
-                currentDate={currentDate}
-                notes={notes}
-                onDateClick={handleDateClick}
-                onNoteClick={handleNoteClick}
-            />
+            {isLoading ? <Skeleton className="h-[500px] w-full" /> : (
+              <CalendarView 
+                  currentDate={currentDate}
+                  notes={notes}
+                  onDateClick={handleDateClick}
+                  onNoteClick={handleNoteClick}
+              />
+            )}
           </Suspense>
         </main>
         <section className="px-4 py-8 md:px-8">
@@ -260,8 +285,8 @@ const BusinessNotesPageComponent = () => {
               </Button>
             </div>
           )}
-           {sortedNotes.length === 0 && (
-              <div className="text-center text-muted-foreground">No notes found.</div>
+           {sortedNotes.length === 0 && !isLoading && (
+              <div className="py-12 text-center text-muted-foreground">No notes found. Click on a date in the calendar to add one.</div>
             )}
         </section>
       </div>
@@ -352,7 +377,10 @@ const BusinessNotesPageComponent = () => {
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">{editingNote ? 'Save Changes' : 'Save Note'}</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {editingNote ? 'Save Changes' : 'Save Note'}
+                    </Button>
                 </div>
               </DialogFooter>
             </form>
@@ -369,8 +397,11 @@ const BusinessNotesPageComponent = () => {
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className={cn(buttonVariants({ variant: "destructive" }))}>Delete</AlertDialogAction>
+                <AlertDialogCancel onClick={() => setDeletingNote(null)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} disabled={isSubmitting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Delete
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
