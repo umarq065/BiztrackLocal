@@ -107,7 +107,7 @@ const DailySummaryPageComponent = () => {
   
   const handleSummaryClick = (summary: DailySummary) => {
     setEditingSummary(summary);
-    setSelectedDate(summary.date);
+    setSelectedDate(summary.date as unknown as Date);
     form.reset({ content: summary.content });
     setDialogOpen(true);
   }
@@ -117,9 +117,16 @@ const DailySummaryPageComponent = () => {
     const apiEndpoint = editingSummary ? `/api/daily-summaries/${editingSummary.id}` : '/api/daily-summaries';
     const method = editingSummary ? 'PUT' : 'POST';
 
+    const dateForPayload = editingSummary?.date || selectedDate;
+    if (!dateForPayload) {
+        toast({ variant: 'destructive', title: "Error", description: "No date selected."});
+        setIsSubmitting(false);
+        return;
+    }
+
     const payload = {
         content: values.content,
-        date: editingSummary ? editingSummary.date : selectedDate,
+        date: dateForPayload,
     };
 
     try {
@@ -194,7 +201,7 @@ const DailySummaryPageComponent = () => {
   const dialogTitle = useMemo(() => {
     const dateForTitle = editingSummary?.date || selectedDate;
     if (dateForTitle) {
-      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(dateForTitle, 'PPP')}`;
+      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(parseDateString(dateForTitle as string), 'PPP')}`;
     }
     return "Summary";
   }, [editingSummary, selectedDate]);
