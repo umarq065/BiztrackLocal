@@ -117,19 +117,16 @@ const DailySummaryPageComponent = () => {
     const apiEndpoint = editingSummary ? `/api/daily-summaries/${editingSummary.id}` : '/api/daily-summaries';
     const method = editingSummary ? 'PUT' : 'POST';
 
-    const dateForPayload = editingSummary ? new Date(editingSummary.date) : selectedDate;
+    const dateForPayload = editingSummary ? (editingSummary.date as unknown as Date) : selectedDate;
     if (!dateForPayload) {
         toast({ variant: 'destructive', title: "Error", description: "No date selected."});
         setIsSubmitting(false);
         return;
     }
     
-    // Ensure date is in UTC for consistency
-    const utcDate = new Date(Date.UTC(dateForPayload.getFullYear(), dateForPayload.getMonth(), dateForPayload.getDate()));
-
     const payload = {
         content: values.content,
-        date: utcDate,
+        date: dateForPayload,
     };
 
     try {
