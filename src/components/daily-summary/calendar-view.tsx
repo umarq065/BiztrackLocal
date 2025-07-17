@@ -9,11 +9,11 @@ import {
     endOfWeek, 
     eachDayOfInterval, 
     isSameMonth, 
-    isSameDay, 
     format 
 } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
-import type { DailySummary } from '@/app/daily-summary/page';
+import type { DailySummary } from '@/lib/data/daily-summary-data';
 
 interface CalendarViewProps {
     currentDate: Date;
@@ -23,6 +23,12 @@ interface CalendarViewProps {
 }
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+const isSameDate = (date1: Date, date2: Date) => {
+    return date1.getUTCFullYear() === date2.getUTCFullYear() &&
+           date1.getUTCMonth() === date2.getUTCMonth() &&
+           date1.getUTCDate() === date2.getUTCDate();
+};
 
 export default function CalendarView({ currentDate, summaries, onDateClick, onSummaryClick }: CalendarViewProps) {
     const daysInMonth = useMemo(() => {
@@ -34,7 +40,7 @@ export default function CalendarView({ currentDate, summaries, onDateClick, onSu
     const summariesByDate = useMemo(() => {
         const map = new Map<string, DailySummary[]>();
         summaries.forEach(summary => {
-            const dateKey = format(summary.date, 'yyyy-MM-dd');
+            const dateKey = format(summary.date, 'yyyy-MM-dd', { timeZone: 'UTC' });
             if (!map.has(dateKey)) {
                 map.set(dateKey, []);
             }
@@ -48,19 +54,22 @@ export default function CalendarView({ currentDate, summaries, onDateClick, onSu
         setIsClient(true);
     }, []);
 
+    const today = useMemo(() => new Date(), []);
+
     return (
-        <div className="flex-1 grid grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] border-l">
+        <div className="flex-1 grid grid-cols-7 grid-rows-[auto_repeat(6,minmax(0,1fr))] border-l summary-calendar">
             {WEEKDAYS.map(day => (
                 <div key={day} className="text-center text-xs font-bold text-muted-foreground p-2 border-b">
                     {day}
                 </div>
             ))}
             
-            {daysInMonth.map((day, index) => {
-                const dayKey = format(day, 'yyyy-MM-dd');
+            {daysInMonth.map((day) => {
+                const zonedDay = toZonedTime(day, 'UTC');
+                const dayKey = format(zonedDay, 'yyyy-MM-dd', { timeZone: 'UTC' });
                 const daySummaries = summariesByDate.get(dayKey) || [];
                 const isCurrentMonth = isSameMonth(day, currentDate);
-                const isToday = isClient && isSameDay(day, new Date());
+                const isToday = isClient && isSameDate(zonedDay, today);
 
                 return (
                     <div 
