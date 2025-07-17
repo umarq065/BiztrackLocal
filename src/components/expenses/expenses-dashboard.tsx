@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState, memo, useEffect, lazy, Suspense, useMemo } from "react";
+import { useState, memo, useEffect, lazy, Suspense, useMemo, useCallback } from "react";
 import { format, subDays, differenceInDays, startOfWeek, startOfMonth, getQuarter, getYear, parseISO, startOfQuarter, startOfYear } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Loader2, Database } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,8 +17,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  DialogTrigger,
-  DialogDescription,
 } from "@/components/ui/alert-dialog";
 
 import { DateFilter } from "@/components/dashboard/date-filter";
@@ -46,7 +45,22 @@ const MemoizedExpensesDashboard = () => {
   
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam && toParam) {
+        const from = new Date(fromParam.replace(/-/g, '/'));
+        const to = new Date(toParam.replace(/-/g, '/'));
+        if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+            return { from, to };
+        }
+    }
+    return undefined;
+  });
   
   const [chartView, setChartView] = useState('daily');
   const [chartType, setChartType] = useState('line');
@@ -84,8 +98,27 @@ const MemoizedExpensesDashboard = () => {
     fetchData();
   }, []);
 
+  const createQueryString = useCallback(
+    (paramsToUpdate: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        for (const [name, value] of Object.entries(paramsToUpdate)) {
+            if (value) {
+                params.set(name, value);
+            } else {
+                params.delete(name);
+            }
+        }
+        return params.toString();
+    },
+    [searchParams]
+  );
+  
   const handleSetDate = (newDate: DateRange | undefined) => {
     setDate(newDate);
+    router.push(`${pathname}?${createQueryString({
+        from: newDate?.from ? newDate.from.toISOString().split('T')[0] : null,
+        to: newDate?.to ? newDate.to.toISOString().split('T')[0] : null,
+    })}`, { scroll: false });
   };
   
   const handleOpenFormDialog = (expense: Expense | null = null) => {
@@ -232,7 +265,8 @@ const MemoizedExpensesDashboard = () => {
                     key = format(startOfMonth(expDate), 'yyyy-MM-dd');
                     break;
                 case 'quarterly':
-                    key = format(startOfQuarter(expDate), 'yyyy');
+                     const quarter = getQuarter(expDate);
+                     key = `${getYear(expDate)}-Q${quarter}`;
                     break;
                 case 'yearly':
                     key = format(startOfYear(expDate), 'yyyy');
