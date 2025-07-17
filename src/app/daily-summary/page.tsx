@@ -117,16 +117,19 @@ const DailySummaryPageComponent = () => {
     const apiEndpoint = editingSummary ? `/api/daily-summaries/${editingSummary.id}` : '/api/daily-summaries';
     const method = editingSummary ? 'PUT' : 'POST';
 
-    const dateForPayload = editingSummary?.date || selectedDate;
+    const dateForPayload = editingSummary ? new Date(editingSummary.date) : selectedDate;
     if (!dateForPayload) {
         toast({ variant: 'destructive', title: "Error", description: "No date selected."});
         setIsSubmitting(false);
         return;
     }
+    
+    // Ensure date is in UTC for consistency
+    const utcDate = new Date(Date.UTC(dateForPayload.getFullYear(), dateForPayload.getMonth(), dateForPayload.getDate()));
 
     const payload = {
         content: values.content,
-        date: dateForPayload,
+        date: utcDate,
     };
 
     try {
@@ -201,7 +204,8 @@ const DailySummaryPageComponent = () => {
   const dialogTitle = useMemo(() => {
     const dateForTitle = editingSummary?.date || selectedDate;
     if (dateForTitle) {
-      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(parseDateString(dateForTitle as string), 'PPP')}`;
+      const dateObject = typeof dateForTitle === 'string' ? parseDateString(dateForTitle) : dateForTitle;
+      return `${editingSummary ? 'Edit' : 'Add'} Summary for ${format(dateObject, 'PPP')}`;
     }
     return "Summary";
   }, [editingSummary, selectedDate]);
