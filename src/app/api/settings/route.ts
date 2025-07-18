@@ -5,7 +5,6 @@ import { z } from 'zod';
 
 const settingsSchema = z.object({
   timezone: z.string().optional(),
-  monthlyTargets: z.record(z.string().regex(/^\d{4}-\d{2}$/), z.number()).optional(),
 });
 
 export async function GET() {

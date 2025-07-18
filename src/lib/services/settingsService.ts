@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 const settingsSchema = z.object({
   timezone: z.string().optional(),
-  monthlyTargets: z.record(z.string().regex(/^\d{4}-\d{2}$/), z.number()).optional(),
 });
 
 type Settings = z.infer<typeof settingsSchema>;
@@ -23,16 +22,15 @@ export async function getSettings(): Promise<Partial<Settings>> {
     const settings = await settingsCollection.findOne({ _id: SETTINGS_ID });
 
     if (!settings) {
-      return { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, monthlyTargets: {} };
+      return { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     }
     
     return {
       timezone: settings.timezone,
-      monthlyTargets: settings.monthlyTargets,
     };
   } catch (error) {
     console.error('Error fetching settings from DB:', error);
-    return { monthlyTargets: {} };
+    return {};
   }
 }
 
@@ -44,10 +42,9 @@ export async function updateSettings(newSettings: Partial<Settings>): Promise<vo
     if (newSettings.timezone) {
       updatePayload['timezone'] = newSettings.timezone;
     }
-    if (newSettings.monthlyTargets) {
-      for (const [key, value] of Object.entries(newSettings.monthlyTargets)) {
-        updatePayload[`monthlyTargets.${key}`] = value;
-      }
+
+    if (Object.keys(updatePayload).length === 0) {
+        return;
     }
 
     await settingsCollection.updateOne(

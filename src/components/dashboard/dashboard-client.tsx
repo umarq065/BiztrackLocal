@@ -52,8 +52,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { OrderFormValues } from "@/app/orders/page";
-import { orderFormSchema, cancellationReasonsList } from "@/lib/data/orders-data";
+import { orderFormSchema, cancellationReasonsList, type OrderFormValues } from "@/lib/data/orders-data";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
 import type { RecentOrder, Order } from "@/lib/placeholder-data";
 
@@ -88,8 +87,8 @@ export function DashboardClient({
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
-  const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>({ "2024-06": 50000 });
+  const [isLoading, setIsLoading] = useState(false);
 
   const { toast } = useToast();
 
@@ -110,23 +109,31 @@ export function DashboardClient({
   }, [monthlyTargets, currentMonthKey]);
 
   useEffect(() => {
-    async function fetchSettings() {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/settings');
-        if (!res.ok) throw new Error('Failed to fetch settings');
-        const data = await res.json();
-        setMonthlyTargets(data.monthlyTargets || {});
-      } catch (error) {
-        console.error("Failed to load settings:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load targets." });
-      } finally {
-        setIsLoading(false);
-      }
+    // This useEffect is now just for setting up dates and initial stats.
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    setDate({ from: from, to: today });
+    
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
+    setDaysLeft(remainingDays);
+    
+    const targetStatIndex = stats.findIndex((s) => s.title.startsWith("Target for"));
+    if (targetStatIndex !== -1 && !isLoading) {
+      const monthKey = format(today, 'yyyy-MM');
+      const target = monthlyTargets[monthKey] || 0;
+      const monthName = format(today, 'MMMM');
+      
+      const newStats = [...stats];
+      newStats[targetStatIndex] = {
+        ...newStats[targetStatIndex],
+        title: `Target for ${monthName}`,
+        value: `$${target.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        description: `Revenue goal for ${monthName} ${today.getFullYear()}`
+      };
+      setStats(newStats);
     }
-    fetchSettings();
-  }, [toast]);
-  
+  }, [isLoading, monthlyTargets, stats]);
 
   const availableGigs = useMemo(() => {
     if (!selectedSource) return [];
@@ -192,53 +199,14 @@ export function DashboardClient({
     setEditingOrder(null);
   };
 
-
-  useEffect(() => {
-    const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    setDate({ from: from, to: today });
-    
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
-    setDaysLeft(remainingDays);
-    
-    const targetStatIndex = stats.findIndex((s) => s.title.startsWith("Target for"));
-    if (targetStatIndex !== -1 && !isLoading) {
-      const monthKey = format(today, 'yyyy-MM');
-      const target = monthlyTargets[monthKey] || 0;
-      const monthName = format(today, 'MMMM');
-      
-      const newStats = [...stats];
-      newStats[targetStatIndex] = {
-        ...newStats[targetStatIndex],
-        title: `Target for ${monthName}`,
-        value: `$${target.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        description: `Revenue goal for ${monthName} ${today.getFullYear()}`
-      };
-      setStats(newStats);
-    }
-  }, [isLoading, monthlyTargets]);
-  
-  const handleSetTarget = async (newTarget: number, month: string, year: number) => {
+  const handleSetTarget = (newTarget: number, month: string, year: number) => {
     const monthIndex = new Date(Date.parse(month +" 1, 2021")).getMonth();
     const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
     
     const updatedTargets = { ...monthlyTargets, [monthKey]: newTarget };
+    setMonthlyTargets(updatedTargets);
 
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthlyTargets: updatedTargets }),
-      });
-      if (!response.ok) throw new Error('Failed to save target.');
-      
-      setMonthlyTargets(updatedTargets);
-      toast({ title: "Target Saved", description: `Target for ${month} ${year} set to $${newTarget.toLocaleString()}.` });
-
-    } catch (error) {
-      toast({ variant: 'destructive', title: "Error", description: "Could not save target. Please try again." });
-    }
+    toast({ title: "Target Set", description: `Target for ${month} ${year} set to $${newTarget.toLocaleString()}.` });
   };
   
   const adrStat = stats.find((s) => s.title === "Avg Daily Revenue (ADR)");

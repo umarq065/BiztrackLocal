@@ -15,13 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DollarSign, Loader2 } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 interface SetTargetDialogProps {
   monthlyTargets: Record<string, number>;
-  onSetTarget: (newTarget: number, month: string, year: number) => Promise<void>;
+  onSetTarget: (newTarget: number, month: string, year: number) => void;
   initialMonth: string;
   initialYear: number;
 }
@@ -36,7 +36,6 @@ export function SetTargetDialog({
   const [month, setMonth] = useState("");
   const [year, setYear] = useState(0);
   const [open, setOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -58,16 +57,14 @@ export function SetTargetDialog({
     }
   }, [month, year, monthlyTargets, months]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const newTarget = parseFloat(target);
     if (isNaN(newTarget) || !month || !year) {
       toast({ variant: 'destructive', title: 'Invalid input', description: 'Please provide a valid target, month, and year.'});
       return;
     }
     
-    setIsSaving(true);
-    await onSetTarget(newTarget, month, year);
-    setIsSaving(false);
+    onSetTarget(newTarget, month, year);
     setOpen(false);
   };
 
@@ -132,10 +129,7 @@ export function SetTargetDialog({
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Target
-          </Button>
+          <Button onClick={handleSave}>Save Target</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
