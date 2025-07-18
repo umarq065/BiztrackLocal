@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Line,
   LineChart,
@@ -96,6 +96,10 @@ const CustomDot = (props: any) => {
 
 export default function RevenueChart({ data, previousData, requiredDailyRevenue }: RevenueChartProps) {
   const [showComparison, setShowComparison] = useState(true);
+
+  const handleShowComparisonChange = useCallback((checked: boolean | 'indeterminate') => {
+    setShowComparison(!!checked);
+  }, []);
   
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
@@ -117,7 +121,7 @@ export default function RevenueChart({ data, previousData, requiredDailyRevenue 
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
                 <div className="flex items-center space-x-2">
-                    <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
+                    <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={handleShowComparisonChange} />
                     <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
                 </div>
             </div>
