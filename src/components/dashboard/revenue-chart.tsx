@@ -99,7 +99,7 @@ export default function RevenueChart({ data, previousData, requiredDailyRevenue 
 
   const handleShowComparisonChange = useCallback((checked: boolean | 'indeterminate') => {
     setShowComparison(!!checked);
-  }, []);
+  }, [setShowComparison]);
   
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
