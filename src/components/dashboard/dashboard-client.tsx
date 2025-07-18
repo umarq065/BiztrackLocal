@@ -293,10 +293,10 @@ export function DashboardClient({
       <DashboardHeader 
         date={date}
         setDate={setDate}
-        currentTarget={currentTarget}
         onSetTarget={handleSetTarget}
         daysLeft={daysLeft}
         isLoading={isLoading}
+        monthlyTargets={monthlyTargets}
       />
 
       <section>

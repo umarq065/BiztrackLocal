@@ -20,17 +20,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 
 interface SetTargetDialogProps {
-  currentTarget: number;
+  monthlyTargets: Record<string, number>;
   onSetTarget: (newTarget: number, month: string, year: number) => Promise<void>;
-  targetMonth: string;
-  targetYear: number;
+  initialMonth: string;
+  initialYear: number;
 }
 
 export function SetTargetDialog({
-  currentTarget,
+  monthlyTargets,
   onSetTarget,
-  targetMonth,
-  targetYear,
+  initialMonth,
+  initialYear,
 }: SetTargetDialogProps) {
   const [target, setTarget] = useState("");
   const [month, setMonth] = useState("");
@@ -44,11 +44,19 @@ export function SetTargetDialog({
 
   useEffect(() => {
     if (open) {
-      setTarget(currentTarget > 0 ? currentTarget.toString() : "");
-      setMonth(targetMonth);
-      setYear(targetYear);
+      setMonth(initialMonth);
+      setYear(initialYear);
     }
-  }, [open, currentTarget, targetMonth, targetYear]);
+  }, [open, initialMonth, initialYear]);
+  
+  useEffect(() => {
+    if (month && year) {
+        const monthIndex = months.indexOf(month);
+        const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+        const existingTarget = monthlyTargets[monthKey] || 0;
+        setTarget(existingTarget > 0 ? existingTarget.toString() : "");
+    }
+  }, [month, year, monthlyTargets, months]);
 
   const handleSave = async () => {
     const newTarget = parseFloat(target);

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { DateFilter } from "./date-filter";
@@ -11,23 +12,24 @@ import { Button } from "@/components/ui/button";
 interface DashboardHeaderProps {
     date: DateRange | undefined;
     setDate: (date: DateRange | undefined) => void;
-    currentTarget: number;
     onSetTarget: (newTarget: number, month: string, year: number) => void;
     daysLeft: number;
     isLoading: boolean;
+    monthlyTargets: Record<string, number>;
 }
 
 export function DashboardHeader({
     date,
     setDate,
-    currentTarget,
     onSetTarget,
     daysLeft,
-    isLoading
+    isLoading,
+    monthlyTargets,
 }: DashboardHeaderProps) {
     const today = new Date();
     const targetMonth = format(today, 'MMMM');
     const targetYear = today.getFullYear();
+
     return (
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="font-headline text-lg font-semibold md:text-2xl">
@@ -46,10 +48,10 @@ export function DashboardHeader({
                     </Button>
                 ) : (
                     <SetTargetDialog
-                        currentTarget={currentTarget}
+                        monthlyTargets={monthlyTargets}
                         onSetTarget={onSetTarget}
-                        targetMonth={targetMonth}
-                        targetYear={targetYear}
+                        initialMonth={targetMonth}
+                        initialYear={targetYear}
                     />
                 )}
             </div>
