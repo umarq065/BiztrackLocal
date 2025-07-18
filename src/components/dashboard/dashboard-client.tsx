@@ -88,7 +88,6 @@ export function DashboardClient({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>({ "2024-06": 50000 });
-  const [isLoading, setIsLoading] = useState(false);
 
   const { toast } = useToast();
 
@@ -98,6 +97,17 @@ export function DashboardClient({
 
   const orderStatus = form.watch("status");
   const selectedSource = form.watch("source");
+  
+  useEffect(() => {
+    // This useEffect is now just for setting up dates and initial stats.
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    setDate({ from: from, to: today });
+    
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
+    setDaysLeft(remainingDays);
+  }, []);
   
   const currentMonthKey = useMemo(() => {
     const today = new Date();
@@ -109,31 +119,29 @@ export function DashboardClient({
   }, [monthlyTargets, currentMonthKey]);
 
   useEffect(() => {
-    // This useEffect is now just for setting up dates and initial stats.
-    const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    setDate({ from: from, to: today });
-    
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
-    setDaysLeft(remainingDays);
-    
     const targetStatIndex = stats.findIndex((s) => s.title.startsWith("Target for"));
-    if (targetStatIndex !== -1 && !isLoading) {
+    if (targetStatIndex !== -1) {
+      const today = new Date();
       const monthKey = format(today, 'yyyy-MM');
       const target = monthlyTargets[monthKey] || 0;
       const monthName = format(today, 'MMMM');
       
-      const newStats = [...stats];
-      newStats[targetStatIndex] = {
-        ...newStats[targetStatIndex],
-        title: `Target for ${monthName}`,
-        value: `$${target.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        description: `Revenue goal for ${monthName} ${today.getFullYear()}`
-      };
-      setStats(newStats);
+      setStats(currentStats => {
+        const newStats = [...currentStats];
+        newStats[targetStatIndex] = {
+          ...newStats[targetStatIndex],
+          title: `Target for ${monthName}`,
+          value: `$${target.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          description: `Revenue goal for ${monthName} ${today.getFullYear()}`
+        };
+        // Avoid re-setting state if it's the same to prevent loops
+        if (JSON.stringify(newStats) !== JSON.stringify(currentStats)) {
+          return newStats;
+        }
+        return currentStats;
+      });
     }
-  }, [isLoading, monthlyTargets, stats]);
+  }, [monthlyTargets, stats]);
 
   const availableGigs = useMemo(() => {
     if (!selectedSource) return [];
@@ -210,12 +218,15 @@ export function DashboardClient({
   };
   
   const adrStat = stats.find((s) => s.title === "Avg Daily Revenue (ADR)");
+  
+  const totalRevenue = useMemo(() => revenueByDay.reduce((sum, day) => sum + day.revenue, 0), [revenueByDay]);
+  
   const rdrStat = useMemo(() => {
     const today = new Date();
     const monthKey = format(today, 'yyyy-MM');
     const target = monthlyTargets[monthKey] || 0;
-    const currentRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
-    const remainingRevenue = Math.max(0, target - currentRevenue);
+    
+    const remainingRevenue = Math.max(0, target - totalRevenue);
     const requiredDaily = daysLeft > 0 ? remainingRevenue / daysLeft : 0;
     
     const existingRdrStat = stats.find(s => s.title === "Req. Daily Revenue (RDR)");
@@ -227,13 +238,15 @@ export function DashboardClient({
       value: `$${requiredDaily.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: "To meet your monthly target"
     };
-  }, [monthlyTargets, revenueByDay, daysLeft, stats, currentMonthKey]);
+  }, [monthlyTargets, totalRevenue, daysLeft, stats, currentMonthKey]);
 
-  const targetStat = stats.find((s) => s.title.startsWith("Target for"));
-  const keyMetrics = [adrStat, rdrStat, targetStat].filter(Boolean) as Stat[];
+  const keyMetrics = useMemo(() => {
+    const targetStat = stats.find((s) => s.title.startsWith("Target for"));
+    return [adrStat, rdrStat, targetStat].filter(Boolean) as Stat[];
+  }, [adrStat, rdrStat, stats]);
 
 
-  const otherMetrics = stats.filter((s) =>
+  const otherMetrics = useMemo(() => stats.filter((s) =>
     [
       "Total Orders (Completed)",
       "Cancelled Orders",
@@ -243,11 +256,9 @@ export function DashboardClient({
   ).map((s, i) => ({
       ...s,
       color: s.title.includes("Cancelled") ? 'hsl(var(--destructive))' : `hsl(var(--chart-${(i % 5) + 1}))`
-  }));
+  })), [stats]);
 
-  const buyersMetric = stats.find(s => s.title === 'Buyers');
-
-  const totalRevenue = revenueByDay.reduce((sum, day) => sum + day.revenue, 0);
+  const buyersMetric = useMemo(() => stats.find(s => s.title === 'Buyers'), [stats]);
 
   const performanceValue = useMemo(() => {
     const target = monthlyTargets[currentMonthKey] || 0;
@@ -263,7 +274,6 @@ export function DashboardClient({
         setDate={setDate}
         onSetTarget={handleSetTarget}
         daysLeft={daysLeft}
-        isLoading={isLoading}
         monthlyTargets={monthlyTargets}
       />
 
