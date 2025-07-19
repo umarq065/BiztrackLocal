@@ -19,42 +19,17 @@ async function getOrdersCollection() {
 }
 
 /**
- * Retrieves all orders from the database.
- * @returns A promise that resolves to an array of all orders.
- */
-export async function getOrders(): Promise<Order[]> {
-  try {
-    const ordersCollection = await getOrdersCollection();
-    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V4) {
-        console.log("Clearing 'orders' collection...");
-        await ordersCollection.deleteMany({});
-        process.env.DATA_CLEARED_ORDERS_V4 = 'true';
-    }
-    const orders = await ordersCollection.find({}).sort({ date: -1 }).toArray();
-    
-    return orders.map(order => ({
-      ...order,
-      _id: order._id,
-      id: order.id,
-    }));
-  } catch (error) {
-    console.error('Error fetching orders from DB:', error);
-    return [];
-  }
-}
-
-
-/**
  * Retrieves a lightweight list of all orders for table display.
  * @returns A promise that resolves to an array of all orders with minimal fields.
  */
 export async function getOrdersList(): Promise<Partial<Order>[]> {
   try {
     const ordersCollection = await getOrdersCollection();
-    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V4) {
+    // Clear existing data as requested
+    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V6) {
         console.log("Clearing 'orders' collection...");
         await ordersCollection.deleteMany({});
-        process.env.DATA_CLEARED_ORDERS_V4 = 'true';
+        process.env.DATA_CLEARED_ORDERS_V6 = 'true';
     }
     const orders = await ordersCollection.find({}, {
       projection: {
@@ -66,7 +41,8 @@ export async function getOrdersList(): Promise<Partial<Order>[]> {
         source: 1,
         gig: 1,
         status: 1,
-        rating: 1
+        rating: 1,
+        cancellationReasons: 1,
       }
     }).sort({ date: -1 }).toArray();
     
@@ -210,6 +186,17 @@ export async function deleteOrder(orderId: string): Promise<boolean> {
     const ordersCollection = await getOrdersCollection();
     const result = await ordersCollection.deleteOne({ id: orderId });
     return result.deletedCount === 1;
+}
+
+/**
+ * Deletes multiple orders from the database by their IDs.
+ * @param orderIds - An array of order IDs to delete.
+ * @returns The number of orders deleted.
+ */
+export async function deleteOrdersByIds(orderIds: string[]): Promise<number> {
+    const ordersCollection = await getOrdersCollection();
+    const result = await ordersCollection.deleteMany({ id: { $in: orderIds } });
+    return result.deletedCount;
 }
 
 

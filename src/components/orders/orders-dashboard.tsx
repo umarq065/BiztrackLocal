@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { Upload, FileUp, Loader2, Search } from "lucide-react";
+import { Upload, FileUp, Loader2, Search, Trash2 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -78,6 +78,9 @@ export function OrdersDashboard() {
         cancelled: INITIAL_LOAD_COUNT,
     });
     
+    const [selectedOrders, setSelectedOrders] = useState<Record<string, boolean>>({});
+    const [deletingSelected, setDeletingSelected] = useState(false);
+
     const [date, setDate] = useState<DateRange | undefined>(() => {
         const fromParam = searchParams.get('from');
         const toParam = searchParams.get('to');
@@ -238,6 +241,30 @@ export function OrdersDashboard() {
             setOrderToDelete(null);
         }
     };
+    
+    const handleDeleteSelectedOrders = async () => {
+        setIsSubmitting(true);
+        const idsToDelete = Object.keys(selectedOrders).filter(id => selectedOrders[id]);
+        try {
+            const response = await fetch('/api/orders/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderIds: idsToDelete }),
+            });
+            const result = await response.json();
+             if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete selected orders');
+            }
+            setOrders(prev => prev.filter(o => !idsToDelete.includes(o.id)));
+            setSelectedOrders({});
+            toast({ title: 'Orders Deleted', description: result.message });
+        } catch(error) {
+             toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
+        } finally {
+            setIsSubmitting(false);
+            setDeletingSelected(false);
+        }
+    };
 
     const parsedOrders = useMemo(() => {
         return orders.map(order => ({ ...order, dateObj: parseDateString(order.date) }));
@@ -317,6 +344,8 @@ export function OrdersDashboard() {
     const completedOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Completed'), [sortedOrders]);
     const cancelledOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Cancelled'), [sortedOrders]);
 
+    const numSelected = Object.values(selectedOrders).filter(Boolean).length;
+
     const renderContent = () => {
         if (isLoading) {
             return <Skeleton className="h-[400px] w-full" />
@@ -326,7 +355,7 @@ export function OrdersDashboard() {
             orderList: (Order & { dateObj: Date; })[],
             tabKey: keyof typeof visibleCounts
         ) => {
-            const visibleOrderList = orderList.slice(0, visibleCounts[tabKey]);
+            const visibleOrderList = orderList;
             return (
                 <div className="space-y-4">
                     <OrdersTable
@@ -335,22 +364,15 @@ export function OrdersDashboard() {
                         onDelete={setOrderToDelete}
                         requestSort={requestSort}
                         sortConfig={sortConfig}
+                        selectedOrders={selectedOrders}
+                        onSelectionChange={setSelectedOrders}
                     />
-                    {orderList.length > visibleCounts[tabKey] && (
-                        <div className="text-center">
-                            <Button
-                                onClick={() => setVisibleCounts(prev => ({ ...prev, [tabKey]: prev[tabKey] + LOAD_MORE_COUNT }))}
-                            >
-                                Load More ({orderList.length - visibleCounts[tabKey]} remaining)
-                            </Button>
-                        </div>
-                    )}
                 </div>
             );
         };
 
         return (
-            <Tabs defaultValue="in-progress" onValueChange={() => setVisibleCounts(prev => ({...prev}))}>
+            <Tabs defaultValue="in-progress" onValueChange={() => setSelectedOrders({})}>
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="in-progress">In Progress ({inProgressOrders.length})</TabsTrigger>
                     <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
@@ -378,7 +400,7 @@ export function OrdersDashboard() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
         <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Orders
+          Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})
         </h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -403,14 +425,17 @@ export function OrdersDashboard() {
             <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
         </div>
       </div>
+       {numSelected > 0 && (
+          <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
+            <p className="text-sm font-medium">{numSelected} order{numSelected > 1 ? 's' : ''} selected</p>
+            <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+        )}
       <Card>
-        <CardHeader>
-          <CardTitle>Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})</CardTitle>
-          <CardDescription>
-            A sortable list of all your recent orders.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
             {renderContent()}
         </CardContent>
       </Card>
@@ -451,6 +476,23 @@ export function OrdersDashboard() {
             <AlertDialogAction onClick={handleDeleteOrder} className={cn(buttonVariants({ variant: "destructive" }), { "opacity-50": isSubmitting })} disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Delete
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Delete {numSelected} Orders?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action is permanent and cannot be undone. Are you sure you want to delete the selected orders?
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelectedOrders} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
             </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

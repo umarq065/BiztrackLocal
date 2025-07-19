@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import type { Order } from "@/lib/data/orders-data";
@@ -41,9 +42,11 @@ interface OrdersTableProps {
     onDelete: (order: Order) => void;
     requestSort: (key: keyof Order) => void;
     sortConfig: { key: keyof Order | null; direction: 'ascending' | 'descending' };
+    selectedOrders: Record<string, boolean>;
+    onSelectionChange: (selection: Record<string, boolean>) => void;
 }
 
-const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfig }: OrdersTableProps) => {
+const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfig, selectedOrders, onSelectionChange }: OrdersTableProps) => {
     
     const getSortIndicator = (key: keyof Order) => {
         if (sortConfig.key === key) {
@@ -51,11 +54,40 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
         }
         return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     };
+
+    const handleSelectAll = (checked: boolean) => {
+        const newSelection: Record<string, boolean> = {};
+        if (checked) {
+            orders.forEach(order => newSelection[order.id] = true);
+        }
+        onSelectionChange(newSelection);
+    };
+    
+    const handleRowSelect = (orderId: string, checked: boolean) => {
+        const newSelection = { ...selectedOrders };
+        if (checked) {
+            newSelection[orderId] = true;
+        } else {
+            delete newSelection[orderId];
+        }
+        onSelectionChange(newSelection);
+    };
+
+    const isAllSelected = orders.length > 0 && orders.every(order => selectedOrders[order.id]);
+    const isSomeSelected = orders.length > 0 && orders.some(order => selectedOrders[order.id]);
     
     return (
         <Table>
             <TableHeader>
                 <TableRow>
+                    <TableHead className="w-12">
+                         <Checkbox
+                            checked={isAllSelected}
+                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                            aria-label="Select all"
+                            indeterminate={isSomeSelected && !isAllSelected}
+                        />
+                    </TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('date')} className="-ml-4">
                            Date {getSortIndicator('date')}
@@ -82,7 +114,14 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
             <TableBody>
                 {orders.length > 0 ? (
                     orders.map((order) => (
-                        <TableRow key={order.id}>
+                        <TableRow key={order.id} data-state={selectedOrders[order.id] && 'selected'}>
+                            <TableCell>
+                                <Checkbox
+                                    checked={!!selectedOrders[order.id]}
+                                    onCheckedChange={(checked) => handleRowSelect(order.id, !!checked)}
+                                    aria-label={`Select order ${order.id}`}
+                                />
+                            </TableCell>
                             <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
                             <TableCell className="font-medium">{order.id}</TableCell>
                             <TableCell>
@@ -142,7 +181,7 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                     ))
                 ) : (
                     <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
+                        <TableCell colSpan={10} className="h-24 text-center">
                             No orders found.
                         </TableCell>
                     </TableRow>
