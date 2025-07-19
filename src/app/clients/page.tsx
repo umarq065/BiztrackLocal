@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database, Loader2 } from "lucide-react";
+import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database, Loader2, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Select,
@@ -69,6 +69,10 @@ const ClientsPageComponent = () => {
     const sortParam = useMemo(() => searchParams.get('sort'), [searchParams]);
 
     const [localSearch, setLocalSearch] = useState(searchQuery);
+
+    const [selectedClients, setSelectedClients] = useState<Record<string, boolean>>({});
+    const [deletingSelected, setDeletingSelected] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [columnVisibility, setColumnVisibility] = useState({
         status: true,
@@ -232,6 +236,30 @@ const ClientsPageComponent = () => {
         }
     };
 
+    const handleDeleteSelectedClients = async () => {
+        setIsSubmitting(true);
+        const idsToDelete = Object.keys(selectedClients).filter(id => selectedClients[id]);
+        try {
+            const response = await fetch('/api/clients/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientIds: idsToDelete }),
+            });
+            const result = await response.json();
+             if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete selected clients');
+            }
+            setClients(prev => prev.filter(c => !idsToDelete.includes(c.id)));
+            setSelectedClients({});
+            toast({ title: 'Clients Deleted', description: result.message });
+        } catch(error) {
+             toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
+        } finally {
+            setIsSubmitting(false);
+            setDeletingSelected(false);
+        }
+    };
+
     const requestSort = (key: keyof Client) => {
         let direction: 'ascending' | 'descending' = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -337,6 +365,8 @@ const ClientsPageComponent = () => {
       return Object.values(aiFilters).filter(v => v !== undefined && v !== null && v !== "" && !(typeof v === 'object' && Object.keys(v).length === 0)).length;
     }, [aiFilters]);
     
+    const numSelected = Object.values(selectedClients).filter(Boolean).length;
+
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -355,6 +385,8 @@ const ClientsPageComponent = () => {
                 onEdit={(client) => setEditingClient(client)}
                 onDelete={(client) => setDeletingClient(client)}
                 columnVisibility={columnVisibility}
+                selectedClients={selectedClients}
+                onSelectionChange={setSelectedClients}
             />
         )
     }
@@ -493,6 +525,16 @@ const ClientsPageComponent = () => {
         )}
       </div>
 
+       {numSelected > 0 && (
+          <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
+            <p className="text-sm font-medium">{numSelected} client{numSelected > 1 ? 's' : ''} selected</p>
+            <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+        )}
+
       {renderContent()}
 
       {editingClient && (
@@ -519,6 +561,23 @@ const ClientsPageComponent = () => {
                     {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Delete
                 </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Delete {numSelected} Clients?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This action is permanent and cannot be undone. Are you sure you want to delete the selected clients and all their associated data?
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelectedClients} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
+            </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

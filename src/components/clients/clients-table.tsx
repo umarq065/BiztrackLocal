@@ -14,6 +14,7 @@ import type { Client } from "@/lib/data/clients-data";
 import { socialPlatforms, getClientStatus } from "@/lib/data/clients-data";
 import { cn } from "@/lib/utils";
 import NProgressLink from "../layout/nprogress-link";
+import { Checkbox } from "../ui/checkbox";
 
 interface ClientsTableProps {
     clients: Client[];
@@ -22,6 +23,8 @@ interface ClientsTableProps {
     onEdit: (client: Client) => void;
     onDelete: (client: Client) => void;
     columnVisibility: Record<string, boolean>;
+    selectedClients: Record<string, boolean>;
+    onSelectionChange: (selection: Record<string, boolean>) => void;
 }
 
 const SocialIcon = ({ platform }: { platform: string }) => {
@@ -31,7 +34,28 @@ const SocialIcon = ({ platform }: { platform: string }) => {
     return <Icon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />;
 };
 
-const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility }: ClientsTableProps) => {
+const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility, selectedClients, onSelectionChange }: ClientsTableProps) => {
+
+    const handleSelectAll = (checked: boolean) => {
+        const newSelection: Record<string, boolean> = {};
+        if (checked) {
+            clients.forEach(client => newSelection[client.id] = true);
+        }
+        onSelectionChange(newSelection);
+    };
+    
+    const handleRowSelect = (clientId: string, checked: boolean) => {
+        const newSelection = { ...selectedClients };
+        if (checked) {
+            newSelection[clientId] = true;
+        } else {
+            delete newSelection[clientId];
+        }
+        onSelectionChange(newSelection);
+    };
+
+    const isAllSelected = clients.length > 0 && clients.every(client => selectedClients[client.id]);
+    const isSomeSelected = clients.length > 0 && clients.some(client => selectedClients[client.id]);
 
     return (
         <Card>
@@ -45,6 +69,14 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                         <Table className="min-w-full">
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={isAllSelected}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                            aria-label="Select all"
+                                            indeterminate={isSomeSelected && !isAllSelected}
+                                        />
+                                    </TableHead>
                                     <TableHead className="w-[250px]">
                                         <Button variant="ghost" onClick={() => requestSort('name')}>
                                             Client {getSortIndicator('name')}
@@ -92,7 +124,15 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                     <TableRow 
                                         key={client.id}
                                         className="cursor-pointer"
+                                        data-state={selectedClients[client.id] && 'selected'}
                                     >
+                                        <TableCell onClick={(e) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={!!selectedClients[client.id]}
+                                                onCheckedChange={(checked) => handleRowSelect(client.id, !!checked)}
+                                                aria-label={`Select client ${client.name || client.username}`}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                            <NProgressLink href={`/clients/${client.username}`}>
                                                 <div className="flex items-center gap-3">
@@ -183,7 +223,7 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                     )}
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 2} className="h-24 text-center">
+                                        <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 3} className="h-24 text-center">
                                             <h3 className="font-semibold">No clients found</h3>
                                             <p className="text-sm text-muted-foreground">Try adjusting your search or filter to find what you're looking for.</p>
                                         </TableCell>
@@ -199,5 +239,3 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
 }
 
 export const ClientsTable = memo(ClientsTableComponent);
-
-    

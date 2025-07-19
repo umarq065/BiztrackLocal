@@ -264,3 +264,15 @@ export async function deleteClient(clientId: string): Promise<boolean> {
     const result = await clientsCollection.deleteOne({ _id });
     return result.deletedCount === 1;
 }
+
+/**
+ * Deletes multiple clients from the database by their IDs.
+ * @param clientIds - An array of client IDs to delete.
+ * @returns The number of clients deleted.
+ */
+export async function deleteClientsByIds(clientIds: string[]): Promise<number> {
+    const clientsCollection = await getClientsCollection();
+    const objectIds = clientIds.map(id => new ObjectId(id));
+    const result = await clientsCollection.deleteMany({ _id: { $in: objectIds } });
+    return result.deletedCount;
+}
