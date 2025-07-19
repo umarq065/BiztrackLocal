@@ -203,6 +203,7 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     const gigName = orderData['gig name'];
     const dateStr = orderData['date'];
     const amount = parseFloat(orderData['amount']);
+    const orderDate = parse(dateStr, 'M/d/yyyy', new Date());
 
     // 1. Check if order ID exists
     const orderExists = await checkOrderExists(orderId);
@@ -219,13 +220,12 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     // 3. Check if gig exists in the source, if not, create it
     const gigExists = source.gigs.some(g => g.name.toLowerCase() === gigName.toLowerCase());
     if (!gigExists) {
-        await addGigToSource(source.id, { name: gigName, date: new Date() });
+        await addGigToSource(source.id, { name: gigName, date: orderDate });
     }
 
     // 4. Check if client exists, if not, create one
     const clientExists = await getClientByUsername(clientUsername);
     if (!clientExists) {
-        const orderDate = parse(dateStr, 'M/d/yyyy', new Date());
         await addClient({
             username: clientUsername,
             source: sourceName,
@@ -236,11 +236,11 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
             notes: `Client auto-created from single order import for order ${orderId}.`,
             tags: 'auto-created,single-import',
             isVip: false,
+            clientSince: orderDate,
         });
     }
 
     // 5. Add the order
-    const orderDate = parse(dateStr, 'M/d/yyyy', new Date());
     const newOrder = await addOrder({
         id: orderId,
         date: orderDate,
