@@ -20,6 +20,7 @@ async function getOrdersCollection() {
 
 async function getIncomesCollection() {
     const client = await clientPromise;
+    const db = client.db("biztrack-pro");
     return db.collection('incomes');
 }
 
@@ -234,7 +235,7 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     // 3. Check if gig exists in the source, if not, create it
     const gigExists = source.gigs.some(g => g.name.toLowerCase() === gigName.toLowerCase());
     if (!gigExists) {
-        await addGigToSource(source.id, { name: gigName, date: orderDate });
+        await addGigToSource(source._id.toString(), { name: gigName, date: orderDate });
     }
 
     // 4. Check if client exists, if not, create one
