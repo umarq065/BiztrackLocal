@@ -6,13 +6,6 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database, Loader2, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -41,7 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import type { IncomeSource } from "@/lib/data/incomes-data";
-
+import { MonthYearPicker } from "@/components/clients/month-year-picker";
 
 const ClientsPageComponent = () => {
     const [clients, setClients] = useState<Client[]>([]);
@@ -65,9 +58,6 @@ const ClientsPageComponent = () => {
 
     // Read state from URL
     const searchQuery = useMemo(() => searchParams.get('q') || "", [searchParams]);
-    const filterSource = useMemo(() => searchParams.get('source') || "all", [searchParams]);
-    const filterYear = useMemo(() => searchParams.get('year') || "all", [searchParams]);
-    const filterMonth = useMemo(() => searchParams.get('month') || "all", [searchParams]);
     const sortParam = useMemo(() => searchParams.get('sort'), [searchParams]);
 
     const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -85,6 +75,19 @@ const ClientsPageComponent = () => {
         clientSince: true,
         lastOrder: true,
         social: true,
+    });
+    
+    const [fromDate, setFromDate] = useState<{ month: number; year: number } | null>(() => {
+        const fromM = searchParams.get('fromMonth');
+        const fromY = searchParams.get('fromYear');
+        if (fromM && fromY) return { month: parseInt(fromM), year: parseInt(fromY) };
+        return null;
+    });
+    const [toDate, setToDate] = useState<{ month: number; year: number } | null>(() => {
+        const toM = searchParams.get('toMonth');
+        const toY = searchParams.get('toYear');
+        if (toM && toY) return { month: parseInt(toM), year: parseInt(toY) };
+        return null;
     });
     
     useEffect(() => {
@@ -145,6 +148,15 @@ const ClientsPageComponent = () => {
         [searchParams]
     );
 
+    const updateUrlWithDate = (from: typeof fromDate, to: typeof toDate) => {
+        router.push(`${pathname}?${createQueryString({
+            fromMonth: from ? String(from.month) : null,
+            fromYear: from ? String(from.year) : null,
+            toMonth: to ? String(to.month) : null,
+            toYear: to ? String(to.year) : null,
+        })}`, { scroll: false });
+    };
+
     useEffect(() => {
       const handler = setTimeout(() => {
         if (localSearch !== searchQuery) {
@@ -162,9 +174,8 @@ const ClientsPageComponent = () => {
         if (!aiSearchQuery.trim()) return;
 
         setIsAiSearching(true);
-        // Clear manual search and its query param when AI search is used
         setLocalSearch(""); 
-        router.push(`${pathname}?${createQueryString({ q: null, source: filterSource === 'all' ? null : filterSource })}`, { scroll: false });
+        router.push(`${pathname}?${createQueryString({ q: null })}`, { scroll: false });
 
         try {
             const filters = await filterClients(aiSearchQuery);
@@ -193,23 +204,6 @@ const ClientsPageComponent = () => {
         if (aiFilters) {
             clearAiFilters();
         }
-    };
-    
-    const handleFilterChange = (value: string) => {
-        router.push(`${pathname}?${createQueryString({ source: value === 'all' ? null : value })}`);
-        if (aiFilters) {
-          clearAiFilters();
-        }
-    };
-
-    const handleYearChange = (value: string) => {
-        router.push(`${pathname}?${createQueryString({ year: value === 'all' ? null : value })}`);
-        if (aiFilters) clearAiFilters();
-    };
-    
-    const handleMonthChange = (value: string) => {
-        router.push(`${pathname}?${createQueryString({ month: value === 'all' ? null : value })}`);
-        if (aiFilters) clearAiFilters();
     };
 
     const handleClientAdded = (newClient: Client) => {
@@ -324,17 +318,20 @@ const ClientsPageComponent = () => {
                 return true;
             });
         } else {
-            // Manual filters apply only if AI filters are not active
-            if (filterSource !== 'all') {
-                clientsToFilter = clientsToFilter.filter(client => client.source.toLowerCase().replace(/\s+/g, '-') === filterSource);
-            }
-             if (filterYear !== 'all' || filterMonth !== 'all') {
+             if (fromDate || toDate) {
                 clientsToFilter = clientsToFilter.filter(client => {
                     if (client.lastOrder === 'N/A') return false;
                     const lastOrderDate = new Date(client.lastOrder.replace(/-/g, '/'));
-                    const yearMatch = filterYear === 'all' || lastOrderDate.getFullYear() === parseInt(filterYear);
-                    const monthMatch = filterMonth === 'all' || (lastOrderDate.getMonth() + 1) === parseInt(filterMonth);
-                    return yearMatch && monthMatch;
+                    
+                    if (fromDate) {
+                        const filterFromDate = new Date(fromDate.year, fromDate.month - 1, 1);
+                        if (lastOrderDate < filterFromDate) return false;
+                    }
+                    if (toDate) {
+                        const filterToDate = new Date(toDate.year, toDate.month, 0); // Last day of month
+                        if (lastOrderDate > filterToDate) return false;
+                    }
+                    return true;
                 });
             }
             if (searchQuery) {
@@ -347,7 +344,7 @@ const ClientsPageComponent = () => {
         }
 
         return clientsToFilter;
-    }, [clients, filterSource, filterYear, filterMonth, searchQuery, aiFilters]);
+    }, [clients, fromDate, toDate, searchQuery, aiFilters]);
 
 
     const sortedClients = useMemo(() => {
@@ -411,21 +408,6 @@ const ClientsPageComponent = () => {
             />
         )
     }
-    
-    const yearOptions = useMemo(() => {
-        const years = [];
-        for (let i = 2030; i >= 2021; i--) {
-            years.push(i.toString());
-        }
-        return years;
-    }, []);
-
-    const monthOptions = useMemo(() => {
-        return Array.from({ length: 12 }, (_, i) => ({
-            value: (i + 1).toString(),
-            label: new Date(0, i).toLocaleString('default', { month: 'long' })
-        }));
-    }, []);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -479,33 +461,10 @@ const ClientsPageComponent = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Select value={filterYear} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {yearOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-              </SelectContent>
-            </Select>
-             <Select value={filterMonth} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Months</SelectItem>
-                {monthOptions.map(month => <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          <Select value={filterSource} onValueChange={handleFilterChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              {incomeSources.map(source => <SelectItem key={source.id} value={source.name.toLowerCase().replace(/\s+/g, '-')}>{source.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+            <div className="flex items-center gap-2">
+                <MonthYearPicker date={fromDate} setDate={(d) => { setFromDate(d); updateUrlWithDate(d, toDate); }} label="From" />
+                <MonthYearPicker date={toDate} setDate={(d) => { setToDate(d); updateUrlWithDate(fromDate, d); }} label="To" />
+            </div>
           <AddClientDialog 
             open={isAddClientOpen} 
             onOpenChange={setIsAddClientOpen} 
