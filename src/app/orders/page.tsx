@@ -85,6 +85,18 @@ const OrdersPageComponent = () => {
         }
         return undefined;
     });
+    
+    const fetchOrders = useCallback(async () => {
+       try {
+            const ordersRes = await fetch('/api/orders');
+            if (!ordersRes.ok) throw new Error('Failed to fetch orders');
+            const ordersData = await ordersRes.json();
+            setOrders(ordersData);
+        } catch (e) {
+             console.error(e);
+             toast({ variant: "destructive", title: "Error", description: "Failed to reload orders." });
+        }
+    }, [toast]);
 
      useEffect(() => {
         async function fetchData() {
@@ -424,6 +436,7 @@ const OrdersPageComponent = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         incomeSources={incomeSources}
+        onImportSuccess={fetchOrders}
       />
       
       <SingleImportDialog

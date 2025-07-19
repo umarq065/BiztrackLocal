@@ -10,6 +10,7 @@ import { ObjectId } from 'mongodb';
 import { format, parse } from 'date-fns';
 import { getClientByUsername, addClient } from './clientsService';
 import { addGigToSource } from './incomesService';
+import Papa from 'papaparse';
 
 async function getOrdersCollection() {
   const client = await clientPromise;
@@ -19,7 +20,7 @@ async function getOrdersCollection() {
 
 async function getIncomesCollection() {
     const client = await clientPromise;
-    return client.db("biztrack-pro").collection('incomes');
+    return db.collection('incomes');
 }
 
 
@@ -81,8 +82,7 @@ export async function addOrder(orderData: OrderFormValues): Promise<Order> {
         await addClient({
             username: orderData.username,
             source: orderData.source,
-            // You can add other default fields for auto-created clients if needed
-            name: orderData.username, // Default name to username
+            name: orderData.username,
             email: '',
             avatarUrl: '',
             socialLinks: [],
@@ -262,8 +262,139 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
         amount: amount,
         source: sourceName,
         gig: gigName,
-        status: "In Progress", // Default status for imported orders
+        status: "In Progress",
     });
 
     return { order: newOrder };
+}
+
+
+/**
+ * Imports multiple orders from a CSV string.
+ * @param sourceName - The name of the income source for the orders.
+ * @param csvContent - The string content of the CSV file.
+ * @returns An object with counts of imported and skipped orders.
+ */
+export async function importBulkOrders(sourceName: string, csvContent: string): Promise<{ importedCount: number; skippedCount: number }> {
+    const ordersCollection = await getOrdersCollection();
+    const incomesCollection = await getIncomesCollection();
+
+    // Parse CSV
+    const parsed = Papa.parse(csvContent, { header: true, skipEmptyLines: true });
+    if (parsed.errors.length) {
+        console.error("CSV Parsing Errors:", parsed.errors);
+        throw new Error("Failed to parse CSV file. Please check the format.");
+    }
+
+    const rows = parsed.data as Record<string, string>[];
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    // Check if income source exists
+    const source = await incomesCollection.findOne({ name: sourceName });
+    if (!source) {
+        throw new Error(`Income source "${sourceName}" not found.`);
+    }
+    const sourceId = source._id.toString();
+
+    // Get existing data to avoid repeated DB calls inside the loop
+    const existingOrderIds = new Set((await ordersCollection.find({}, { projection: { id: 1 } }).toArray()).map(o => o.id));
+    const existingClients = new Set((await getClients()).map(c => c.username));
+    let sourceGigs = [...source.gigs];
+
+    const newClientsToCreate: any[] = [];
+    const newGigsToCreate: any[] = [];
+    const newOrdersToCreate: any[] = [];
+
+    for (const row of rows) {
+        // Standardize headers
+        const orderData = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), value]));
+        
+        const orderId = orderData['order id'];
+        const clientUsername = orderData['client username'];
+        const gigName = orderData['gig name'];
+        
+        if (!orderId || !clientUsername || !gigName || !orderData['date'] || !orderData['amount']) {
+            console.warn("Skipping row due to missing required fields:", row);
+            skippedCount++;
+            continue;
+        }
+
+        if (existingOrderIds.has(orderId)) {
+            skippedCount++;
+            continue;
+        }
+
+        let orderDate;
+        try {
+            orderDate = parse(orderData['date'], 'M/d/yyyy', new Date());
+            if (isNaN(orderDate.getTime())) orderDate = parse(orderData['date'], 'yyyy-MM-dd', new Date());
+            if (isNaN(orderDate.getTime())) throw new Error();
+        } catch (e) {
+            console.warn(`Skipping order ${orderId} due to invalid date format: ${orderData['date']}`);
+            skippedCount++;
+            continue;
+        }
+        
+        // Add client to creation list if new
+        if (!existingClients.has(clientUsername) && !newClientsToCreate.some(c => c.username === clientUsername)) {
+            newClientsToCreate.push({
+                username: clientUsername,
+                source: sourceName,
+                name: clientUsername,
+                email: '',
+                avatarUrl: '',
+                socialLinks: [],
+                notes: `Client auto-created from bulk import.`,
+                tags: ['auto-created', 'bulk-import'],
+                isVip: false,
+                clientSince: orderDate
+            });
+            existingClients.add(clientUsername);
+        }
+
+        // Add gig to creation list if new
+        const gigExists = sourceGigs.some(g => g.name.toLowerCase() === gigName.toLowerCase());
+        if (!gigExists && !newGigsToCreate.some(g => g.name.toLowerCase() === gigName.toLowerCase())) {
+             const newGig = { name: gigName, date: orderDate };
+             newGigsToCreate.push(newGig);
+             sourceGigs.push({ id: '', // temp
+                name: gigName,
+                date: format(orderDate, 'yyyy-MM-dd')
+            });
+        }
+        
+        const newOrder = {
+            id: orderId,
+            clientUsername: clientUsername,
+            date: format(orderDate, "yyyy-MM-dd"),
+            amount: parseFloat(orderData['amount']),
+            source: sourceName,
+            gig: gigName,
+            status: "In Progress",
+            type: orderData['type'] || "Order",
+        };
+        newOrdersToCreate.push(newOrder);
+        existingOrderIds.add(orderId);
+        importedCount++;
+    }
+
+    // --- Perform batched database operations ---
+    if (newClientsToCreate.length > 0) {
+        const clientCollection = (await clientPromise).db("biztrack-pro").collection('clients');
+        await clientCollection.insertMany(newClientsToCreate);
+    }
+
+    if (newGigsToCreate.length > 0) {
+        for(const gig of newGigsToCreate) {
+            // This has to be one by one to use the service logic
+            await addGigToSource(sourceId, gig);
+        }
+    }
+
+    if (newOrdersToCreate.length > 0) {
+        await ordersCollection.insertMany(newOrdersToCreate as any);
+    }
+    
+    return { importedCount, skippedCount };
 }
