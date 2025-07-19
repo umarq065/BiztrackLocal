@@ -89,6 +89,7 @@ export async function addOrder(orderData: OrderFormValues): Promise<Order> {
             notes: `Client auto-created from order ${orderData.id}.`,
             tags: 'auto-created',
             isVip: false,
+            clientSince: orderData.date,
         });
     }
 
@@ -203,7 +204,20 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     const gigName = orderData['gig name'];
     const dateStr = orderData['date'];
     const amount = parseFloat(orderData['amount']);
-    const orderDate = parse(dateStr, 'M/d/yyyy', new Date());
+    
+    // Attempt to parse multiple date formats
+    let orderDate;
+    try {
+        orderDate = parse(dateStr, 'M/d/yyyy', new Date());
+        if (isNaN(orderDate.getTime())) {
+            orderDate = parse(dateStr, 'yyyy-MM-dd', new Date());
+        }
+        if (isNaN(orderDate.getTime())) {
+            throw new Error('Invalid date format');
+        }
+    } catch (e) {
+        throw new Error(`Invalid date format in CSV: "${dateStr}". Please use MM/DD/YYYY or YYYY-MM-DD.`);
+    }
 
     // 1. Check if order ID exists
     const orderExists = await checkOrderExists(orderId);
