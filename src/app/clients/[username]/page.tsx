@@ -55,9 +55,8 @@ const parseDateString = (dateString: string): Date => {
   if (!dateString || dateString === 'N/A') {
     return new Date(0); // Return a default date for invalid strings
   }
-  const [year, month, day] = dateString.split('-').map(Number);
-  // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
-  return new Date(year, month - 1, day);
+  // Handles both "YYYY-MM-DD" and full ISO strings like "2024-07-29T10:00:00.000Z"
+  return new Date(dateString.replace(/-/g, '/'));
 };
 
 export default function ClientDetailsPage() {
@@ -363,3 +362,5 @@ export default function ClientDetailsPage() {
     </main>
   );
 }
+
+    
