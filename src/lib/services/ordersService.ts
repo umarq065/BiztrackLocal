@@ -248,7 +248,7 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
         amount: amount,
         source: sourceName,
         gig: gigName,
-        status: "Completed", // Default status for imported orders
+        status: "In Progress", // Default status for imported orders
     });
 
     return { order: newOrder };
