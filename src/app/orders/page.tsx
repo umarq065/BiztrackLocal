@@ -375,7 +375,7 @@ const OrdersPageComponent = () => {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Manage Orders</CardTitle>
+          <CardTitle>Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})</CardTitle>
           <CardDescription>
             A sortable list of all your recent orders.
           </CardDescription>
