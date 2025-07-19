@@ -25,10 +25,10 @@ async function getOrdersCollection() {
 export async function getOrders(): Promise<Order[]> {
   try {
     const ordersCollection = await getOrdersCollection();
-    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V2) {
+    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V3) {
         console.log("Clearing 'orders' collection...");
         await ordersCollection.deleteMany({});
-        process.env.DATA_CLEARED_ORDERS_V2 = 'true';
+        process.env.DATA_CLEARED_ORDERS_V3 = 'true';
     }
     const orders = await ordersCollection.find({}).sort({ date: -1 }).toArray();
     
@@ -307,6 +307,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
         const clientUsername = orderData['client username'];
         const gigName = orderData['gig name'];
         const amountStr = orderData['amount'];
+        const type = orderData['type'];
         
         if (!orderId || !clientUsername || !gigName || !orderData['date'] || !amountStr) {
             console.warn("Skipping row due to missing required fields:", row);
@@ -321,13 +322,6 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
             continue;
         }
 
-        if (existingOrderIds.has(orderId)) {
-            // It's a duplicate, schedule for update
-            ordersToUpdate.push({ id: orderId, amount: amount });
-            updatedCount++;
-            continue;
-        }
-
         let orderDate;
         try {
             orderDate = parse(orderData['date'], 'M/d/yyyy', new Date());
@@ -336,6 +330,12 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
         } catch (e) {
             console.warn(`Skipping order ${orderId} due to invalid date format: ${orderData['date']}`);
             skippedCount++;
+            continue;
+        }
+
+        if (existingOrderIds.has(orderId)) {
+            ordersToUpdate.push({ id: orderId, amount: amount });
+            updatedCount++;
             continue;
         }
         
@@ -364,7 +364,12 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
              sourceGigs.set(gigNameLower, { id: '', name: gigName, date: format(orderDate, 'yyyy-MM-dd') });
         }
         
-        const status = (orderData['status'] || 'In Progress') as Order['status'];
+        let status: Order['status'] = 'In Progress';
+        if (type?.toLowerCase() === 'order') {
+            status = 'Completed';
+        } else if (type?.toLowerCase() === 'cancellation') {
+            status = 'Cancelled';
+        }
 
         const newOrder = {
             id: orderId,
