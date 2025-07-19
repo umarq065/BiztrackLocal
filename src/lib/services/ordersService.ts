@@ -25,10 +25,10 @@ async function getOrdersCollection() {
 export async function getOrders(): Promise<Order[]> {
   try {
     const ordersCollection = await getOrdersCollection();
-    if (process.env.NODE_ENV === 'development' && process.env.SHOULD_CLEAR_ORDERS === 'true') {
+    if (process.env.NODE_ENV === 'development' && !process.env.DATA_CLEARED_ORDERS_V2) {
         console.log("Clearing 'orders' collection...");
         await ordersCollection.deleteMany({});
-        delete process.env.SHOULD_CLEAR_ORDERS;
+        process.env.DATA_CLEARED_ORDERS_V2 = 'true';
     }
     const orders = await ordersCollection.find({}).sort({ date: -1 }).toArray();
     
@@ -286,7 +286,8 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
     const sourceId = source._id.toString();
 
     // Get existing data to avoid repeated DB calls inside the loop
-    const existingOrderIds = new Set((await ordersCollection.find({}, { projection: { id: 1 } }).toArray()).map(o => o.id));
+    const existingOrders = await ordersCollection.find({}, { projection: { id: 1, _id: 0 } }).toArray();
+    const existingOrderIds = new Set(existingOrders.map(o => o.id));
     const existingClients = new Set((await getClients()).map(c => c.username));
     let sourceGigs = new Map(source.gigs.map(g => [g.name.toLowerCase(), g]));
 
@@ -377,7 +378,11 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
 
     // --- Perform batched database operations ---
     if (newClientsToCreate.length > 0) {
-        await clientCollection.insertMany(newClientsToCreate);
+        const clientDocsToInsert = newClientsToCreate.map(c => ({
+            ...c,
+            clientSince: format(c.clientSince, 'yyyy-MM-dd')
+        }));
+        await clientCollection.insertMany(clientDocsToInsert);
     }
 
     if (newGigsToCreate.length > 0) {
