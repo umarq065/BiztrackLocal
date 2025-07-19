@@ -39,8 +39,6 @@ import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { ImportOrdersDialog } from "@/components/orders/import-orders-dialog";
 import { SingleImportDialog } from "@/components/orders/single-import-dialog";
 
-const ORDERS_TO_LOAD = 50;
-
 // A more robust date parsing function to avoid performance issues.
 const parseDateString = (dateString: string): Date => {
   const [year, month, day] = dateString.split('-').map(Number);
@@ -70,8 +68,6 @@ const OrdersPageComponent = () => {
     const sortParam = searchParams.get('sort');
     const searchQuery = searchParams.get('q') || "";
     const [localSearch, setLocalSearch] = useState(searchQuery);
-
-    const [visibleOrdersCount, setVisibleOrdersCount] = useState(ORDERS_TO_LOAD);
     
     const [date, setDate] = useState<DateRange | undefined>(() => {
         const fromParam = searchParams.get('from');
@@ -303,26 +299,12 @@ const OrdersPageComponent = () => {
     const completedOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Completed'), [sortedOrders]);
     const cancelledOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Cancelled'), [sortedOrders]);
 
-    const visibleInProgressOrders = useMemo(() => inProgressOrders.slice(0, visibleOrdersCount), [inProgressOrders, visibleOrdersCount]);
-    const visibleCompletedOrders = useMemo(() => completedOrders.slice(0, visibleOrdersCount), [completedOrders, visibleOrdersCount]);
-    const visibleCancelledOrders = useMemo(() => cancelledOrders.slice(0, visibleOrdersCount), [cancelledOrders, visibleOrdersCount]);
-    const visibleAllOrders = useMemo(() => sortedOrders.slice(0, visibleOrdersCount), [sortedOrders, visibleOrdersCount]);
-
-
-    const handleLoadMore = () => {
-        setVisibleOrdersCount(prev => prev + ORDERS_TO_LOAD);
-    };
-
-    const handleTabChange = () => {
-        setVisibleOrdersCount(ORDERS_TO_LOAD);
-    };
-
     const renderContent = () => {
         if (isLoading) {
             return <Skeleton className="h-[400px] w-full" />
         }
         return (
-            <Tabs defaultValue="in-progress" onValueChange={handleTabChange}>
+            <Tabs defaultValue="in-progress">
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="in-progress">In Progress ({inProgressOrders.length})</TabsTrigger>
                     <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
@@ -331,51 +313,31 @@ const OrdersPageComponent = () => {
                 </TabsList>
                 <TabsContent value="in-progress" className="mt-4">
                     <OrdersTable
-                        orders={visibleInProgressOrders}
+                        orders={inProgressOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
                     />
-                    {inProgressOrders.length > visibleInProgressOrders.length && (
-                        <div className="mt-6 flex justify-center">
-                            <Button onClick={handleLoadMore}>Load More</Button>
-                        </div>
-                    )}
                 </TabsContent>
                 <TabsContent value="completed" className="mt-4">
                     <OrdersTable
-                        orders={visibleCompletedOrders}
+                        orders={completedOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
                     />
-                    {completedOrders.length > visibleCompletedOrders.length && (
-                        <div className="mt-6 flex justify-center">
-                            <Button onClick={handleLoadMore}>Load More</Button>
-                        </div>
-                    )}
                 </TabsContent>
                 <TabsContent value="cancelled" className="mt-4">
                      <OrdersTable
-                        orders={visibleCancelledOrders}
+                        orders={cancelledOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
                     />
-                    {cancelledOrders.length > visibleCancelledOrders.length && (
-                        <div className="mt-6 flex justify-center">
-                            <Button onClick={handleLoadMore}>Load More</Button>
-                        </div>
-                    )}
                 </TabsContent>
                 <TabsContent value="all" className="mt-4">
                      <OrdersTable
-                        orders={visibleAllOrders}
+                        orders={sortedOrders}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
                     />
-                    {sortedOrders.length > visibleAllOrders.length && (
-                        <div className="mt-6 flex justify-center">
-                            <Button onClick={handleLoadMore}>Load More</Button>
-                        </div>
-                    )}
                 </TabsContent>
             </Tabs>
         )
