@@ -1,7 +1,10 @@
 
+
 "use client";
 
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { format } from 'date-fns';
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
@@ -22,14 +25,50 @@ import { initialIncomeSources } from "@/lib/data/incomes-data";
 const incomeSourceNames = initialIncomeSources.map((s) => s.name);
 
 const DetailedMetricsPageComponent = () => {
-  const [date, setDate] = useState<DateRange | undefined>();
-  const [source, setSource] = useState("all");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  useEffect(() => {
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam && toParam) {
+        const from = new Date(fromParam.replace(/-/g, '/'));
+        const to = new Date(toParam.replace(/-/g, '/'));
+        if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+            return { from, to };
+        }
+    }
     const today = new Date();
     const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    setDate({ from, to: today });
-  }, []);
+    return { from, to: today };
+  });
+
+  const [source, setSource] = useState("all");
+
+  const createQueryString = useCallback(
+    (paramsToUpdate: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams.toString());
+        for (const [name, value] of Object.entries(paramsToUpdate)) {
+            if (value) {
+                params.set(name, value);
+            } else {
+                params.delete(name);
+            }
+        }
+        return params.toString();
+    },
+    [searchParams]
+  );
+  
+  const handleSetDate = (newDate: DateRange | undefined) => {
+    setDate(newDate);
+    router.push(`${pathname}?${createQueryString({
+        from: newDate?.from ? format(newDate.from, 'yyyy-MM-dd') : null,
+        to: newDate?.to ? format(newDate.to, 'yyyy-MM-dd') : null,
+    })}`, { scroll: false });
+  };
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -51,7 +90,7 @@ const DetailedMetricsPageComponent = () => {
               ))}
             </SelectContent>
           </Select>
-          <DateFilter date={date} setDate={setDate} />
+          <DateFilter date={date} setDate={handleSetDate} />
         </div>
       </div>
 

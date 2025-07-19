@@ -14,7 +14,6 @@ interface DashboardHeaderProps {
     setDate: (date: DateRange | undefined) => void;
     onSetTarget: (newTarget: number, month: string, year: number) => void;
     daysLeft: number;
-    isLoading: boolean;
     monthlyTargets: Record<string, number>;
 }
 
@@ -23,7 +22,6 @@ export function DashboardHeader({
     setDate,
     onSetTarget,
     daysLeft,
-    isLoading,
     monthlyTargets,
 }: DashboardHeaderProps) {
     const today = new Date();
@@ -41,19 +39,12 @@ export function DashboardHeader({
                     <span>{daysLeft} days left</span>
                 </div>
                 <DateFilter date={date} setDate={setDate} />
-                {isLoading ? (
-                    <Button disabled>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Set Target
-                    </Button>
-                ) : (
-                    <SetTargetDialog
-                        monthlyTargets={monthlyTargets}
-                        onSetTarget={onSetTarget}
-                        initialMonth={targetMonth}
-                        initialYear={targetYear}
-                    />
-                )}
+                <SetTargetDialog
+                    monthlyTargets={monthlyTargets}
+                    onSetTarget={onSetTarget}
+                    initialMonth={targetMonth}
+                    initialYear={targetYear}
+                />
             </div>
         </div>
     );

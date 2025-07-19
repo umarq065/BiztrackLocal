@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, memo, useEffect, lazy, Suspense, useMemo, useCallback } from "react";
@@ -116,8 +117,8 @@ const MemoizedExpensesDashboard = () => {
   const handleSetDate = (newDate: DateRange | undefined) => {
     setDate(newDate);
     router.push(`${pathname}?${createQueryString({
-        from: newDate?.from ? newDate.from.toISOString().split('T')[0] : null,
-        to: newDate?.to ? newDate.to.toISOString().split('T')[0] : null,
+        from: newDate?.from ? format(newDate.from, 'yyyy-MM-dd') : null,
+        to: newDate?.to ? format(newDate.to, 'yyyy-MM-dd') : null,
     })}`, { scroll: false });
   };
   

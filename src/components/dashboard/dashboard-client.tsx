@@ -5,6 +5,7 @@
 import { useState, useEffect, lazy, Suspense, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -80,7 +81,25 @@ export function DashboardClient({
   incomeBySource,
 }: DashboardData) {
   const [stats, setStats] = useState<Stat[]>(initialStats);
-  const [date, setDate] = useState<DateRange | undefined>();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam && toParam) {
+        const from = new Date(fromParam.replace(/-/g, '/'));
+        const to = new Date(toParam.replace(/-/g, '/'));
+        if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+            return { from, to };
+        }
+    }
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { from, to: today };
+  });
+
   const [daysLeft, setDaysLeft] = useState(0);
 
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>(initialRecentOrders);
@@ -97,13 +116,32 @@ export function DashboardClient({
 
   const orderStatus = form.watch("status");
   const selectedSource = form.watch("source");
+
+  const createQueryString = (name: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set(name, value);
+    return params.toString();
+  };
+
+  const handleSetDate = (newDate: DateRange | undefined) => {
+    setDate(newDate);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newDate?.from) {
+      params.set('from', format(newDate.from, 'yyyy-MM-dd'));
+    } else {
+      params.delete('from');
+    }
+    if (newDate?.to) {
+      params.set('to', format(newDate.to, 'yyyy-MM-dd'));
+    } else {
+      params.delete('to');
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   
   useEffect(() => {
     // This useEffect is now just for setting up dates and initial stats.
     const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1);
-    setDate({ from: from, to: today });
-    
     const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const remainingDays = lastDayOfMonth.getDate() - today.getDate();
     setDaysLeft(remainingDays);
@@ -271,7 +309,7 @@ export function DashboardClient({
     <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
       <DashboardHeader 
         date={date}
-        setDate={setDate}
+        setDate={handleSetDate}
         onSetTarget={handleSetTarget}
         daysLeft={daysLeft}
         monthlyTargets={monthlyTargets}
