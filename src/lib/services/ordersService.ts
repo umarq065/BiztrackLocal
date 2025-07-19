@@ -229,10 +229,8 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     const amount = parseFloat(orderData['amount']);
     
     const type = orderData['type'];
-    let status: Order['status'] = 'In Progress';
-    if (type?.toLowerCase() === 'order') {
-        status = 'Completed';
-    } else if (type?.toLowerCase() === 'cancellation') {
+    let status: Order['status'] = 'Completed';
+    if (type?.toLowerCase() === 'cancellation') {
         status = 'Cancelled';
     }
 
@@ -408,11 +406,11 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
              sourceGigs.set(gigNameLower, { id: '', name: gigName, date: format(orderDate, 'yyyy-MM-dd') });
         }
         
-        let status: Order['status'] = 'In Progress';
-        if (type?.toLowerCase() === 'order') {
-            status = 'Completed';
-        } else if (type?.toLowerCase() === 'cancellation') {
+        let status: Order['status'] = 'Completed';
+        if (type?.toLowerCase() === 'cancellation') {
             status = 'Cancelled';
+        } else if (type?.toLowerCase() === 'in progress') {
+            status = 'In Progress';
         }
 
         const newOrder = {

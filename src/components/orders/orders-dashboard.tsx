@@ -185,6 +185,15 @@ export function OrdersDashboard() {
         const [key, direction] = sortParam.split('_');
         return { key: key as keyof Order, direction: direction as 'ascending' | 'descending' };
     }, [sortParam]);
+    
+    const requestSort = (key: keyof Order) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        const newSortParam = `${key}_${direction}`;
+        router.push(`${pathname}?${createQueryString({ sort: newSortParam })}`);
+    };
 
     const handleOpenDialog = (order: Order | null = null) => {
         setEditingOrder(order);
@@ -282,8 +291,8 @@ export function OrdersDashboard() {
                 let aValue: any, bValue: any;
 
                 if (key === 'date') {
-                    aValue = a.dateObj;
-                    bValue = b.dateObj;
+                    aValue = a.dateObj.getTime();
+                    bValue = b.dateObj.getTime();
                 } else {
                     aValue = a[key as keyof Order];
                     bValue = b[key as keyof Order];
@@ -324,6 +333,8 @@ export function OrdersDashboard() {
                         orders={visibleOrderList}
                         onEdit={handleOpenDialog}
                         onDelete={setOrderToDelete}
+                        requestSort={requestSort}
+                        sortConfig={sortConfig}
                     />
                     {orderList.length > visibleCounts[tabKey] && (
                         <div className="text-center">

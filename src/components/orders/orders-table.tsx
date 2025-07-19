@@ -3,7 +3,7 @@
 
 import { memo } from "react";
 import { format } from "date-fns";
-import { MoreHorizontal, Star, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, Star, Edit, Trash2, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -39,20 +39,42 @@ interface OrdersTableProps {
     orders: (Order & { dateObj: Date })[];
     onEdit: (order: Order) => void;
     onDelete: (order: Order) => void;
+    requestSort: (key: keyof Order) => void;
+    sortConfig: { key: keyof Order | null; direction: 'ascending' | 'descending' };
 }
 
-const OrdersTableComponent = ({ orders, onEdit, onDelete }: OrdersTableProps) => {
+const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfig }: OrdersTableProps) => {
+    
+    const getSortIndicator = (key: keyof Order) => {
+        if (sortConfig.key === key) {
+            return sortConfig.direction === 'ascending' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+        }
+        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    };
+    
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('date')} className="-ml-4">
+                           Date {getSortIndicator('date')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Client Username</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">
+                         <Button variant="ghost" onClick={() => requestSort('amount')} className="justify-end w-full -mr-4">
+                           Amount {getSortIndicator('amount')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Gig</TableHead>
-                    <TableHead>Rating</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('rating')} className="-ml-4">
+                           Rating {getSortIndicator('rating')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
