@@ -36,6 +36,9 @@ import { cn } from "@/lib/utils";
 import type { IncomeSource } from "@/lib/data/incomes-data";
 import { MonthYearPicker } from "@/components/clients/month-year-picker";
 
+const INITIAL_LOAD_COUNT = 50;
+const LOAD_MORE_COUNT = 200;
+
 const ClientsPageComponent = () => {
     const [clients, setClients] = useState<Client[]>([]);
     const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -65,6 +68,7 @@ const ClientsPageComponent = () => {
     const [selectedClients, setSelectedClients] = useState<Record<string, boolean>>({});
     const [deletingSelected, setDeletingSelected] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(INITIAL_LOAD_COUNT);
 
     const [columnVisibility, setColumnVisibility] = useState({
         status: true,
@@ -384,6 +388,7 @@ const ClientsPageComponent = () => {
     }, [aiFilters]);
     
     const numSelected = Object.values(selectedClients).filter(Boolean).length;
+    const visibleClients = useMemo(() => sortedClients.slice(0, visibleCount), [sortedClients, visibleCount]);
 
     const renderContent = () => {
         if (isLoading) {
@@ -397,7 +402,7 @@ const ClientsPageComponent = () => {
 
         return (
              <ClientsTable 
-                clients={sortedClients}
+                clients={visibleClients}
                 requestSort={requestSort}
                 getSortIndicator={getSortIndicator}
                 onEdit={(client) => setEditingClient(client)}
@@ -548,7 +553,19 @@ const ClientsPageComponent = () => {
           </div>
         )}
 
-      {renderContent()}
+        <div className="space-y-4">
+            {renderContent()}
+            {visibleCount < sortedClients.length && (
+                <div className="text-center">
+                    <Button
+                        variant="outline"
+                        onClick={() => setVisibleCount(prev => prev + LOAD_MORE_COUNT)}
+                    >
+                        Load More ({sortedClients.length - visibleCount} remaining)
+                    </Button>
+                </div>
+            )}
+        </div>
 
       {editingClient && (
         <EditClientDialog
