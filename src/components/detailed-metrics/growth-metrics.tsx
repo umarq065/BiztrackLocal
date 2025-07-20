@@ -7,19 +7,15 @@ import { BarChart, ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type GrowthMetricData } from "@/lib/services/analyticsService";
 
 const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
 
-const growthMetrics = [
-    { name: "Monthly Revenue Growth (%)", value: "2.5%", formula: "((This Month’s Revenue - Last Month’s Revenue) / Last Month’s Revenue) × 100", change: "+0.5%", changeType: "increase" as const },
-    { name: "Net Profit Growth (%)", value: "3.1%", formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100", change: "+0.8%", changeType: "increase" as const },
-    { name: "Client Growth Rate (%)", value: "10%", formula: "((New Clients - Lost Clients) / Clients Last Month) × 100", change: "-2.0%", changeType: "decrease" as const },
-    { name: "Average Order Value (AOV) Growth (%)", value: "1.2%", formula: "Growth rate of AOV over a period", change: "+0.3%", changeType: "increase" as const },
-    { name: "High-Value Client Growth Rate (%)", value: "8%", formula: "Growth rate of clients in top spending quintile", change: "+1.5%", changeType: "increase" as const },
-    { name: "Income Source/Gig Growth Rate (%)", value: "12%", formula: "Growth rate of top-performing income sources or gigs", change: "+2.2%", changeType: "increase" as const },
-];
+interface GrowthMetricsProps {
+    data: GrowthMetricData;
+}
 
-export function GrowthMetrics() {
+export function GrowthMetrics({ data }: GrowthMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     revenueGrowth: true,
@@ -33,6 +29,15 @@ export function GrowthMetrics() {
   const handleMetricToggle = (metric: string) => {
     setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
+  
+  const growthMetrics = [
+    { name: "Monthly Revenue Growth (%)", value: `${data.revenueGrowth.value.toFixed(1)}%`, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100", change: `${data.revenueGrowth.change.toFixed(1)}%`, changeType: data.revenueGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+    { name: "Net Profit Growth (%)", value: `${data.profitGrowth.value.toFixed(1)}%`, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100", change: `${data.profitGrowth.change.toFixed(1)}%`, changeType: data.profitGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+    { name: "Client Growth Rate (%)", value: `${data.clientGrowth.value.toFixed(1)}%`, formula: "((New Clients - Lost Clients) / Clients at Start) × 100", change: `${data.clientGrowth.change.toFixed(1)}%`, changeType: data.clientGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+    { name: "Average Order Value (AOV) Growth (%)", value: `${data.aovGrowth.value.toFixed(1)}%`, formula: "Growth rate of AOV over a period", change: `${data.aovGrowth.change.toFixed(1)}%`, changeType: data.aovGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+    { name: "High-Value Client Growth Rate (%)", value: `${data.vipClientGrowth.value}%`, formula: "Growth rate of clients marked as VIP", change: `${data.vipClientGrowth.change}%`, changeType: data.vipClientGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+    { name: "Top Source Growth Rate (%)", value: `${data.topSourceGrowth.value.toFixed(1)}%`, formula: `Growth of '${data.topSourceGrowth.source}'`, change: `${data.topSourceGrowth.change.toFixed(1)}%`, changeType: data.topSourceGrowth.change >= 0 ? 'increase' : 'decrease' as const },
+];
 
   return (
     <Card>
@@ -68,7 +73,7 @@ export function GrowthMetrics() {
                                 {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                                 {metric.change}
                             </span>
-                            <span className="ml-1 text-muted-foreground">vs selected period</span>
+                            <span className="ml-1 text-muted-foreground">vs previous period</span>
                         </div>
                     )}
                     <p className="text-xs text-muted-foreground">{metric.formula}</p>
@@ -81,7 +86,7 @@ export function GrowthMetrics() {
       {showChart && (
         <CardContent>
              <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                <GrowthMetricsChart activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
+                <GrowthMetricsChart data={data.timeSeries} activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
             </Suspense>
         </CardContent>
       )}

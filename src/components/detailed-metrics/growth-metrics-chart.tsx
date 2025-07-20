@@ -8,15 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '../ui/separator';
 import { BookText } from 'lucide-react';
-
-const chartData = [
-  { month: "Jan", revenueGrowth: 2.1, profitGrowth: 1.5, clientGrowth: 5, aovGrowth: 0.5, highValueClientGrowth: 1, sourceGrowth: 2 },
-  { month: "Feb", revenueGrowth: 2.5, profitGrowth: 2.0, clientGrowth: 7, aovGrowth: 0.8, highValueClientGrowth: 2, sourceGrowth: 3 },
-  { month: "Mar", revenueGrowth: 1.8, profitGrowth: 1.2, clientGrowth: 4, aovGrowth: -0.2, highValueClientGrowth: 1, sourceGrowth: 1.5 },
-  { month: "Apr", revenueGrowth: 3.0, profitGrowth: 2.5, clientGrowth: 10, aovGrowth: 1.2, highValueClientGrowth: 4, sourceGrowth: 5, note: "New top-performing gig launched." },
-  { month: "May", revenueGrowth: 2.8, profitGrowth: 2.2, clientGrowth: 8, aovGrowth: 1.0, highValueClientGrowth: 3, sourceGrowth: 4 },
-  { month: "Jun", revenueGrowth: 3.5, profitGrowth: 3.0, clientGrowth: 12, aovGrowth: 1.5, highValueClientGrowth: 5, sourceGrowth: 6 },
-];
+import type { GrowthMetricTimeSeries } from '@/lib/services/analyticsService';
 
 const chartConfig = {
     revenueGrowth: {
@@ -46,6 +38,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface GrowthMetricsChartProps {
+    data: GrowthMetricTimeSeries[];
     activeMetrics: Record<string, boolean>;
     onMetricToggle: (metric: string) => void;
 }
@@ -99,7 +92,7 @@ const CustomDot = (props: any) => {
   return null;
 };
 
-export default function GrowthMetricsChart({ activeMetrics, onMetricToggle }: GrowthMetricsChartProps) {
+export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle }: GrowthMetricsChartProps) {
     return (
         <Card>
             <CardHeader>
@@ -130,7 +123,7 @@ export default function GrowthMetricsChart({ activeMetrics, onMetricToggle }: Gr
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis
                             dataKey="month"

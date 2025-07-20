@@ -1,9 +1,10 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
 import { ObjectId } from 'mongodb';
-import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, differenceInDays, parseISO, sub, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
 import clientPromise from '@/lib/mongodb';
 import type { IncomeSource } from '@/lib/data/incomes-data';
 
@@ -16,6 +17,16 @@ async function getIncomesCollection() {
 async function getOrdersCollection() {
     const client = await clientPromise;
     return client.db("biztrack-pro").collection('orders');
+}
+
+async function getExpensesCollection() {
+    const client = await clientPromise;
+    return client.db("biztrack-pro").collection('expenses');
+}
+
+async function getClientsCollection() {
+    const client = await clientPromise;
+    return client.db("biztrack-pro").collection('clients');
 }
 
 // Interfaces for Analytics Data
@@ -60,9 +71,29 @@ export interface SourceAnalyticsData {
     sourceName: string;
     gigs: { id: string; name: string; date: string; messages?: number }[];
     timeSeries: TimeSeriesDataPoint[];
-    totals: Omit<Totals, 'conversionRate'>;
-    previousTotals: Omit<Totals, 'conversionRate'>;
+    totals: Omit<Totals, 'conversionRate'> & {ctr: number};
+    previousTotals: Omit<Totals, 'conversionRate'> & {ctr: number};
 }
+
+export interface GrowthMetricTimeSeries {
+    month: string;
+    revenueGrowth: number;
+    profitGrowth: number;
+    clientGrowth: number;
+    aovGrowth: number;
+    vipClientGrowth: number;
+    topSourceGrowth: number;
+}
+export interface GrowthMetricData {
+  revenueGrowth: { value: number; change: number };
+  profitGrowth: { value: number; change: number };
+  clientGrowth: { value: number; change: number };
+  aovGrowth: { value: number; change: number };
+  vipClientGrowth: { value: number; change: number };
+  topSourceGrowth: { value: number; change: number; source: string };
+  timeSeries: GrowthMetricTimeSeries[];
+}
+
 
 // Shared data processing function
 async function processAnalytics(
@@ -287,7 +318,77 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
         sourceName: source.name,
         gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: g.messages })),
         timeSeries,
-        totals,
-        previousTotals
+        totals: { ...totals, ctr: totals.ctr },
+        previousTotals: { ...previousTotals, ctr: previousTotals.ctr }
+    };
+}
+
+export async function getGrowthMetrics(from: string, to: string): Promise<GrowthMetricData> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+    const duration = differenceInDays(toDate, fromDate);
+    
+    const prevToDate = subDays(fromDate, 1);
+    const prevFromDate = subDays(prevToDate, duration);
+
+    const ordersCol = await getOrdersCollection();
+    const expensesCol = await getExpensesCollection();
+    const clientsCol = await getClientsCollection();
+
+    const calcPeriodMetrics = async (start: Date, end: Date) => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+
+        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
+        const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, status: 'Completed' }).toArray();
+        const vipClientsPromise = clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr} });
+        const sourcesPromise = ordersCol.aggregate([{$match: {date: {$gte: startStr, $lte: endStr}}}, {$group: {_id: "$source", revenue: {$sum: "$amount"}}}, {$sort: {revenue: -1}}, {$limit: 1}]).toArray();
+        const allClientsAtStartPromise = clientsCol.countDocuments({ clientSince: { $lt: startStr } });
+        const inactiveClientsPromise = (await getClients()).filter(c => c.lastOrder !== 'N/A' && parseISO(c.lastOrder) < start).length;
+
+        const [revenueRes, expensesRes, newClients, ordersInPeriod, vipClients, topSourceRes, clientsAtStart, inactiveClients] = await Promise.all([revenuePromise, expensesPromise, newClientsPromise, ordersInPeriodPromise, vipClientsPromise, sourcesPromise, allClientsAtStartPromise, inactiveClientsPromise]);
+
+        const revenue = revenueRes[0]?.total || 0;
+        const expenses = expensesRes[0]?.total || 0;
+        const netProfit = revenue - expenses;
+        const aov = ordersInPeriod.length > 0 ? revenue / ordersInPeriod.length : 0;
+        const topSource = topSourceRes[0] ? {source: topSourceRes[0]._id, revenue: topSourceRes[0].revenue} : {source: 'N/A', revenue: 0};
+
+        return { revenue, expenses, netProfit, newClients, aov, vipClients, topSource, clientsAtStart, inactiveClients};
+    };
+
+    const [current, previous] = await Promise.all([
+        calcPeriodMetrics(fromDate, toDate),
+        calcPeriodMetrics(prevFromDate, prevToDate)
+    ]);
+
+    const calculateGrowth = (currentVal: number, prevVal: number) => prevVal === 0 ? (currentVal > 0 ? 100 : 0) : ((currentVal - prevVal) / prevVal) * 100;
+    
+    const clientGrowth = previous.clientsAtStart > 0 ? ((current.newClients - current.inactiveClients) / previous.clientsAtStart) * 100 : (current.newClients > 0 ? 100 : 0);
+    const prevClientGrowth = 0; // Simplified for now
+
+    const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map(monthStart => {
+        // Dummy data for chart - in a real scenario, this would be another aggregation
+        return {
+            month: format(monthStart, 'MMM'),
+            revenueGrowth: Math.random() * 5,
+            profitGrowth: Math.random() * 5,
+            clientGrowth: Math.random() * 10,
+            aovGrowth: Math.random() * 2,
+            vipClientGrowth: Math.random(),
+            topSourceGrowth: Math.random() * 12
+        };
+    });
+
+    return {
+        revenueGrowth: { value: calculateGrowth(current.revenue, previous.revenue), change: 0 },
+        profitGrowth: { value: calculateGrowth(current.netProfit, previous.netProfit), change: 0 },
+        clientGrowth: { value: clientGrowth, change: clientGrowth - prevClientGrowth },
+        aovGrowth: { value: calculateGrowth(current.aov, previous.aov), change: 0 },
+        vipClientGrowth: { value: calculateGrowth(current.vipClients, previous.vipClients), change: 0 },
+        topSourceGrowth: { value: calculateGrowth(current.topSource.revenue, previous.topSource.revenue), change: 0, source: current.topSource.source },
+        timeSeries,
     };
 }

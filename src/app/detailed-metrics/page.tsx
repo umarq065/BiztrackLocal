@@ -21,6 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
+import { type GrowthMetricData } from "@/lib/services/analyticsService";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const incomeSourceNames = initialIncomeSources.map((s) => s.name);
 
@@ -28,6 +31,7 @@ const DetailedMetricsPageComponent = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [date, setDate] = useState<DateRange | undefined>(() => {
     const fromParam = searchParams.get('from');
@@ -45,6 +49,8 @@ const DetailedMetricsPageComponent = () => {
   });
 
   const [source, setSource] = useState("all");
+  const [growthMetrics, setGrowthMetrics] = useState<GrowthMetricData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const createQueryString = useCallback(
     (paramsToUpdate: Record<string, string | null>) => {
@@ -68,6 +74,31 @@ const DetailedMetricsPageComponent = () => {
         to: newDate?.to ? format(newDate.to, 'yyyy-MM-dd') : null,
     })}`, { scroll: false });
   };
+  
+  useEffect(() => {
+    async function fetchGrowthMetrics() {
+      if (!date?.from || !date?.to) return;
+      setIsLoading(true);
+      try {
+        const from = format(date.from, 'yyyy-MM-dd');
+        const to = format(date.to, 'yyyy-MM-dd');
+        const res = await fetch(`/api/analytics/growth?from=${from}&to=${to}`);
+        if (!res.ok) throw new Error('Failed to fetch growth metrics.');
+        const data = await res.json();
+        setGrowthMetrics(data);
+      } catch (e: any) {
+        console.error(e);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: e.message || 'Could not load growth metrics data.',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchGrowthMetrics();
+  }, [date, toast]);
 
 
   return (
@@ -95,7 +126,11 @@ const DetailedMetricsPageComponent = () => {
       </div>
 
       <div className="space-y-8">
-        <GrowthMetrics />
+        {isLoading ? (
+          <Skeleton className="h-[250px] w-full" />
+        ) : (
+          growthMetrics && <GrowthMetrics data={growthMetrics} />
+        )}
         <FinancialMetrics />
         <ClientMetrics />
         <SalesMetrics />
