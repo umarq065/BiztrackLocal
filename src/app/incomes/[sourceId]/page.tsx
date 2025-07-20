@@ -3,7 +3,7 @@
 
 import { useMemo, lazy, Suspense, useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart2, LineChartIcon, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatCard from "@/components/dashboard/stat-card";
@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { SourceAnalyticsData } from "@/lib/services/analyticsService";
+import { Switch } from "@/components/ui/switch";
 
 const SourcePerformanceChart = lazy(() => import('@/components/incomes/source-performance-chart').then(m => ({ default: m.SourcePerformanceChart })));
 
@@ -45,6 +46,8 @@ export default function SourceAnalyticsPage() {
     const from = subDays(today, 29);
     return { from, to: today };
   });
+  
+  const [chartType, setChartType] = useState('line');
 
   const [activeMetrics, setActiveMetrics] = useState({
     impressions: true,
@@ -174,23 +177,17 @@ export default function SourceAnalyticsPage() {
                         <CardDescription>Impressions, clicks, orders, and messages from this source.</CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).filter(k => !k.startsWith('prev')).map((metric) => (
-                            <div key={metric} className="flex items-center gap-2">
-                                <Checkbox
-                                    id={`metric-${metric}`}
-                                    checked={activeMetrics[metric as keyof typeof activeMetrics]}
-                                    onCheckedChange={() => handleMetricToggle(metric as keyof typeof activeMetrics)}
-                                    style={{
-                                        '--chart-color': chartConfig[metric as keyof typeof chartConfig].color,
-                                    } as React.CSSProperties}
-                                    className="data-[state=checked]:bg-[var(--chart-color)] data-[state=checked]:border-[var(--chart-color)] border-muted-foreground"
-                                />
-                                <Label htmlFor={`metric-${metric}`} className="capitalize">
-                                    {chartConfig[metric as keyof typeof chartConfig].label}
-                                </Label>
-                            </div>
-                        ))}
-                         <div className="flex items-center gap-2">
+                        <div className="flex items-center space-x-2">
+                            <Label htmlFor="chart-type-toggle" className="text-sm font-normal">Line</Label>
+                            <Switch
+                                id="chart-type-toggle"
+                                checked={chartType === 'bar'}
+                                onCheckedChange={(checked) => setChartType(checked ? 'bar' : 'line')}
+                                aria-label="Toggle between line and bar chart"
+                            />
+                            <Label htmlFor="chart-type-toggle" className="text-sm font-normal">Bar</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <Checkbox id="show-comparison" checked={showComparison} onCheckedChange={(c) => setShowComparison(!!c)} />
                             <Label htmlFor="show-comparison">Compare</Label>
                         </div>
@@ -204,16 +201,37 @@ export default function SourceAnalyticsPage() {
                      config={chartConfig}
                      activeMetrics={activeMetrics}
                      showComparison={showComparison}
+                     chartType={chartType}
                    />
                 </Suspense>
             </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-            <CardTitle>Gigs in this Source</CardTitle>
-            <CardDescription>A list of all gigs associated with {analyticsData.sourceName}.</CardDescription>
+      
+       <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+              <CardTitle>Gigs in this Source</CardTitle>
+              <CardDescription>A list of all gigs associated with {analyticsData.sourceName}.</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              {(Object.keys(chartConfig) as Array<keyof typeof chartConfig>).filter(k => !k.startsWith('prev')).map((metric) => (
+                  <div key={metric} className="flex items-center gap-2">
+                      <Checkbox
+                          id={`metric-${metric}`}
+                          checked={activeMetrics[metric as keyof typeof activeMetrics]}
+                          onCheckedChange={() => handleMetricToggle(metric as keyof typeof activeMetrics)}
+                          style={{
+                              '--chart-color': chartConfig[metric as keyof typeof chartConfig].color,
+                          } as React.CSSProperties}
+                          className="data-[state=checked]:bg-[var(--chart-color)] data-[state=checked]:border-[var(--chart-color)] border-muted-foreground"
+                      />
+                      <Label htmlFor={`metric-${metric}`} className="capitalize">
+                          {chartConfig[metric as keyof typeof chartConfig].label}
+                      </Label>
+                  </div>
+              ))}
+          </div>
         </CardHeader>
         <CardContent>
              <Table>

@@ -195,6 +195,29 @@ async function processAnalytics(
     return { source, timeSeries, totals, previousTotals };
 }
 
+// Function to get the full date range of data for a source
+async function getFullDateRange(sourceName: string) {
+    const ordersCollection = await getOrdersCollection();
+    const incomesCollection = await getIncomesCollection();
+
+    const orderDateRange = await ordersCollection.aggregate([
+        { $match: { source: sourceName } },
+        { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
+    ]).toArray();
+
+    const source = await incomesCollection.findOne({ name: sourceName });
+    let analyticsDates = source?.gigs.flatMap(g => g.analytics?.map(a => a.date) || []) || [];
+    let dataPointDates = source?.dataPoints?.map(dp => dp.date) || [];
+    const allDates = [...(orderDateRange[0]?.minDate ? [orderDateRange[0].minDate] : []), ...(orderDateRange[0]?.maxDate ? [orderDateRange[0].maxDate] : []), ...analyticsDates, ...dataPointDates].filter(Boolean);
+
+    if (allDates.length === 0) return null;
+
+    const sortedDates = allDates.map(d => new Date(d.replace(/-/g, '/'))).sort((a,b) => a.getTime() - b.getTime());
+
+    return { from: sortedDates[0], to: sortedDates[sortedDates.length - 1] };
+}
+
+
 // Public service functions
 export async function getGigAnalytics(gigId: string, fromDate?: string, toDate?: string): Promise<GigAnalyticsData | null> {
     const to = toDate ? new Date(toDate.replace(/-/g, '/')) : new Date();
@@ -222,10 +245,29 @@ export async function getGigAnalytics(gigId: string, fromDate?: string, toDate?:
 }
 
 export async function getSourceAnalytics(sourceId: string, fromDate?: string, toDate?: string): Promise<SourceAnalyticsData | null> {
-    const to = toDate ? new Date(toDate.replace(/-/g, '/')) : new Date();
-    const from = fromDate ? new Date(fromDate.replace(/-/g, '/')) : subDays(to, 29);
+    const incomesCollection = await getIncomesCollection();
+    const sourceDoc = await incomesCollection.findOne({_id: new ObjectId(sourceId)});
+    if (!sourceDoc) return null;
 
-    const result = await processAnalytics({ from, to }, { sourceId });
+    let dateRange;
+    if (fromDate && toDate) {
+        dateRange = { from: new Date(fromDate.replace(/-/g, '/')), to: new Date(toDate.replace(/-/g, '/')) };
+    } else {
+        const fullRange = await getFullDateRange(sourceDoc.name);
+        if (!fullRange) {
+             return {
+                sourceId,
+                sourceName: sourceDoc.name,
+                gigs: sourceDoc.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: g.messages })),
+                timeSeries: [],
+                totals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0, ctr: 0, conversionRate: 0 },
+                previousTotals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 }
+            };
+        }
+        dateRange = fullRange;
+    }
+
+    const result = await processAnalytics(dateRange, { sourceId });
     if (!result) return null;
     
     const { source, timeSeries, totals, previousTotals } = result;
