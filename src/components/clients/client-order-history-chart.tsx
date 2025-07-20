@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bar, BarChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Text } from 'recharts';
+import { Bar, BarChart, Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
@@ -10,19 +10,16 @@ import { BarChart2, LineChartIcon } from "lucide-react";
 import { 
     format, 
     startOfWeek,
-    endOfWeek,
     startOfMonth, 
     startOfQuarter,
     startOfYear,
     getQuarter, 
     getYear, 
-    parseISO,
     eachDayOfInterval,
     eachWeekOfInterval,
     eachMonthOfInterval,
     eachQuarterOfInterval,
     eachYearOfInterval,
-    isWithinInterval,
 } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -47,22 +44,6 @@ const chartConfig = {
 
 type ChartView = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
-const CustomXAxisTick = ({ x, y, payload }: any) => {
-    if (payload && payload.value) {
-        // Split value into parts if it contains a newline character
-        const parts = String(payload.value).split('\n');
-        return (
-            <Text x={x} y={y} dy={16} textAnchor="middle" fill="#666" fontSize={12}>
-                {parts.map((part, index) => (
-                    <tspan x={x} dy={index > 0 ? "1.2em" : 0} key={index}>{part}</tspan>
-                ))}
-            </Text>
-        );
-    }
-    return null;
-};
-
-
 export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChartProps) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
     const [chartView, setChartView] = useState<ChartView>('monthly');
@@ -74,14 +55,8 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
         const firstOrderDate = sortedData[0].dateObj;
         const lastOrderDate = sortedData[sortedData.length - 1].dateObj;
         const interval = { start: firstOrderDate, end: lastOrderDate };
-        
-        if (chartView === 'daily') {
-             return sortedData.map(order => ({
-                ...order,
-                dateLabel: format(order.dateObj, "MMM d"),
-            }));
-        }
 
+        // 1. Aggregate data by the selected view
         const aggregatedData: Record<string, { amount: number, count: number, dateObj: Date }> = {};
         
         sortedData.forEach(order => {
@@ -89,19 +64,11 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
             const date = order.dateObj;
 
             switch(chartView) {
-                case 'weekly':
-                    key = format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-                    break;
-                case 'monthly':
-                    key = format(startOfMonth(date), 'yyyy-MM');
-                    break;
-                case 'quarterly':
-                     const quarter = getQuarter(date);
-                     key = `${getYear(date)}-Q${quarter}`;
-                    break;
-                case 'yearly':
-                    key = getYear(date).toString();
-                    break;
+                case 'daily': key = format(date, 'yyyy-MM-dd'); break;
+                case 'weekly': key = format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
+                case 'monthly': key = format(startOfMonth(date), 'yyyy-MM'); break;
+                case 'quarterly': key = `${getYear(date)}-Q${getQuarter(date)}`; break;
+                case 'yearly': key = getYear(date).toString(); break;
             }
 
             if (!aggregatedData[key]) {
@@ -111,9 +78,10 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
             aggregatedData[key].count++;
         });
 
-        // Generate all intervals and fill in gaps
+        // 2. Generate all intervals to fill gaps
         let allIntervals: Date[];
         switch (chartView) {
+            case 'daily': allIntervals = eachDayOfInterval(interval); break;
             case 'weekly': allIntervals = eachWeekOfInterval(interval, { weekStartsOn: 1 }); break;
             case 'monthly': allIntervals = eachMonthOfInterval(interval); break;
             case 'quarterly': allIntervals = eachQuarterOfInterval(interval); break;
@@ -121,40 +89,39 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
             default: allIntervals = [];
         }
 
+        // 3. Map aggregated data to the full interval list
         return allIntervals.map(intervalDate => {
             let key = '';
             let dateLabel = '';
             
             switch (chartView) {
-                case 'weekly': {
+                case 'daily': {
                     key = format(intervalDate, 'yyyy-MM-dd');
-                    const weekEnd = endOfWeek(intervalDate, { weekStartsOn: 1 });
-                    const startMonth = format(intervalDate, 'MMM');
-                    const endMonth = format(weekEnd, 'MMM');
-                    const startDay = format(intervalDate, 'd');
-                    const endDay = format(weekEnd, 'd');
-                    const year = format(intervalDate, 'yyyy');
-
-                    if (startMonth === endMonth) {
-                        dateLabel = `${startMonth} ${startDay}-${endDay}\n${year}`;
-                    } else {
-                        dateLabel = `${startMonth} ${startDay} - ${endMonth} ${endDay}\n${year}`;
-                    }
+                    dateLabel = format(intervalDate, "MMM d, yy");
                     break;
                 }
-                case 'monthly':
+                case 'weekly': {
+                    key = format(intervalDate, 'yyyy-MM-dd');
+                    dateLabel = `W/C ${format(intervalDate, 'MMM d')}`;
+                    break;
+                }
+                case 'monthly': {
                     key = format(intervalDate, 'yyyy-MM');
                     dateLabel = format(intervalDate, "MMM yyyy");
                     break;
-                case 'quarterly':
+                }
+                case 'quarterly': {
+                    const year = getYear(intervalDate);
                     const quarter = getQuarter(intervalDate);
-                    key = `${getYear(intervalDate)}-Q${quarter}`;
+                    key = `${year}-Q${quarter}`;
                     dateLabel = key;
                     break;
-                case 'yearly':
+                }
+                case 'yearly': {
                     key = getYear(intervalDate).toString();
                     dateLabel = key;
                     break;
+                }
             }
 
             const dataPoint = aggregatedData[key];
@@ -181,15 +148,7 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
                 const order = payload?.[0]?.payload;
                 if (!order) return label;
                 
-                if (chartView === 'daily') {
-                    return (
-                        <div>
-                            <div>{format(order.dateObj, 'PPP')}</div>
-                            <div className="text-xs text-muted-foreground">ID: {order.id}</div>
-                        </div>
-                    )
-                }
-                return String(label).replace('\n', ' ');
+                return format(order.dateObj, 'PPP')
             }}
             indicator="dot" 
         />
@@ -240,15 +199,14 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
                 {chartData.length > 0 ? (
                     <ChartContainer config={chartConfig} className="h-[350px] w-full">
                        {chartType === 'bar' ? (
-                            <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: chartView === 'weekly' ? 40 : (chartView === 'daily' ? 50 : 5), left: 20 }}>
+                            <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                     dataKey="dateLabel"
                                     tickLine={false}
                                     axisLine={false}
                                     interval="preserveStartEnd"
-                                    height={chartView === 'weekly' ? 50 : (chartView === 'daily' ? 60 : 30)}
-                                    tick={<CustomXAxisTick />}
+                                    tick={{ fontSize: 12 }}
                                 />
                                 <YAxis
                                     tickLine={false}
@@ -263,15 +221,14 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
                                 <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
                             </BarChart>
                        ) : (
-                            <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: chartView === 'weekly' ? 40 : (chartView === 'daily' ? 50 : 5), left: 20 }}>
+                            <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 20 }}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                     dataKey="dateLabel"
                                     tickLine={false}
                                     axisLine={false}
                                     interval="preserveStartEnd"
-                                    height={chartView === 'weekly' ? 50 : (chartView === 'daily' ? 60 : 30)}
-                                    tick={<CustomXAxisTick />}
+                                    tick={{ fontSize: 12 }}
                                 />
                                 <YAxis
                                     tickLine={false}
