@@ -26,11 +26,13 @@ export interface TimeSeriesDataPoint {
     orders: number;
     revenue: number;
     messages: number;
+    ctr: number;
     prevImpressions: number;
     prevClicks: number;
     prevOrders: number;
     prevRevenue: number;
     prevMessages: number;
+    prevCtr: number;
 }
 
 export interface Totals {
@@ -50,7 +52,7 @@ export interface GigAnalyticsData {
     sourceTotalOrders: number;
     timeSeries: TimeSeriesDataPoint[];
     totals: Totals;
-    previousTotals: Omit<Totals, 'ctr' | 'conversionRate'>;
+    previousTotals: Omit<Totals, 'ctr' | 'conversionRate'> & { ctr: number };
 }
 
 export interface SourceAnalyticsData {
@@ -58,8 +60,8 @@ export interface SourceAnalyticsData {
     sourceName: string;
     gigs: { id: string; name: string; date: string; messages?: number }[];
     timeSeries: TimeSeriesDataPoint[];
-    totals: Omit<Totals, 'ctr' | 'conversionRate'>;
-    previousTotals: Omit<Totals, 'ctr' | 'conversionRate'>;
+    totals: Omit<Totals, 'conversionRate'>;
+    previousTotals: Omit<Totals, 'conversionRate'>;
 }
 
 // Shared data processing function
@@ -155,11 +157,13 @@ async function processAnalytics(
             orders: orderData.orders,
             revenue: orderData.revenue,
             messages: currentData.messages,
+            ctr: currentData.impressions > 0 ? (currentData.clicks / currentData.impressions) * 100 : 0,
             prevImpressions: prevData.impressions,
             prevClicks: prevData.clicks,
             prevOrders: prevOrderData.orders,
             prevRevenue: prevOrderData.revenue,
             prevMessages: prevData.messages,
+            prevCtr: prevData.impressions > 0 ? (prevData.clicks / prevData.impressions) * 100 : 0,
         };
     });
 
@@ -180,13 +184,19 @@ async function processAnalytics(
     };
     
     const calculatePreviousTotals = (series: TimeSeriesDataPoint[]) => {
-        return series.reduce((acc, curr) => ({
+        const totals = series.reduce((acc, curr) => ({
             impressions: acc.impressions + curr.prevImpressions,
             clicks: acc.clicks + curr.prevClicks,
             orders: acc.orders + curr.prevOrders,
             revenue: acc.revenue + curr.prevRevenue,
             messages: acc.messages + curr.prevMessages,
         }), { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 });
+        
+         return {
+            ...totals,
+            ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
+            conversionRate: totals.impressions > 0 ? (totals.orders / totals.impressions) * 100 : 0,
+        };
     }
 
     const totals = calculateTotals(timeSeries);
@@ -260,8 +270,8 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
                 sourceName: sourceDoc.name,
                 gigs: sourceDoc.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: g.messages })),
                 timeSeries: [],
-                totals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 },
-                previousTotals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 }
+                totals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0, ctr: 0 },
+                previousTotals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0, ctr: 0 }
             };
         }
         dateRange = fullRange;

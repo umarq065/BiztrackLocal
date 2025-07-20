@@ -3,7 +3,7 @@
 
 import { useMemo, lazy, Suspense, useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
-import { ArrowLeft, BarChart2, LineChartIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart2, LineChartIcon, Loader2, Percent } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatCard from "@/components/dashboard/stat-card";
@@ -27,13 +27,15 @@ const chartConfig = {
   revenue: { label: "Revenue", color: "hsl(var(--chart-5))"},
   impressions: { label: "Impressions", color: "hsl(var(--chart-1))" },
   clicks: { label: "Clicks", color: "hsl(var(--chart-2))" },
-  messages: { label: "Messages", color: "hsl(var(--chart-3))" },
   orders: { label: "Orders", color: "hsl(var(--chart-4))" },
+  messages: { label: "Messages", color: "hsl(var(--chart-3))" },
+  ctr: { label: "CTR (%)", color: "hsl(var(--accent))" },
   prevRevenue: { label: "Prev. Revenue", color: "hsl(var(--chart-5))"},
   prevImpressions: { label: "Prev. Impressions", color: "hsl(var(--chart-1))" },
   prevClicks: { label: "Prev. Clicks", color: "hsl(var(--chart-2))" },
-  prevMessages: { label: "Prev. Messages", color: "hsl(var(--chart-3))" },
   prevOrders: { label: "Prev. Orders", color: "hsl(var(--chart-4))" },
+  prevMessages: { label: "Prev. Messages", color: "hsl(var(--chart-3))" },
+  prevCtr: { label: "Prev. CTR (%)", color: "hsl(var(--accent))" },
 } satisfies ChartConfig;
 
 export default function SourceAnalyticsPage() {
@@ -59,6 +61,7 @@ export default function SourceAnalyticsPage() {
     clicks: true,
     orders: true,
     messages: true,
+    ctr: false,
   });
   const [showComparison, setShowComparison] = useState(false);
   
@@ -121,12 +124,15 @@ export default function SourceAnalyticsPage() {
     const avgOrderValue = totals.orders > 0 ? totals.revenue / totals.orders : 0;
     const prevAvgOrderValue = previousTotals.orders > 0 ? previousTotals.revenue / previousTotals.orders : 0;
     const aovChange = calculateChange(avgOrderValue, prevAvgOrderValue);
+    
+    const ctrChange = calculateChange(totals.ctr, previousTotals.ctr);
 
     return [
       { icon: "DollarSign", title: "Total Revenue", value: `$${totals.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, description: "vs. previous period", ...calculateChange(totals.revenue, previousTotals.revenue)},
       { icon: "CreditCard", title: "Avg. Order Value", value: `$${avgOrderValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, description: "vs. previous period", ...aovChange },
       { icon: "Eye", title: "Total Impressions", value: totals.impressions.toLocaleString(), description: "vs. previous period", ...calculateChange(totals.impressions, previousTotals.impressions) },
       { icon: "MousePointerClick", title: "Total Clicks", value: totals.clicks.toLocaleString(), description: "vs. previous period", ...calculateChange(totals.clicks, previousTotals.clicks) },
+      { icon: "Percent", title: "Click-Through Rate (CTR)", value: `${totals.ctr.toFixed(2)}%`, description: "vs. previous period", ...ctrChange },
       { icon: "ShoppingCart", title: "Total Orders", value: totals.orders.toLocaleString(), description: "vs. previous period", ...calculateChange(totals.orders, previousTotals.orders) },
       { icon: "MessageSquare", title: "Source Messages", value: totals.messages.toLocaleString(), description: "vs. previous period", ...calculateChange(totals.messages, previousTotals.messages) },
     ];
@@ -166,7 +172,7 @@ export default function SourceAnalyticsPage() {
 
       <section>
         <h2 className="mb-4 text-xl font-semibold">Overall Performance</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {sourceStats.map((stat, i) => (
             <StatCard key={i} {...stat} />
           ))}
