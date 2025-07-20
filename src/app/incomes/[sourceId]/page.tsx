@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { SourceAnalyticsData } from "@/lib/services/analyticsService";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SourcePerformanceChart = lazy(() => import('@/components/incomes/source-performance-chart').then(m => ({ default: m.SourcePerformanceChart })));
 
@@ -48,6 +49,7 @@ export default function SourceAnalyticsPage() {
   });
   
   const [chartType, setChartType] = useState('line');
+  const [chartView, setChartView] = useState('daily');
 
   const [activeMetrics, setActiveMetrics] = useState({
     impressions: true,
@@ -187,6 +189,18 @@ export default function SourceAnalyticsPage() {
                             />
                             <Label htmlFor="chart-type-toggle" className="text-sm font-normal">Bar</Label>
                         </div>
+                        <Select value={chartView} onValueChange={setChartView}>
+                            <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Select view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="daily">Daily</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="quarterly">Quarterly</SelectItem>
+                                <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                        </Select>
                         <div className="flex items-center gap-2">
                             <Checkbox id="show-comparison" checked={showComparison} onCheckedChange={(c) => setShowComparison(!!c)} />
                             <Label htmlFor="show-comparison">Compare</Label>
@@ -202,6 +216,7 @@ export default function SourceAnalyticsPage() {
                      activeMetrics={activeMetrics}
                      showComparison={showComparison}
                      chartType={chartType}
+                     chartView={chartView}
                    />
                 </Suspense>
             </CardContent>
