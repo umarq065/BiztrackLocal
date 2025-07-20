@@ -136,9 +136,9 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
                     const year = format(intervalDate, 'yyyy');
 
                     if (startMonth === endMonth) {
-                        dateLabel = `${startMonth} ${startDay}-${endDay},\n${year}`;
+                        dateLabel = `${startMonth} ${startDay}-${endDay}\n${year}`;
                     } else {
-                        dateLabel = `${startMonth} ${startDay} - ${endMonth} ${endDay},\n${year}`;
+                        dateLabel = `${startMonth} ${startDay} - ${endMonth} ${endDay}\n${year}`;
                     }
                     break;
                 }
@@ -296,4 +296,3 @@ export default function ClientOrderHistoryChart({ data }: ClientOrderHistoryChar
         </Card>
     );
 }
-
