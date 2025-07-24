@@ -7,22 +7,18 @@ import { DollarSign, ArrowUp, ArrowDown, BarChart, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { FinancialMetricData } from "@/lib/services/analyticsService";
 
 const FinancialValueChart = lazy(() => import("@/components/detailed-metrics/financial-value-chart"));
 const FinancialPercentageChart = lazy(() => import("@/components/detailed-metrics/financial-percentage-chart"));
 
-const financialMetrics = [
-  { name: "Total Revenue", value: "$45,231.89", formula: "Sum of all income from services", change: "+12.5%", changeType: "increase" as const },
-  { name: "Total Expenses", value: "$10,543.00", formula: "Sum of all business expenses", change: "+8.2%", changeType: "increase" as const, invertColor: true },
-  { name: "Net Profit", value: "$34,688.89", formula: "Total Revenue - Total Expenses", change: "+14.1%", changeType: "increase" as const },
-  { name: "Profit Margin (%)", value: "76.7%", formula: "(Net Profit / Total Revenue) × 100", change: "+1.8%", changeType: "increase" as const },
-  { name: "Gross Margin (%)", value: "85.2%", formula: "((Revenue - Cost of Services Sold) / Revenue) × 100", change: "-0.5%", changeType: "decrease" as const },
-  { name: "Client Acquisition Cost (CAC)", value: "$150.25", formula: "Total Sales & Marketing Costs / Number of New Clients", change: "+5.0%", changeType: "increase" as const, invertColor: true },
-  { name: "Customer Lifetime Value (CLTV)", value: "$2,540.75", formula: "AOV × Repeat Purchase Rate × Avg. Client Lifespan", change: "+20.3%", changeType: "increase" as const },
-  { name: "Average Order Value (AOV)", value: "$131.50", formula: "Total Revenue / Number of Orders", change: "-3.2%", changeType: "decrease" as const },
-];
+interface FinancialMetricsProps {
+    data: FinancialMetricData;
+}
 
-export function FinancialMetrics() {
+const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export function FinancialMetrics({ data }: FinancialMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,
@@ -33,6 +29,16 @@ export function FinancialMetrics() {
     setActivePercentageMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
 
+  const financialMetrics = [
+    { name: "Total Revenue", value: formatCurrency(data.totalRevenue.value), formula: "Sum of all income from services", change: `${data.totalRevenue.change.toFixed(1)}%`, changeType: data.totalRevenue.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Total Expenses", value: formatCurrency(data.totalExpenses.value), formula: "Sum of all business expenses", change: `${data.totalExpenses.change.toFixed(1)}%`, changeType: data.totalExpenses.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
+    { name: "Net Profit", value: formatCurrency(data.netProfit.value), formula: "Total Revenue - Total Expenses", change: `${data.netProfit.change.toFixed(1)}%`, changeType: data.netProfit.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Profit Margin (%)", value: `${data.profitMargin.value.toFixed(1)}%`, formula: "(Net Profit / Total Revenue) × 100", change: `${data.profitMargin.change.toFixed(1)}%`, changeType: data.profitMargin.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Gross Margin (%)", value: `${data.grossMargin.value.toFixed(1)}%`, formula: "((Revenue - Cost of Services) / Revenue) × 100", change: `${data.grossMargin.change.toFixed(1)}%`, changeType: data.grossMargin.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Client Acquisition Cost (CAC)", value: formatCurrency(data.cac.value), formula: "Sales & Marketing Costs / New Clients", change: `${data.cac.change.toFixed(1)}%`, changeType: data.cac.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
+    { name: "Customer Lifetime Value (CLTV)", value: formatCurrency(data.cltv.value), formula: "AOV × Repeat Purchase Rate × Avg. Lifespan", change: `${data.cltv.change.toFixed(1)}%`, changeType: data.cltv.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Average Order Value (AOV)", value: formatCurrency(data.aov.value), formula: "Total Revenue / Number of Orders", change: `${data.aov.change.toFixed(1)}%`, changeType: data.aov.change >= 0 ? "increase" : "decrease" as const },
+  ];
 
   return (
     <Card>
@@ -81,10 +87,11 @@ export function FinancialMetrics() {
        {showChart && (
         <CardContent className="space-y-6">
              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <FinancialValueChart />
+                <FinancialValueChart data={data.timeSeries} />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <FinancialPercentageChart 
+                  data={data.timeSeries}
                   activeMetrics={activePercentageMetrics}
                   onMetricToggle={handlePercentageMetricToggle}
                 />

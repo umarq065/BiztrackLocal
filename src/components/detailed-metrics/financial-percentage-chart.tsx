@@ -8,15 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '../ui/separator';
 import { BookText } from 'lucide-react';
-
-const chartData = [
-  { month: "Jan", profitMargin: 55.6, grossMargin: 80.0 },
-  { month: "Feb", profitMargin: 56.8, grossMargin: 82.5, note: "Reduced software costs." },
-  { month: "Mar", profitMargin: 56.0, grossMargin: 81.0 },
-  { month: "Apr", profitMargin: 60.0, grossMargin: 85.0 },
-  { month: "May", profitMargin: 58.9, grossMargin: 84.5 },
-  { month: "Jun", profitMargin: 76.7, grossMargin: 85.2, note: "High-margin project completed." },
-];
+import type { FinancialMetricTimeSeries } from '@/lib/services/analyticsService';
 
 const chartConfig = {
     profitMargin: { label: "Profit Margin", color: "hsl(var(--chart-1))" },
@@ -24,6 +16,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 interface FinancialPercentageChartProps {
+    data: FinancialMetricTimeSeries[];
     activeMetrics: Record<string, boolean>;
     onMetricToggle: (metric: string) => void;
 }
@@ -78,7 +71,7 @@ const CustomDot = (props: any) => {
 };
 
 
-export default function FinancialPercentageChart({ activeMetrics, onMetricToggle }: FinancialPercentageChartProps) {
+export default function FinancialPercentageChart({ data, activeMetrics, onMetricToggle }: FinancialPercentageChartProps) {
     return (
         <Card>
             <CardHeader>
@@ -109,7 +102,7 @@ export default function FinancialPercentageChart({ activeMetrics, onMetricToggle
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                    <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid vertical={false} />
                         <XAxis
                             dataKey="month"

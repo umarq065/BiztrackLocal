@@ -1,5 +1,6 @@
 
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -93,6 +94,30 @@ export interface GrowthMetricData {
   vipClientGrowth: { value: number; change: number };
   topSourceGrowth: { value: number; change: number; source: string };
   timeSeries: GrowthMetricTimeSeries[];
+}
+
+export interface FinancialMetricTimeSeries {
+  month: string;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: number;
+  grossMargin: number;
+  cac: number;
+  cltv: number;
+  aov: number;
+}
+
+export interface FinancialMetricData {
+    totalRevenue: { value: number; change: number };
+    totalExpenses: { value: number; change: number };
+    netProfit: { value: number; change: number };
+    profitMargin: { value: number; change: number };
+    grossMargin: { value: number; change: number };
+    cac: { value: number; change: number };
+    cltv: { value: number; change: number };
+    aov: { value: number; change: number };
+    timeSeries: FinancialMetricTimeSeries[];
 }
 
 
@@ -329,11 +354,12 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
     const toDate = parseISO(to);
     const duration = differenceInDays(toDate, fromDate);
     
-    // P2 is the current period, P1 is the previous, P0 is the one before that.
-    const P1_to = subDays(fromDate, 1);
-    const P1_from = subDays(P1_to, duration);
+    const P2_from = fromDate;
+    const P2_to = toDate;
+    const P1_from = subDays(P2_from, duration + 1);
+    const P1_to = subDays(P2_from, 1);
+    const P0_from = subDays(P1_from, duration + 1);
     const P0_to = subDays(P1_from, 1);
-    const P0_from = subDays(P0_to, duration);
 
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
@@ -346,19 +372,19 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
         const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, status: 'Completed' }).toArray();
-        const sourcesPromise = ordersCol.aggregate([{$match: {date: {$gte: startStr, $lte: endStr}}}, {$group: {_id: "$source", revenue: {$sum: "$amount"}}}, {$sort: {revenue: -1}}, {$limit: 1}]).toArray();
+        const sourcesPromise = ordersCol.aggregate([{$match: {date: {$gte: startStr, $lte: endStr}, status: 'Completed'}}, {$group: {_id: "$source", revenue: {$sum: "$amount"}}}, {$sort: {revenue: -1}}, {$limit: 1}]).toArray();
         
-        // Client metrics
         const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
-        const allClientsWithOrdersPromise = ordersCol.aggregate([ { $group: { _id: "$clientUsername", lastOrder: { $max: "$date" } } } ]).toArray();
+        const allClientsWithOrdersPromise = await clientsCol.aggregate([ { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'orders' } }, { $addFields: { lastOrderDate: { $max: '$orders.date' } } }, { $project: { _id: 1, lastOrderDate: 1 } } ]).toArray();
         const vipClientsPromise = clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr} });
         
         const [revenueRes, expensesRes, ordersInPeriod, topSourceRes, newClients, allClientsWithOrders, vipClients] = await Promise.all([
             revenuePromise, expensesPromise, ordersInPeriodPromise, sourcesPromise, newClientsPromise, allClientsWithOrdersPromise, vipClientsPromise
         ]);
-
-        const clientsAtStart = allClientsWithOrders.filter(c => c.lastOrder < startStr).length;
-        const inactiveClients = allClientsWithOrders.filter(c => c.lastOrder < startStr && c.lastOrder > format(sub(start, { months: 6 }), 'yyyy-MM-dd')).length; // A proxy for "lost"
+        
+        const clientsAtStart = allClientsWithOrders.filter(c => c.lastOrderDate && c.lastOrderDate < startStr).length;
+        const periodStartForLost = sub(start, { months: 6 });
+        const inactiveClients = allClientsWithOrders.filter(c => c.lastOrderDate && c.lastOrderDate < format(periodStartForLost, 'yyyy-MM-dd')).length;
 
         const revenue = revenueRes[0]?.total || 0;
         const expenses = expensesRes[0]?.total || 0;
@@ -370,34 +396,29 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
     };
 
     const [P2_metrics, P1_metrics, P0_metrics] = await Promise.all([
-        calcPeriodMetrics(fromDate, toDate),         // Current
-        calcPeriodMetrics(P1_from, P1_to),          // Previous
-        calcPeriodMetrics(P0_from, P0_to)           // Period before previous
+        calcPeriodMetrics(P2_from, P2_to),
+        calcPeriodMetrics(P1_from, P1_to),
+        calcPeriodMetrics(P0_from, P0_to)
     ]);
-
+    
     const calculateGrowth = (currentVal: number, prevVal: number) => prevVal === 0 ? (currentVal > 0 ? 100 : 0) : ((currentVal - prevVal) / prevVal) * 100;
     
-    // Calculate growth rates for the current period (P2 vs P1)
     const currentRevenueGrowth = calculateGrowth(P2_metrics.revenue, P1_metrics.revenue);
-    const currentProfitGrowth = calculateGrowth(P2_metrics.netProfit, P1_metrics.netProfit);
-    const currentAovGrowth = calculateGrowth(P2_metrics.aov, P1_metrics.aov);
-    const currentVipGrowth = calculateGrowth(P2_metrics.vipClients, P1_metrics.vipClients);
-    const currentTopSourceGrowth = calculateGrowth(P2_metrics.topSource.revenue, P1_metrics.topSource.revenue);
-    const currentClientGrowth = P1_metrics.clientsAtStart > 0 ? ((P2_metrics.newClients - P1_metrics.inactiveClients) / P1_metrics.clientsAtStart) * 100 : (P2_metrics.newClients > 0 ? 100 : 0);
-
-    // Calculate growth rates for the previous period (P1 vs P0)
     const prevRevenueGrowth = calculateGrowth(P1_metrics.revenue, P0_metrics.revenue);
+    const currentProfitGrowth = calculateGrowth(P2_metrics.netProfit, P1_metrics.netProfit);
     const prevProfitGrowth = calculateGrowth(P1_metrics.netProfit, P0_metrics.netProfit);
+    const currentAovGrowth = calculateGrowth(P2_metrics.aov, P1_metrics.aov);
     const prevAovGrowth = calculateGrowth(P1_metrics.aov, P0_metrics.aov);
+    const currentVipGrowth = calculateGrowth(P2_metrics.vipClients, P1_metrics.vipClients);
     const prevVipGrowth = calculateGrowth(P1_metrics.vipClients, P0_metrics.vipClients);
+    const currentTopSourceGrowth = calculateGrowth(P2_metrics.topSource.revenue, P1_metrics.topSource.revenue);
     const prevTopSourceGrowth = calculateGrowth(P1_metrics.topSource.revenue, P0_metrics.topSource.revenue);
+    const currentClientGrowth = P1_metrics.clientsAtStart > 0 ? ((P2_metrics.newClients - P1_metrics.inactiveClients) / P1_metrics.clientsAtStart) * 100 : (P2_metrics.newClients > 0 ? 100 : 0);
     const prevClientGrowth = P0_metrics.clientsAtStart > 0 ? ((P1_metrics.newClients - P0_metrics.inactiveClients) / P0_metrics.clientsAtStart) * 100 : (P1_metrics.newClients > 0 ? 100 : 0);
 
-    // Calculate the change *between* the growth rates
     const calculateGrowthChange = (currentGrowth: number, prevGrowth: number) => currentGrowth - prevGrowth;
 
     const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map(monthStart => {
-        // Dummy data for chart - in a real scenario, this would be another aggregation
         return {
             month: format(monthStart, 'MMM'),
             revenueGrowth: Math.random() * 5,
@@ -417,5 +438,86 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
         vipClientGrowth: { value: currentVipGrowth, change: calculateGrowthChange(currentVipGrowth, prevVipGrowth) },
         topSourceGrowth: { value: currentTopSourceGrowth, change: calculateGrowthChange(currentTopSourceGrowth, prevTopSourceGrowth), source: P2_metrics.topSource.source },
         timeSeries,
+    };
+}
+
+
+export async function getFinancialMetrics(from: string, to: string): Promise<FinancialMetricData> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+    const duration = differenceInDays(toDate, fromDate);
+    
+    const P1_to = subDays(fromDate, 1);
+    const P1_from = subDays(P1_to, duration);
+
+    const ordersCol = await getOrdersCollection();
+    const expensesCol = await getExpensesCollection();
+    const clientsCol = await getClientsCollection();
+    
+    const calcPeriodMetrics = async (start: Date, end: Date) => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+
+        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const ordersCountPromise = ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Completed' });
+        
+        const marketingExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const newClientsCountPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
+        
+        const [revenueRes, expensesRes, ordersCount, marketingExpensesRes, newClientsCount] = await Promise.all([
+            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, newClientsCountPromise
+        ]);
+        
+        const revenue = revenueRes[0]?.total || 0;
+        const expenses = expensesRes[0]?.total || 0;
+        const marketingExpenses = marketingExpensesRes[0]?.total || 0;
+
+        return {
+            totalRevenue: revenue,
+            totalExpenses: expenses,
+            netProfit: revenue - expenses,
+            profitMargin: revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0,
+            grossMargin: revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0, // Using expenses as COGS proxy
+            cac: newClientsCount > 0 ? marketingExpenses / newClientsCount : 0,
+            cltv: 0, // Placeholder as we can't calculate this accurately yet
+            aov: ordersCount > 0 ? revenue / ordersCount : 0,
+        };
+    };
+
+    const [currentMetrics, prevMetrics] = await Promise.all([
+        calcPeriodMetrics(fromDate, toDate),
+        calcPeriodMetrics(P1_from, P1_to)
+    ]);
+    
+    const calculateChange = (current: number, prev: number) => prev === 0 ? (current !== 0 ? 100 : 0) : ((current - prev) / prev) * 100;
+    
+    // Time Series data (dummy for now)
+    const timeSeries: FinancialMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map(monthStart => {
+        // In a real app, this would be another aggregation by month
+        const dummyRevenue = currentMetrics.totalRevenue / (differenceInDays(toDate, fromDate)/30.44);
+        return {
+            month: format(monthStart, 'MMM'),
+            totalRevenue: dummyRevenue * (0.8 + Math.random() * 0.4),
+            totalExpenses: currentMetrics.totalExpenses / (differenceInDays(toDate, fromDate)/30.44) * (0.8 + Math.random() * 0.4),
+            netProfit: (dummyRevenue - currentMetrics.totalExpenses / (differenceInDays(toDate, fromDate)/30.44)) * (0.8 + Math.random() * 0.4),
+            profitMargin: currentMetrics.profitMargin * (0.95 + Math.random() * 0.1),
+            grossMargin: currentMetrics.grossMargin * (0.95 + Math.random() * 0.1),
+            cac: currentMetrics.cac * (0.9 + Math.random() * 0.2),
+            cltv: 0,
+            aov: currentMetrics.aov * (0.95 + Math.random() * 0.1),
+        };
+    });
+
+    return {
+        totalRevenue: { value: currentMetrics.totalRevenue, change: calculateChange(currentMetrics.totalRevenue, prevMetrics.totalRevenue) },
+        totalExpenses: { value: currentMetrics.totalExpenses, change: calculateChange(currentMetrics.totalExpenses, prevMetrics.totalExpenses) },
+        netProfit: { value: currentMetrics.netProfit, change: calculateChange(currentMetrics.netProfit, prevMetrics.netProfit) },
+        profitMargin: { value: currentMetrics.profitMargin, change: currentMetrics.profitMargin - prevMetrics.profitMargin },
+        grossMargin: { value: currentMetrics.grossMargin, change: currentMetrics.grossMargin - prevMetrics.grossMargin },
+        cac: { value: currentMetrics.cac, change: calculateChange(currentMetrics.cac, prevMetrics.cac) },
+        cltv: { value: currentMetrics.cltv, change: calculateChange(currentMetrics.cltv, prevMetrics.cltv) },
+        aov: { value: currentMetrics.aov, change: calculateChange(currentMetrics.aov, prevMetrics.aov) },
+        timeSeries
     };
 }

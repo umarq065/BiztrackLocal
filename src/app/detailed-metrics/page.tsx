@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialIncomeSources } from "@/lib/data/incomes-data";
-import { type GrowthMetricData } from "@/lib/services/analyticsService";
+import { type GrowthMetricData, type FinancialMetricData } from "@/lib/services/analyticsService";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -50,6 +50,7 @@ const DetailedMetricsPageComponent = () => {
 
   const [source, setSource] = useState("all");
   const [growthMetrics, setGrowthMetrics] = useState<GrowthMetricData | null>(null);
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetricData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const createQueryString = useCallback(
@@ -76,28 +77,40 @@ const DetailedMetricsPageComponent = () => {
   };
   
   useEffect(() => {
-    async function fetchGrowthMetrics() {
+    async function fetchAllMetrics() {
       if (!date?.from || !date?.to) return;
       setIsLoading(true);
+      
+      const from = format(date.from, 'yyyy-MM-dd');
+      const to = format(date.to, 'yyyy-MM-dd');
+      
       try {
-        const from = format(date.from, 'yyyy-MM-dd');
-        const to = format(date.to, 'yyyy-MM-dd');
-        const res = await fetch(`/api/analytics/growth?from=${from}&to=${to}`);
-        if (!res.ok) throw new Error('Failed to fetch growth metrics.');
-        const data = await res.json();
-        setGrowthMetrics(data);
+        const [growthRes, financialRes] = await Promise.all([
+            fetch(`/api/analytics/growth?from=${from}&to=${to}`),
+            fetch(`/api/analytics/financials?from=${from}&to=${to}`)
+        ]);
+
+        if (!growthRes.ok) throw new Error('Failed to fetch growth metrics.');
+        if (!financialRes.ok) throw new Error('Failed to fetch financial metrics.');
+        
+        const growthData = await growthRes.json();
+        const financialData = await financialRes.json();
+
+        setGrowthMetrics(growthData);
+        setFinancialMetrics(financialData);
+
       } catch (e: any) {
         console.error(e);
         toast({
           variant: 'destructive',
-          title: 'Error',
-          description: e.message || 'Could not load growth metrics data.',
+          title: 'Error Loading Metrics',
+          description: e.message || 'Could not load key metrics data.',
         });
       } finally {
         setIsLoading(false);
       }
     }
-    fetchGrowthMetrics();
+    fetchAllMetrics();
   }, [date, toast]);
 
 
@@ -126,12 +139,8 @@ const DetailedMetricsPageComponent = () => {
       </div>
 
       <div className="space-y-8">
-        {isLoading ? (
-          <Skeleton className="h-[250px] w-full" />
-        ) : (
-          growthMetrics && <GrowthMetrics data={growthMetrics} />
-        )}
-        <FinancialMetrics />
+        {isLoading ? <Skeleton className="h-[250px] w-full" /> : growthMetrics && <GrowthMetrics data={growthMetrics} />}
+        {isLoading ? <Skeleton className="h-[250px] w-full" /> : financialMetrics && <FinancialMetrics data={financialMetrics} />}
         <ClientMetrics />
         <SalesMetrics />
         <MarketingMetrics />

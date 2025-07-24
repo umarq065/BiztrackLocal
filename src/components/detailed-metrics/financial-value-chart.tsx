@@ -9,15 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from "../ui/separator";
 import { BookText } from "lucide-react";
-
-const chartData = [
-  { month: "Jan", totalRevenue: 18000, totalExpenses: 8000, netProfit: 10000, cac: 120, cltv: 1800, aov: 110 },
-  { month: "Feb", totalRevenue: 22000, totalExpenses: 9500, netProfit: 12500, cac: 135, cltv: 2100, aov: 115 },
-  { month: "Mar", totalRevenue: 25000, totalExpenses: 11000, netProfit: 14000, cac: 130, cltv: 2200, aov: 120, note: "Major project payment received." },
-  { month: "Apr", totalRevenue: 30000, totalExpenses: 12000, netProfit: 18000, cac: 110, cltv: 2500, aov: 125 },
-  { month: "May", totalRevenue: 28000, totalExpenses: 11500, netProfit: 16500, cac: 115, cltv: 2400, aov: 122 },
-  { month: "Jun", totalRevenue: 45231, totalExpenses: 10543, netProfit: 34688, cac: 150, cltv: 2540, aov: 131, note: "End of quarter rush." },
-];
+import type { FinancialMetricTimeSeries } from "@/lib/services/analyticsService";
 
 const highValueChartConfig = {
     totalRevenue: { label: "Total Revenue", color: "hsl(var(--chart-1))" },
@@ -30,6 +22,10 @@ const customerValueChartConfig = {
     cac: { label: "CAC", color: "hsl(var(--chart-4))" },
     aov: { label: "AOV", color: "hsl(var(--primary))" },
 } satisfies ChartConfig;
+
+interface FinancialValueChartProps {
+  data: FinancialMetricTimeSeries[];
+}
 
 const CustomTooltip = ({ active, payload, label, config }: any) => {
   if (active && payload && payload.length) {
@@ -80,7 +76,7 @@ const CustomDot = (props: any) => {
   return null;
 };
 
-export default function FinancialValueChart() {
+export default function FinancialValueChart({ data }: FinancialValueChartProps) {
     const [activeHighValueMetrics, setActiveHighValueMetrics] = useState({
         totalRevenue: true,
         totalExpenses: true,
@@ -128,7 +124,7 @@ export default function FinancialValueChart() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={highValueChartConfig} className="h-[300px] w-full">
-                        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                        <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                             <CartesianGrid vertical={false} />
                             <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                             <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `$${value / 1000}k`} />
@@ -166,7 +162,7 @@ export default function FinancialValueChart() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={customerValueChartConfig} className="h-[300px] w-full">
-                        <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                        <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                             <CartesianGrid vertical={false} />
                             <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
                             <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `$${value}`} />
