@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -623,7 +622,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
     };
 }
 
-export async function getYearlyStats(year: number): Promise<Partial<SingleYearData>> {
+export async function getYearlyStats(year: number): Promise<SingleYearData> {
     const ordersCol = await getOrdersCollection();
     const competitorsCol = await getCompetitorsCollection();
     const expensesCol = await getExpensesCollection();
@@ -631,14 +630,20 @@ export async function getYearlyStats(year: number): Promise<Partial<SingleYearDa
     const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
 
-    // Initialize default structures
-    const myMonthlyOrders = Array(12).fill(0);
-    const monthlyFinancials = Array(12).fill(0).map((_, i) => ({
-        month: format(new Date(year, i, 1), 'MMM'),
-        revenue: 0,
-        expenses: 0,
-        profit: 0
-    }));
+    // Create a default structure for the full year
+    const defaultData: SingleYearData = {
+        year: year,
+        myTotalYearlyOrders: 0,
+        monthlyOrders: Array(12).fill(0),
+        competitors: [],
+        monthlyFinancials: Array(12).fill(0).map((_, i) => ({
+            month: format(new Date(year, i, 1), 'MMM'),
+            revenue: 0,
+            expenses: 0,
+            profit: 0
+        })),
+        monthlyTargetRevenue: Array(12).fill(0),
+    };
 
     // 1. Get My Orders and Revenue, grouped by month
     const myMonthlyDataArr = await ordersCol.aggregate([
@@ -651,15 +656,15 @@ export async function getYearlyStats(year: number): Promise<Partial<SingleYearDa
     myMonthlyDataArr.forEach(item => {
         const monthIndex = parseInt(item._id, 10) - 1;
         if (monthIndex >= 0 && monthIndex < 12) {
-            myMonthlyOrders[monthIndex] = item.orders;
-            monthlyFinancials[monthIndex].revenue = item.revenue;
+            defaultData.monthlyOrders[monthIndex] = item.orders;
+            defaultData.monthlyFinancials[monthIndex].revenue = item.revenue;
         }
     });
 
     // 2. Get Expenses, grouped by month
     const monthlyExpensesArr = await expensesCol.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
-        { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } },
+        { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } } ,
         { $group: { _id: '$month', totalExpenses: { $sum: '$amount' } } },
         { $sort: { '_id': 1 } }
     ]).toArray();
@@ -667,20 +672,19 @@ export async function getYearlyStats(year: number): Promise<Partial<SingleYearDa
     monthlyExpensesArr.forEach(item => {
         const monthIndex = parseInt(item._id, 10) - 1;
         if (monthIndex >= 0 && monthIndex < 12) {
-            monthlyFinancials[monthIndex].expenses = item.totalExpenses;
+            defaultData.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
         }
     });
 
-    // 3. Calculate Profit
-    monthlyFinancials.forEach(mf => {
+    // 3. Calculate Profit and Totals
+    defaultData.monthlyFinancials.forEach(mf => {
         mf.profit = mf.revenue - mf.expenses;
     });
-
-    const myTotalYearlyOrders = myMonthlyOrders.reduce((sum, count) => sum + count, 0);
+    defaultData.myTotalYearlyOrders = defaultData.monthlyOrders.reduce((sum, count) => sum + count, 0);
 
     // 4. Get Competitor Data
     const competitors = await competitorsCol.find({}).toArray();
-    const competitorYearlyData = competitors.map(comp => {
+    defaultData.competitors = competitors.map(comp => {
         const monthlyOrders = Array(12).fill(0);
         (comp.monthlyData || [])
             .filter(d => d.year === year)
@@ -696,11 +700,5 @@ export async function getYearlyStats(year: number): Promise<Partial<SingleYearDa
         };
     });
 
-    return {
-        year,
-        myTotalYearlyOrders,
-        monthlyOrders: myMonthlyOrders,
-        competitors: competitorYearlyData,
-        monthlyFinancials: monthlyFinancials,
-    };
+    return defaultData;
 }
