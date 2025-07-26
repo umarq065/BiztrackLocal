@@ -33,10 +33,12 @@ export async function GET(request: Request, { params }: { params: { year: string
         monthlyTargetRevenue: Array(12).fill(0),
     };
 
-    // Merge fetched data into the default structure
+    // Merge fetched data into the default structure, ensuring nested arrays are also defaulted
     const yearlyStatsData: SingleYearData = {
         ...defaultData,
         ...fetchedData,
+        monthlyFinancials: fetchedData.monthlyFinancials || defaultData.monthlyFinancials,
+        monthlyTargetRevenue: fetchedData.monthlyTargetRevenue || defaultData.monthlyTargetRevenue,
         competitors: fetchedData.competitors || [],
     };
     
