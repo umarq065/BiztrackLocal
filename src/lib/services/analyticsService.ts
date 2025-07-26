@@ -1,14 +1,16 @@
 
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
 import { ObjectId } from 'mongodb';
-import { format, subDays, eachDayOfInterval, differenceInDays, parseISO, sub, startOfMonth, endOfMonth, eachMonthOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, differenceInDays, parseISO, sub, startOfMonth, endOfMonth, eachMonthOfInterval, startOfYear, endOfYear } from 'date-fns';
 import clientPromise from '@/lib/mongodb';
-import type { IncomeSource } from '@/lib/data/incomes-data';
+import type { IncomeSource, Competitor } from '@/lib/data/incomes-data';
 import type { Client } from '@/lib/data/clients-data';
 import type { Order } from '@/lib/data/orders-data';
+import type { SingleYearData } from '@/lib/data/yearly-stats-data';
 
 // Helper function to get database collections
 async function getIncomesCollection() {
@@ -29,6 +31,11 @@ async function getExpensesCollection() {
 async function getClientsCollection() {
     const client = await clientPromise;
     return client.db("biztrack-pro").collection<Omit<Client, 'id'>>('clients');
+}
+
+async function getCompetitorsCollection() {
+    const client = await clientPromise;
+    return client.db("biztrack-pro").collection<Competitor>('competitors');
 }
 
 // Interfaces for Analytics Data
@@ -363,15 +370,19 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
 export async function getGrowthMetrics(from: string, to: string): Promise<GrowthMetricData> {
     const fromDate = parseISO(from);
     const toDate = parseISO(to);
-    const duration = differenceInDays(toDate, fromDate);
     
-    const P2_from = fromDate;
-    const P2_to = toDate;
-    const P1_from = subDays(P2_from, duration + 1);
-    const P1_to = subDays(P2_from, 1);
-    const P0_from = subDays(P1_from, duration + 1);
-    const P0_to = subDays(P1_from, 1);
+    const durationInDays = differenceInDays(toDate, fromDate);
 
+    // Define three consecutive periods
+    const P2_to = toDate;
+    const P2_from = fromDate;
+
+    const P1_to = subDays(P2_from, 1);
+    const P1_from = subDays(P1_to, durationInDays);
+
+    const P0_to = subDays(P1_from, 1);
+    const P0_from = subDays(P0_to, durationInDays);
+    
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
     const clientsCol = await getClientsCollection();
@@ -533,66 +544,69 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
 export async function getClientMetrics(from: string, to: string): Promise<ClientMetricData> {
     const fromDate = parseISO(from);
     const toDate = parseISO(to);
-    const duration = differenceInDays(toDate, fromDate);
-    
-    const P1_to = subDays(fromDate, 1);
-    const P1_from = subDays(P1_to, duration);
-
-    const ordersCol = await getOrdersCollection();
-    const clientsCol = await getClientsCollection();
     
     const calcPeriodMetrics = async (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
-
-        const totalClientsUsernames = await ordersCol.distinct('clientUsername', { date: { $gte: startStr, $lte: endStr } });
-        const newClientsCount = await clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
         
-        const clientsWithFirstOrderInPeriod = new Set((await clientsCol.find({ clientSince: { $gte: startStr, $lte: endStr } }).toArray()).map(c => c.username));
-        const ordersInPeriod = await ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray();
-        const repeatOrdersCount = ordersInPeriod.filter(o => !clientsWithFirstOrderInPeriod.has(o.clientUsername)).length;
+        const ordersCol = await getOrdersCollection();
+        const clientsCol = await getClientsCollection();
         
-        const clientsAtStart = await clientsCol.countDocuments({ clientSince: { $lt: startStr } });
-        const activeInLastSixMonths = new Set((await ordersCol.distinct('clientUsername', { date: { $gte: format(sub(start, { months: 6 }), 'yyyy-MM-dd'), $lt: startStr } })));
-        const retainedClients = await ordersCol.distinct('clientUsername', { date: { $gte: startStr, $lte: endStr }, clientUsername: { $in: Array.from(activeInLastSixMonths) }});
-        const retentionRate = activeInLastSixMonths.size > 0 ? (retainedClients.length / activeInLastSixMonths.size) * 100 : 0;
+        const [
+            totalClientsInPeriod,
+            newClientsInPeriod,
+            ordersInPeriod,
+            cancelledInPeriod,
+            csatResults,
+            lifespanResults
+        ] = await Promise.all([
+            ordersCol.distinct('clientUsername', { date: { $gte: startStr, $lte: endStr } }),
+            clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
+            ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray(),
+            ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled' }),
+            ordersCol.aggregate([
+                { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
+                { $group: { _id: null, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, totalRatings: { $sum: 1 }, avgRating: { $avg: '$rating' } } }
+            ]).toArray(),
+            clientsCol.aggregate([
+                { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
+                { $match: { 'clientOrders.1': { $exists: true } } },
+                { $project: { firstOrder: { $min: '$clientOrders.date' }, lastOrder: { $max: '$clientOrders.date' } } },
+                { $match: { lastOrder: { $lt: startStr } } },
+                { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
+                { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
+            ]).toArray()
+        ]);
+
+        const firstTimeBuyersInPeriod = new Set(
+            (await clientsCol.find({ clientSince: { $gte: startStr, $lte: endStr } }, { projection: { username: 1 } }).toArray()).map(c => c.username)
+        );
+
+        const repeatOrdersCount = ordersInPeriod.filter(o => !firstTimeBuyersInPeriod.has(o.clientUsername)).length;
         
-        const csatRes = await ordersCol.aggregate([
-            { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
-            { $group: { _id: null, totalRatings: { $sum: 1 }, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, avgRating: { $avg: '$rating' } } }
-        ]).toArray();
-        const csat = csatRes[0] ? (csatRes[0].positiveRatings / csatRes[0].totalRatings) * 100 : 0;
-        const avgRating = csatRes[0]?.avgRating || 0;
-        const cancelledOrders = ordersInPeriod.filter(o => o.status === 'Cancelled').length;
+        const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
+        const avgRating = csatResults[0]?.avgRating || 0;
+        const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
 
-        // Correct Lifespan Calculation
-        const lifespanRes = await clientsCol.aggregate([
-            { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'orders' } },
-            { $match: { 'orders.1': { $exists: true } } },
-            { $project: {
-                firstOrderDate: { $min: '$orders.date' },
-                lastOrderDate: { $max: '$orders.date' },
-            }},
-            { $match: { lastOrderDate: { $lt: startStr } } }, // Churned before the period starts
-            { $project: {
-                lifespan: { $divide: [
-                    { $subtract: [ 
-                        { $dateFromString: { dateString: '$lastOrderDate' } }, 
-                        { $dateFromString: { dateString: '$firstOrderDate' } } 
-                    ]},
-                    1000 * 60 * 60 * 24 * 30.44 // Convert ms to months
-                ]}
-            }},
-            { $group: { _id: null, avgLifespan: { $avg: '$lifespan' } } }
-        ]).toArray();
-        const avgLifespan = lifespanRes[0]?.avgLifespan || 0;
-
-        return { totalClients: totalClientsUsernames.length, newClients: newClientsCount, repeatOrders: repeatOrdersCount, retentionRate, csat, avgRating, cancelledOrders, avgLifespan };
+        return {
+            totalClients: totalClientsInPeriod.length,
+            newClients: newClientsInPeriod,
+            repeatOrders: repeatOrdersCount,
+            retentionRate: 0, // This metric needs a more stable definition across periods.
+            avgLifespan: avgLifespanMonths,
+            csat,
+            avgRating,
+            cancelledOrders: cancelledInPeriod
+        };
     };
+
+    const durationDays = differenceInDays(toDate, fromDate);
+    const prevToDate = subDays(fromDate, 1);
+    const prevFromDate = subDays(prevToDate, durationDays);
 
     const [currentMetrics, prevMetrics] = await Promise.all([
         calcPeriodMetrics(fromDate, toDate),
-        calcPeriodMetrics(P1_from, P1_to)
+        calcPeriodMetrics(prevFromDate, prevToDate)
     ]);
     
     const calculateChange = (current: number, prev: number) => prev === 0 ? (current !== 0 ? 100 : 0) : ((current - prev) / prev) * 100;
@@ -606,5 +620,52 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         csat: { value: currentMetrics.csat, change: currentMetrics.csat - prevMetrics.csat },
         avgRating: { value: currentMetrics.avgRating, change: currentMetrics.avgRating - prevMetrics.avgRating },
         cancelledOrders: { value: currentMetrics.cancelledOrders, change: calculateChange(currentMetrics.cancelledOrders, prevMetrics.cancelledOrders) },
+    };
+}
+
+export async function getYearlyStats(year: number): Promise<Partial<SingleYearData>> {
+    const ordersCol = await getOrdersCollection();
+    const competitorsCol = await getCompetitorsCollection();
+
+    const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
+    const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
+
+    // 1. Get My Orders, grouped by month
+    const myMonthlyOrdersArr = await ordersCol.aggregate([
+        { $match: { date: { $gte: yearStart, $lte: yearEnd }, status: 'Completed' } },
+        { $project: { month: { $substr: ['$date', 5, 2] }, amount: '$amount' } },
+        { $group: { _id: '$month', orders: { $sum: 1 }, revenue: { $sum: '$amount' } } },
+        { $sort: { '_id': 1 } }
+    ]).toArray();
+
+    const myMonthlyOrders = Array(12).fill(0);
+    myMonthlyOrdersArr.forEach(item => {
+        myMonthlyOrders[parseInt(item._id, 10) - 1] = item.orders;
+    });
+    const myTotalYearlyOrders = myMonthlyOrders.reduce((sum, count) => sum + count, 0);
+
+    // 2. Get Competitor Data
+    const competitors = await competitorsCol.find({}).toArray();
+    const competitorYearlyData = competitors.map(comp => {
+        const monthlyOrders = Array(12).fill(0);
+        (comp.monthlyData || [])
+            .filter(d => d.year === year)
+            .forEach(d => {
+                monthlyOrders[d.month - 1] = d.orders;
+            });
+        const totalOrders = monthlyOrders.reduce((sum, count) => sum + count, 0);
+        return {
+            id: comp._id.toString(),
+            name: comp.name,
+            monthlyOrders,
+            totalOrders
+        };
+    });
+
+    return {
+        year,
+        myTotalYearlyOrders,
+        monthlyOrders: myMonthlyOrders,
+        competitors: competitorYearlyData,
     };
 }

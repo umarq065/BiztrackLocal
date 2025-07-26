@@ -27,10 +27,11 @@ const chartColors = [
 export default function TotalYearlyOrdersDistributionChart({ yearData }: TotalYearlyOrdersDistributionChartProps) {
     
     const { chartData, chartConfig, totalOrders } = useMemo(() => {
+        if (!yearData) return { chartData: [], chartConfig: {}, totalOrders: 0 };
         const { myTotalYearlyOrders, competitors } = yearData;
         const data = [
             { name: "My Orders", value: myTotalYearlyOrders, color: chartColors[0] },
-            ...competitors.map((c, i) => ({
+            ...(competitors || []).map((c, i) => ({
                 name: c.name,
                 value: c.totalOrders,
                 color: chartColors[(i + 1) % chartColors.length]
@@ -64,6 +65,10 @@ export default function TotalYearlyOrdersDistributionChart({ yearData }: TotalYe
                 })}
             </div>
         );
+    }
+
+    if (!yearData) {
+        return <div className="flex h-[300px] w-full items-center justify-center">Loading...</div>;
     }
 
     return (

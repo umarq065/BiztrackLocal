@@ -9,12 +9,13 @@ import {
   ChartLegend,
   type ChartConfig
 } from "@/components/ui/chart";
-import { type YearlyStatsData } from '@/lib/data/yearly-stats-data';
+import { type YearlyStatsData, type SingleYearData } from '@/lib/data/yearly-stats-data';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '../ui/skeleton';
 
 interface MyOrdersVsCompetitorAvgChartProps {
     allYearlyData: YearlyStatsData;
@@ -43,20 +44,25 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
         'Competitor Avg.': true,
     });
     
-    const { chartData, chartConfig, legendStats, isYoy } = useMemo(() => {
-        const yoy = selectedYears.length > 1;
+    const { chartData, chartConfig, legendStats, isYoy, isLoading } = useMemo(() => {
+        const yearsWithData = selectedYears.filter(year => allYearlyData[year]);
+        if (yearsWithData.length === 0) {
+            return { chartData: [], chartConfig: {}, legendStats: {}, isYoy: false, isLoading: true };
+        }
+
+        const yoy = yearsWithData.length > 1;
         const data: { month: string; [key: string]: string | number }[] = months.map((month) => ({ month }));
         const config: ChartConfig = {};
         const legendData: Record<string, { label: string; total: number; avg: number; year?: number }> = {};
         
-        selectedYears.forEach((year, yearIndex) => {
+        yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
             if (!yearData) return;
             
-            const metrics = { 'My Orders': yearData.monthlyOrders, 'Competitor Avg.': [] as number[] };
+            const metrics: Record<string, number[]> = { 'My Orders': yearData.monthlyOrders, 'Competitor Avg.': [] };
             
             months.forEach((_, monthIndex) => {
-                const competitorTotalForMonth = yearData.competitors.reduce((acc, curr) => acc + curr.monthlyOrders[monthIndex], 0);
+                const competitorTotalForMonth = (yearData.competitors || []).reduce((sum, comp) => sum + comp.monthlyOrders[monthIndex], 0);
                 metrics['Competitor Avg.'].push(yearData.competitors.length > 0 ? Math.round(competitorTotalForMonth / yearData.competitors.length) : 0);
             });
             
@@ -64,7 +70,7 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
                 const baseKey = sanitizeKey(metricName);
                 const key = yoy ? `${baseKey}_${year}` : baseKey;
                 const label = yoy ? `${metricName} ${year}` : metricName;
-                const colorIndex = (metricIndex * selectedYears.length + yearIndex) % Object.keys(colorVariants).length;
+                const colorIndex = (metricIndex * yearsWithData.length + yearIndex) % Object.keys(colorVariants).length;
 
                 config[key] = { label, color: colorVariants[colorIndex] };
 
@@ -77,7 +83,7 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
             });
         });
         
-        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy };
+        return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy, isLoading: false };
 
     }, [selectedYears, allYearlyData]);
 
@@ -127,6 +133,10 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
           })}
         </div>
       );
+    }
+
+    if (isLoading) {
+        return <Skeleton className="h-[500px] lg:col-span-2" />;
     }
 
     return (
