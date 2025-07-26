@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getYearlyStats } from '@/lib/services/analyticsService';
 import { z } from 'zod';
+import type { SingleYearData } from '@/lib/data/yearly-stats-data';
 
 const paramsSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
@@ -15,7 +16,29 @@ export async function GET(request: Request, { params }: { params: { year: string
     }
 
     const { year } = validatedParams.data;
-    const yearlyStatsData = await getYearlyStats(year);
+    const fetchedData = await getYearlyStats(year);
+    
+    // Create a default structure to ensure all keys are present
+    const defaultData: SingleYearData = {
+        year: year,
+        myTotalYearlyOrders: 0,
+        monthlyOrders: Array(12).fill(0),
+        competitors: [],
+        monthlyFinancials: Array(12).fill(0).map((_, i) => ({
+            month: new Date(year, i, 1).toLocaleString('default', { month: 'short' }),
+            revenue: 0,
+            expenses: 0,
+            profit: 0
+        })),
+        monthlyTargetRevenue: Array(12).fill(0),
+    };
+
+    // Merge fetched data into the default structure
+    const yearlyStatsData: SingleYearData = {
+        ...defaultData,
+        ...fetchedData,
+        competitors: fetchedData.competitors || [],
+    };
     
     return NextResponse.json(yearlyStatsData);
 
