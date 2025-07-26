@@ -629,9 +629,9 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
-
-    // Create a default structure for the full year
-    const defaultData: SingleYearData = {
+    
+    // Always start with a complete, zero-filled structure
+    const data: SingleYearData = {
         year: year,
         myTotalYearlyOrders: 0,
         monthlyOrders: Array(12).fill(0),
@@ -645,7 +645,6 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         monthlyTargetRevenue: Array(12).fill(0),
     };
 
-    // 1. Get My Orders and Revenue, grouped by month
     const myMonthlyDataArr = await ordersCol.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd }, status: 'Completed' } },
         { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } },
@@ -653,52 +652,57 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         { $sort: { '_id': 1 } }
     ]).toArray();
 
-    myMonthlyDataArr.forEach(item => {
-        const monthIndex = parseInt(item._id, 10) - 1;
-        if (monthIndex >= 0 && monthIndex < 12) {
-            defaultData.monthlyOrders[monthIndex] = item.orders;
-            defaultData.monthlyFinancials[monthIndex].revenue = item.revenue;
-        }
-    });
+    if (myMonthlyDataArr.length > 0) {
+        myMonthlyDataArr.forEach(item => {
+            const monthIndex = parseInt(item._id, 10) - 1;
+            if (monthIndex >= 0 && monthIndex < 12) {
+                data.monthlyOrders[monthIndex] = item.orders;
+                data.monthlyFinancials[monthIndex].revenue = item.revenue;
+            }
+        });
+    }
 
-    // 2. Get Expenses, grouped by month
     const monthlyExpensesArr = await expensesCol.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
         { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } } ,
         { $group: { _id: '$month', totalExpenses: { $sum: '$amount' } } },
         { $sort: { '_id': 1 } }
     ]).toArray();
+    
+    if (monthlyExpensesArr.length > 0) {
+        monthlyExpensesArr.forEach(item => {
+            const monthIndex = parseInt(item._id, 10) - 1;
+            if (monthIndex >= 0 && monthIndex < 12) {
+                data.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
+            }
+        });
+    }
 
-    monthlyExpensesArr.forEach(item => {
-        const monthIndex = parseInt(item._id, 10) - 1;
-        if (monthIndex >= 0 && monthIndex < 12) {
-            defaultData.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
-        }
-    });
-
-    // 3. Calculate Profit and Totals
-    defaultData.monthlyFinancials.forEach(mf => {
+    data.monthlyFinancials.forEach(mf => {
         mf.profit = mf.revenue - mf.expenses;
     });
-    defaultData.myTotalYearlyOrders = defaultData.monthlyOrders.reduce((sum, count) => sum + count, 0);
+    data.myTotalYearlyOrders = data.monthlyOrders.reduce((sum, count) => sum + count, 0);
 
-    // 4. Get Competitor Data
     const competitors = await competitorsCol.find({}).toArray();
-    defaultData.competitors = competitors.map(comp => {
-        const monthlyOrders = Array(12).fill(0);
-        (comp.monthlyData || [])
-            .filter(d => d.year === year)
-            .forEach(d => {
-                monthlyOrders[d.month - 1] = d.orders;
-            });
-        const totalOrders = monthlyOrders.reduce((sum, count) => sum + count, 0);
-        return {
-            id: comp._id.toString(),
-            name: comp.name,
-            monthlyOrders,
-            totalOrders
-        };
-    });
+    if (competitors.length > 0) {
+        data.competitors = competitors.map(comp => {
+            const monthlyOrders = Array(12).fill(0);
+            (comp.monthlyData || [])
+                .filter(d => d.year === year)
+                .forEach(d => {
+                    if(d.month >= 1 && d.month <= 12) {
+                        monthlyOrders[d.month - 1] = d.orders;
+                    }
+                });
+            const totalOrders = monthlyOrders.reduce((sum, count) => sum + count, 0);
+            return {
+                id: comp._id.toString(),
+                name: comp.name,
+                monthlyOrders,
+                totalOrders
+            };
+        });
+    }
 
-    return defaultData;
+    return data;
 }
