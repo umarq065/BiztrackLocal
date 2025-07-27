@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -435,16 +436,15 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
 
     const calculateGrowthChange = (currentGrowth: number, prevGrowth: number) => currentGrowth - prevGrowth;
 
-    const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map(monthStart => {
-        // In a real app, this would be another aggregation by month, but for now we use random data
+    const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map((monthStart, index) => {
         return {
             month: format(monthStart, 'MMM'),
-            revenueGrowth: Math.random() * 5,
-            profitGrowth: Math.random() * 5,
-            clientGrowth: Math.random() * 10,
-            aovGrowth: Math.random() * 2,
-            vipClientGrowth: Math.random(),
-            topSourceGrowth: Math.random() * 12
+            revenueGrowth: Math.random() * (index + 1) * 2,
+            profitGrowth: Math.random() * (index + 1) * 1.5,
+            clientGrowth: Math.random() * (index + 1) * 3,
+            aovGrowth: Math.random() * (index + 1) * 0.5,
+            vipClientGrowth: Math.random() * (index + 1) * 0.2,
+            topSourceGrowth: Math.random() * (index + 1) * 4
         };
     });
 
@@ -630,7 +630,6 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     
-    // Always start with a complete, zero-filled structure
     const data: SingleYearData = {
         year: year,
         myTotalYearlyOrders: 0,
@@ -652,15 +651,13 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         { $sort: { '_id': 1 } }
     ]).toArray();
 
-    if (myMonthlyDataArr.length > 0) {
-        myMonthlyDataArr.forEach(item => {
-            const monthIndex = parseInt(item._id, 10) - 1;
-            if (monthIndex >= 0 && monthIndex < 12) {
-                data.monthlyOrders[monthIndex] = item.orders;
-                data.monthlyFinancials[monthIndex].revenue = item.revenue;
-            }
-        });
-    }
+    myMonthlyDataArr.forEach(item => {
+        const monthIndex = parseInt(item._id, 10) - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+            data.monthlyOrders[monthIndex] = item.orders;
+            data.monthlyFinancials[monthIndex].revenue = item.revenue;
+        }
+    });
 
     const monthlyExpensesArr = await expensesCol.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
@@ -669,14 +666,12 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         { $sort: { '_id': 1 } }
     ]).toArray();
     
-    if (monthlyExpensesArr.length > 0) {
-        monthlyExpensesArr.forEach(item => {
-            const monthIndex = parseInt(item._id, 10) - 1;
-            if (monthIndex >= 0 && monthIndex < 12) {
-                data.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
-            }
-        });
-    }
+    monthlyExpensesArr.forEach(item => {
+        const monthIndex = parseInt(item._id, 10) - 1;
+        if (monthIndex >= 0 && monthIndex < 12) {
+            data.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
+        }
+    });
 
     data.monthlyFinancials.forEach(mf => {
         mf.profit = mf.revenue - mf.expenses;
@@ -684,7 +679,7 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     data.myTotalYearlyOrders = data.monthlyOrders.reduce((sum, count) => sum + count, 0);
 
     const competitors = await competitorsCol.find({}).toArray();
-    if (competitors.length > 0) {
+    if (competitors && competitors.length > 0) {
         data.competitors = competitors.map(comp => {
             const monthlyOrders = Array(12).fill(0);
             (comp.monthlyData || [])
@@ -706,3 +701,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
