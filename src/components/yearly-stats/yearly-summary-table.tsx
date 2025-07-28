@@ -21,6 +21,8 @@ interface YearlySummaryTableProps {
     selectedYear: number;
 }
 
+type SortKey = keyof ReturnType<typeof useMemo<any[], any>>[0];
+
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const formatCurrency = (value: number) => {
@@ -28,7 +30,10 @@ const formatCurrency = (value: number) => {
 }
 
 export default function YearlySummaryTable({ allYearlyData, selectedYear }: YearlySummaryTableProps) {
-    const [sortAsc, setSortAsc] = useState(true);
+    const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'ascending' | 'descending' }>({
+        key: 'index',
+        direction: 'ascending',
+    });
 
     const tableData = useMemo(() => {
         const yearData = allYearlyData[selectedYear];
@@ -61,16 +66,44 @@ export default function YearlySummaryTable({ allYearlyData, selectedYear }: Year
             };
         });
 
-        return data.sort((a, b) => sortAsc ? a.index - b.index : b.index - a.index);
+        if (sortConfig.key) {
+            data.sort((a, b) => {
+                const aVal = a[sortConfig.key as keyof typeof a];
+                const bVal = b[sortConfig.key as keyof typeof b];
+                
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                     if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+                     if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                
+                // Fallback for non-numeric or equal values
+                return 0;
+            });
+        }
+        
+        return data;
 
-    }, [selectedYear, allYearlyData, sortAsc]);
+    }, [selectedYear, allYearlyData, sortConfig]);
+
+    const requestSort = (key: SortKey) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIndicator = (key: SortKey) => {
+        if (sortConfig.key !== key) return null;
+        return sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />;
+    };
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>Yearly Summary</CardTitle>
-                    <CardDescription>A monthly breakdown of key performance indicators for {selectedYear}.</CardDescription>
+                    <CardTitle>Yearly Summary for {selectedYear}</CardTitle>
+                    <CardDescription>A monthly breakdown of key performance indicators.</CardDescription>
                 </div>
             </CardHeader>
             <CardContent>
@@ -78,15 +111,35 @@ export default function YearlySummaryTable({ allYearlyData, selectedYear }: Year
                     <TableHeader>
                         <TableRow>
                             <TableHead>
-                                <Button variant="ghost" onClick={() => setSortAsc(!sortAsc)} className="-ml-4">
-                                    Month {sortAsc ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />}
+                                <Button variant="ghost" onClick={() => requestSort('index')} className="-ml-4">
+                                    Month {getSortIndicator('index')}
                                 </Button>
                             </TableHead>
-                            <TableHead>Total Income</TableHead>
-                            <TableHead>Orders</TableHead>
-                            <TableHead>Avg. Comp. Orders</TableHead>
-                            <TableHead>Expenses</TableHead>
-                            <TableHead>Net Profit</TableHead>
+                             <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('totalIncome')} className="-ml-4">
+                                    Total Income {getSortIndicator('totalIncome')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('orders')} className="-ml-4">
+                                    Orders {getSortIndicator('orders')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('avgCompOrders')} className="-ml-4">
+                                    Avg. Comp. Orders {getSortIndicator('avgCompOrders')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('expenses')} className="-ml-4">
+                                    Expenses {getSortIndicator('expenses')}
+                                </Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('netProfit')} className="-ml-4">
+                                    Net Profit {getSortIndicator('netProfit')}
+                                </Button>
+                            </TableHead>
                             <TableHead>Perf. vs Prev. Month</TableHead>
                         </TableRow>
                     </TableHeader>
