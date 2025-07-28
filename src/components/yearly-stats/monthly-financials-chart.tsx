@@ -10,7 +10,7 @@ import {
   type ChartConfig
 } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { type YearlyStatsData } from '@/lib/data/yearly-stats-data';
+import { type YearlyStatsData, type MonthlyFinancials } from '@/lib/data/yearly-stats-data';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -55,9 +55,15 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
         const config: ChartConfig = {};
         const legendData: Record<string, { label: string; total: number; avg: number; year?: number }> = {};
         
-        selectedYears.forEach((year, yearIndex) => {
+        const yearsWithData = selectedYears.filter(year => allYearlyData[year]);
+
+        if (yearsWithData.length === 0) {
+            return { chartData: [], chartConfig: {}, legendStats: {}, isYoy: yoy };
+        }
+        
+        yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
-            if (!yearData) return;
+            if (!yearData || !yearData.monthlyFinancials) return;
 
             Object.keys(baseChartColors).forEach((metric, metricIndex) => {
                 const baseKey = sanitizeKey(metric);
@@ -72,9 +78,11 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
                 };
                 
                 let total = 0;
-                yearData.monthlyFinancials.forEach((val, monthIndex) => {
-                    const metricValue = val[metric as keyof typeof val] as number;
-                    data[monthIndex][key] = metricValue;
+                yearData.monthlyFinancials.forEach((val: MonthlyFinancials, monthIndex: number) => {
+                    const metricValue = val[metric as keyof MonthlyFinancials] as number;
+                    if (data[monthIndex]) {
+                      data[monthIndex][key] = metricValue;
+                    }
                     total += metricValue;
                 });
                 
