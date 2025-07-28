@@ -76,8 +76,8 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
 
                 let total = 0;
                 const sourceData = metric === 'revenue' 
-                    ? yearData.monthlyFinancials.map(f => f.revenue) 
-                    : yearData.monthlyFinancials.map(f => f.monthlyTargetRevenue || 0);
+                    ? (yearData.monthlyFinancials || []).map(f => f.revenue) 
+                    : (yearData.monthlyFinancials || []).map(f => f.monthlyTargetRevenue || 0);
 
                 sourceData.forEach((val, monthIndex) => {
                     data[monthIndex][key] = val;
@@ -87,7 +87,7 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
                 legendData[key] = {
                     label: label,
                     total: total,
-                    avg: Math.round(total / 12),
+                    avg: total > 0 ? Math.round(total / 12) : 0,
                     year: yoy ? year : undefined,
                 };
             });
@@ -251,5 +251,3 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
         </Card>
     );
 }
-
-    
