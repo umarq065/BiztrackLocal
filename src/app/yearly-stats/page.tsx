@@ -46,6 +46,7 @@ const YearlyStatsPageComponent = () => {
                   .then(async res => {
                       if (!res.ok) {
                           const errorText = await res.text();
+                          console.error(`Failed to fetch data for ${year}: ${res.status} ${errorText}`);
                           throw new Error(`Failed to fetch data for ${year}: ${res.status} ${errorText}`);
                       }
                       return res.json();
@@ -70,7 +71,7 @@ const YearlyStatsPageComponent = () => {
           setIsLoading(false);
       }
       fetchDataForYears();
-    }, [selectedYears, fetchedData]);
+    }, [selectedYears]);
 
     const handleYearToggle = (year: number) => {
         setSelectedYears(prev => {
@@ -156,21 +157,21 @@ const YearlyStatsPageComponent = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <Suspense fallback={<Skeleton className="h-[500px]" />}>
-            <MonthlyRevenueVsTargetChart allYearlyData={yearlyStatsData} selectedYears={selectedYears} />
-        </Suspense>
+          <Suspense fallback={<Skeleton className="h-[500px]" />}>
+              <MonthlyRevenueVsTargetChart allYearlyData={fetchedData} selectedYears={selectedYears} />
+          </Suspense>
       </div>
       
       <div className="grid grid-cols-1 gap-6">
           <Suspense fallback={<Skeleton className="h-[500px]" />}>
-              <MonthlyFinancialsChart allYearlyData={yearlyStatsData} selectedYears={selectedYears} />
+              <MonthlyFinancialsChart allYearlyData={fetchedData} selectedYears={selectedYears} />
           </Suspense>
       </div>
       
       {selectedYears.length === 1 && (
         <div className="grid grid-cols-1 gap-6">
           <Suspense fallback={<Skeleton className="h-[500px]" />}>
-            <YearlySummaryTable allYearlyData={yearlyStatsData} selectedYear={singleSelectedYear} />
+            <YearlySummaryTable allYearlyData={fetchedData} selectedYear={singleSelectedYear} />
           </Suspense>
         </div>
       )}
