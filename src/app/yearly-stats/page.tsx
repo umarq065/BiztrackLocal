@@ -71,7 +71,7 @@ const YearlyStatsPageComponent = () => {
           setIsLoading(false);
       }
       fetchDataForYears();
-    }, [selectedYears]);
+    }, [selectedYears, fetchedData]);
 
     const handleYearToggle = (year: number) => {
         setSelectedYears(prev => {
@@ -83,8 +83,7 @@ const YearlyStatsPageComponent = () => {
         });
     };
 
-    const singleSelectedYear = selectedYears[selectedYears.length - 1] || availableYears[0];
-    const selectedYearsData = useMemo(() => {
+    const yearsWithData = useMemo(() => {
       return selectedYears.map(year => fetchedData[year]).filter(Boolean);
     }, [selectedYears, fetchedData]);
     
@@ -129,7 +128,7 @@ const YearlyStatsPageComponent = () => {
         
         {isLoading && selectedYears.some(year => !fetchedData[year]) ? (
           <Skeleton className="h-[500px]" />
-        ) : selectedYearsData.length > 0 ? (
+        ) : yearsWithData.length > 0 ? (
           <Card>
              <CardHeader>
                 <CardTitle>Total Yearly Orders Distribution</CardTitle>
@@ -137,7 +136,7 @@ const YearlyStatsPageComponent = () => {
             </CardHeader>
             <CardContent>
                 <Suspense fallback={<Skeleton className="h-[300px]" />}>
-                   <TotalYearlyOrdersDistributionChart yearsData={selectedYearsData} />
+                   <TotalYearlyOrdersDistributionChart yearsData={yearsWithData} />
                 </Suspense>
             </CardContent>
           </Card>
@@ -168,13 +167,13 @@ const YearlyStatsPageComponent = () => {
           </Suspense>
       </div>
       
-      {selectedYears.length === 1 && (
-        <div className="grid grid-cols-1 gap-6">
+      {selectedYears.map(year => (
+        <div key={year} className="grid grid-cols-1 gap-6">
           <Suspense fallback={<Skeleton className="h-[500px]" />}>
-            <YearlySummaryTable allYearlyData={fetchedData} selectedYear={singleSelectedYear} />
+            <YearlySummaryTable allYearlyData={fetchedData} selectedYear={year} />
           </Suspense>
         </div>
-      )}
+      ))}
 
     </main>
   );
