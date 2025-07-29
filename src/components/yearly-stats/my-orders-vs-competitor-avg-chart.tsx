@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, BarChart } from 'recharts';
 import {
   ChartContainer,
   ChartTooltipContent,
@@ -15,6 +15,7 @@ import { BarChart2, LineChartIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
 
 interface MyOrdersVsCompetitorAvgChartProps {
@@ -55,6 +56,9 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
         const config: ChartConfig = {};
         const legendData: Record<string, { label: string; total: number; avg: number; year?: number }> = {};
         
+        const currentSysYear = new Date().getFullYear();
+        const currentSysMonth = new Date().getMonth(); // 0-11
+
         yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
             if (!yearData) return;
@@ -79,7 +83,16 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
                 });
                 
                 const total = monthlyValues.reduce((s, c) => s + c, 0);
-                legendData[key] = { label, total, avg: Math.round(total / 12), year: yoy ? year : undefined };
+
+                let monthsForAvg = 12;
+                if (year === currentSysYear) {
+                    monthsForAvg = currentSysMonth + 1;
+                } else if (year > currentSysYear) {
+                    monthsForAvg = 0; // Don't show average for future years
+                }
+                const avg = monthsForAvg > 0 ? Math.round(total / monthsForAvg) : 0;
+                
+                legendData[key] = { label, total, avg, year: yoy ? year : undefined };
             });
         });
         
