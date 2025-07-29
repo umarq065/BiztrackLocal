@@ -49,13 +49,13 @@ export function SetTargetDialog({
   }, [open, initialMonth, initialYear]);
   
   useEffect(() => {
-    if (month && year) {
+    if (month && year && open) {
         const monthIndex = months.indexOf(month);
         const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
         const existingTarget = monthlyTargets[monthKey] || 0;
         setTarget(existingTarget > 0 ? existingTarget.toString() : "");
     }
-  }, [month, year, monthlyTargets, months]);
+  }, [month, year, monthlyTargets, open]);
 
   const handleSave = () => {
     const newTarget = parseFloat(target);
