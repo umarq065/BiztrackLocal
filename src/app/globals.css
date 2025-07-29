@@ -121,23 +121,4 @@
         grid-template-rows: auto repeat(6,minmax(10rem,auto));
     }
 }
-
-/* React Resizable Styles */
-.react-resizable {
-  position: relative;
-  box-sizing: border-box;
-}
-
-.react-resizable-handle {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  bottom: 0;
-  right: 0;
-  background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2IDYiIHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOiNmZmZmZmYwMCIgeD0iMHB4IiB5PSIwcHgiIHdpZHRoPSI2cHgiIGhlaWdodD0iNnB4Ij48ZyBvcGFjaXR5PSIwLjMwMiI+PHBhdGggZD0iTTQgNiA2IDYgNiA0IEwgNCA0IFogTSAwIDYgMiA2IDIgNCBMMCA0IFoiIGZpbGw9IiMwMDAwMDAiLz48cGF0aCBkPSJNNCAyIDYgMiA2IDAgTCA0IDAgWiBNIDAgMiAyIDIgMiAwIEwgMCAwIFoiIGZpbGw9IiMwMDAwMDAiLz48L2c+PC9zdmc+');
-  background-position: bottom right;
-  padding: 0 3px 3px 0;
-  box-sizing: border-box;
-  cursor: se-resize;
-}
     
