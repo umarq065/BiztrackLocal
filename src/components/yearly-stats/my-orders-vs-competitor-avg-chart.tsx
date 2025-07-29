@@ -96,6 +96,28 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
             });
         });
         
+        if (yoy) {
+            const totalMyOrders = Object.entries(legendData)
+                .filter(([key, _]) => key.startsWith('MyOrders'))
+                .reduce((sum, [, val]) => sum + val.total, 0);
+
+            const totalCompetitorOrders = Object.entries(legendData)
+                .filter(([key, _]) => key.startsWith('CompetitorAvg'))
+                .reduce((sum, [, val]) => sum + val.total, 0);
+
+            const totalMonths = yearsWithData.reduce((acc, year) => {
+                 if (year < currentSysYear) return acc + 12;
+                 if (year === currentSysYear) return acc + (currentSysMonth + 1);
+                 return acc;
+            }, 0)
+            
+            const avgMyOrders = totalMonths > 0 ? Math.round(totalMyOrders / totalMonths) : 0;
+            const avgCompetitorOrders = totalMonths > 0 ? Math.round(totalCompetitorOrders / totalMonths) : 0;
+
+            legendData['total_my_orders'] = { label: 'Total My Orders', total: totalMyOrders, avg: avgMyOrders };
+            legendData['total_competitor_avg'] = { label: 'Total Competitor Avg.', total: totalCompetitorOrders, avg: avgCompetitorOrders };
+        }
+        
         return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy, isLoading: false };
 
     }, [selectedYears, allYearlyData]);
@@ -125,25 +147,53 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
       const activePayload = payload.filter((p: any) => activeChartKeys.includes(p.value));
 
       return (
-        <div className="flex justify-center gap-4 pt-4 flex-wrap">
-          {activePayload.map((entry: any, index: number) => {
-            const key = entry.value as keyof typeof legendStats;
-            const stats = legendStats[key];
-            if (!stats) return null;
+        <div className="flex flex-col items-center gap-4 pt-4">
+            <div className="flex justify-center gap-4 flex-wrap">
+              {activePayload.map((entry: any, index: number) => {
+                const key = entry.value as keyof typeof legendStats;
+                const stats = legendStats[key];
+                if (!stats) return null;
 
-            return (
-                <div key={`item-${index}`} className="flex items-center space-x-2 rounded-lg border bg-background/50 px-4 py-2">
-                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                    <div className="flex flex-col text-sm">
-                        <span className="font-semibold text-foreground">{stats.label}</span>
-                        <div className="flex gap-2 text-muted-foreground">
-                            <span>Total: <span className="font-medium text-foreground/90">{formatNumber(stats.total)}</span></span>
-                            <span>Avg: <span className="font-medium text-foreground/90">{formatNumber(stats.avg)}</span></span>
+                return (
+                    <div key={`item-${index}`} className="flex items-center space-x-2 rounded-lg border bg-background/50 px-4 py-2">
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                        <div className="flex flex-col text-sm">
+                            <span className="font-semibold text-foreground">{stats.label}</span>
+                            <div className="flex gap-2 text-muted-foreground">
+                                <span>Total: <span className="font-medium text-foreground/90">{formatNumber(stats.total)}</span></span>
+                                <span>Avg: <span className="font-medium text-foreground/90">{formatNumber(stats.avg)}</span></span>
+                            </div>
                         </div>
                     </div>
+                );
+              })}
+            </div>
+            {isYoy && (
+                <div className="flex justify-center gap-4 flex-wrap border-t pt-4 mt-4 w-full">
+                    {legendStats.total_my_orders && activeMetrics['My Orders'] && (
+                        <div className="flex items-center space-x-2 rounded-lg border bg-background/50 px-4 py-2">
+                            <div className="flex flex-col text-sm">
+                                <span className="font-semibold text-foreground">{legendStats.total_my_orders.label}</span>
+                                <div className="flex gap-2 text-muted-foreground">
+                                    <span>Total: <span className="font-medium text-foreground/90">{formatNumber(legendStats.total_my_orders.total)}</span></span>
+                                    <span>Avg: <span className="font-medium text-foreground/90">{formatNumber(legendStats.total_my_orders.avg)}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                     {legendStats.total_competitor_avg && activeMetrics['Competitor Avg.'] && (
+                        <div className="flex items-center space-x-2 rounded-lg border bg-background/50 px-4 py-2">
+                            <div className="flex flex-col text-sm">
+                                <span className="font-semibold text-foreground">{legendStats.total_competitor_avg.label}</span>
+                                <div className="flex gap-2 text-muted-foreground">
+                                    <span>Total: <span className="font-medium text-foreground/90">{formatNumber(legendStats.total_competitor_avg.total)}</span></span>
+                                    <span>Avg: <span className="font-medium text-foreground/90">{formatNumber(legendStats.total_competitor_avg.avg)}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            );
-          })}
+            )}
         </div>
       );
     }
