@@ -61,6 +61,9 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
             return { chartData: [], chartConfig: {}, legendStats: {}, isYoy: yoy };
         }
         
+        const currentSysYear = new Date().getFullYear();
+        const currentSysMonth = new Date().getMonth(); // 0-11
+
         yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
             if (!yearData || !yearData.monthlyFinancials) return;
@@ -86,10 +89,18 @@ export default function MonthlyFinancialsChart({ allYearlyData, selectedYears }:
                     total += metricValue;
                 });
                 
+                let monthsForAvg = 12;
+                if (year === currentSysYear) {
+                    monthsForAvg = currentSysMonth + 1;
+                } else if (year > currentSysYear) {
+                    monthsForAvg = 0;
+                }
+                const avg = monthsForAvg > 0 ? Math.round(total / monthsForAvg) : 0;
+
                 legendData[key] = {
                     label: label,
                     total: total,
-                    avg: Math.round(total / 12),
+                    avg,
                     year: yoy ? year : undefined,
                 };
             });
