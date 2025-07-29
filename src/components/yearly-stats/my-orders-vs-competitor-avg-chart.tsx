@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface MyOrdersVsCompetitorAvgChartProps {
     allYearlyData: YearlyStatsData;
@@ -254,7 +255,7 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
                         </div>
                     </div>
                     <div className="md:col-span-4">
-                        <ChartContainer config={chartConfig} className="w-full min-h-[400px]">
+                        <ChartContainer config={chartConfig} className={cn("w-full", selectedYears.length > 1 ? "min-h-[500px]" : "min-h-[400px]")}>
                             {chartType === 'bar' ? (
                                 <BarChart
                                     data={chartData}
