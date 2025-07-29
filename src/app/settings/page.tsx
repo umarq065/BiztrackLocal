@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,12 +26,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 const SettingsPageComponent = () => {
   const [timezones, setTimezones] = useState<string[]>([]);
   const [selectedTimezone, setSelectedTimezone] = useState<string>("");
+  const [geminiApiKey, setGeminiApiKey] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    async function fetchSettingsAndTz() {
+    async function fetchSettingsData() {
       setIsLoading(true);
       try {
         // Fetch saved settings
@@ -53,6 +55,12 @@ const SettingsPageComponent = () => {
              setSelectedTimezone(allTimezones[0]);
            }
         }
+
+        // Set Gemini API Key
+        if (savedSettings?.geminiApiKey) {
+            setGeminiApiKey(savedSettings.geminiApiKey);
+        }
+
       } catch (error) {
         console.error("Failed to load settings:", error);
         toast({
@@ -72,7 +80,7 @@ const SettingsPageComponent = () => {
       }
     }
 
-    fetchSettingsAndTz();
+    fetchSettingsData();
   }, [toast]);
 
   const handleSaveChanges = async () => {
@@ -81,7 +89,10 @@ const SettingsPageComponent = () => {
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timezone: selectedTimezone }),
+        body: JSON.stringify({ 
+            timezone: selectedTimezone,
+            geminiApiKey: geminiApiKey,
+        }),
       });
 
       if (!response.ok) {
@@ -91,7 +102,7 @@ const SettingsPageComponent = () => {
 
       toast({
         title: "Settings Saved",
-        description: `Timezone set to ${selectedTimezone}.`,
+        description: `Your settings have been updated successfully.`,
       });
     } catch (error) {
        console.error("Failed to save settings:", error);
@@ -114,12 +125,12 @@ const SettingsPageComponent = () => {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Time Zone</CardTitle>
+          <CardTitle>General Settings</CardTitle>
           <CardDescription>
-            Set your preferred time zone for all date and time displays.
+            Manage your application-wide settings here.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {isLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-4 w-20" />
@@ -127,7 +138,7 @@ const SettingsPageComponent = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="timezone">Select Timezone</Label>
+              <Label htmlFor="timezone">Timezone</Label>
               <Select value={selectedTimezone} onValueChange={setSelectedTimezone} disabled={timezones.length === 0}>
                 <SelectTrigger id="timezone" className="w-full max-w-sm">
                   <SelectValue placeholder="Select a timezone" />
@@ -140,6 +151,42 @@ const SettingsPageComponent = () => {
                   ))}
                 </SelectContent>
               </Select>
+               <p className="text-sm text-muted-foreground">Set your preferred time zone for all date and time displays.</p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button className="ml-auto" onClick={handleSaveChanges} disabled={isLoading || isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>API Keys</CardTitle>
+          <CardDescription>
+            Manage third-party API keys for AI features and integrations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full max-w-sm" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="gemini-api-key">Gemini API Key</Label>
+              <Input 
+                id="gemini-api-key"
+                type="password" 
+                className="w-full max-w-sm"
+                placeholder="Enter your Gemini API Key"
+                value={geminiApiKey}
+                onChange={(e) => setGeminiApiKey(e.target.value)}
+              />
+               <p className="text-sm text-muted-foreground">This key will be used for all Generative AI features.</p>
             </div>
           )}
         </CardContent>

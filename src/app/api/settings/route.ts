@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 const settingsSchema = z.object({
   timezone: z.string().optional(),
+  geminiApiKey: z.string().optional(),
 });
 
 export async function GET() {
