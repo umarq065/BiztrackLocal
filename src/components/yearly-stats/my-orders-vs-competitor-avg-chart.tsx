@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -27,23 +26,12 @@ interface MyOrdersVsCompetitorAvgChartProps {
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Expanded color palette for better distinction between multiple lines
-const colorVariants: { [key: number]: string } = {
-    0: "hsl(var(--chart-1))",
-    1: "hsl(var(--chart-2))",
-    2: "hsl(var(--chart-3))",
-    3: "hsl(var(--chart-4))",
-    4: "hsl(var(--chart-5))",
-    5: "hsl(22, 90%, 60%)",  // Orange
-    6: "hsl(262, 82%, 66%)", // Purple
-    7: "hsl(340, 82%, 60%)", // Pink
-    8: "hsl(145, 63%, 49%)", // Green
-    9: "hsl(45, 93%, 60%)",  // Yellow
-    10: "hsl(210, 89%, 64%)", // Blue
-    11: "hsl(0, 84%, 60%)",   // Red
-    12: "hsl(175, 75%, 40%)", // Teal
-    13: "hsl(290, 60%, 65%)", // Magenta
-    14: "hsl(75, 70%, 50%)",  // Lime
+// Function to generate a distinct color based on an index
+const generateColor = (index: number): string => {
+    const hue = (index * 137.508) % 360; // Use golden angle approximation for distinct colors
+    const saturation = 70;
+    const lightness = 50;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
 
@@ -92,6 +80,7 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
         
         const currentSysYear = new Date().getFullYear();
         const currentSysMonth = new Date().getMonth(); // 0-11
+        let colorCounter = 0;
 
         yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
@@ -104,13 +93,12 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
                 metrics['Competitor Avg.'].push(yearData.competitors.length > 0 ? Math.round(competitorTotalForMonth / yearData.competitors.length) : 0);
             });
             
-            Object.entries(metrics).forEach(([metricName, monthlyValues], metricIndex) => {
+            Object.entries(metrics).forEach(([metricName, monthlyValues]) => {
                 const baseKey = sanitizeKey(metricName);
                 const key = yoy ? `${baseKey}_${year}` : baseKey;
                 const label = yoy ? `${metricName} ${year}` : metricName;
-                const colorIndex = (metricIndex * yearsWithData.length + yearIndex) % Object.keys(colorVariants).length;
-
-                config[key] = { label, color: colorVariants[colorIndex] };
+                
+                config[key] = { label, color: generateColor(colorCounter++) };
 
                 monthlyValues.forEach((value, monthIndex) => {
                     data[monthIndex][key] = value;
@@ -155,6 +143,18 @@ export default function MyOrdersVsCompetitorAvgChart({ allYearlyData, selectedYe
         return { chartData: data, chartConfig: config, legendStats: legendData, isYoy: yoy, isLoading: false };
 
     }, [selectedYears, allYearlyData]);
+    
+    useEffect(() => {
+        setActiveMetrics(
+            Object.keys(chartConfig).reduce((acc, key) => {
+                const baseMetric = baseMetrics.find(bm => key.startsWith(sanitizeKey(bm)));
+                if(baseMetric) {
+                    acc[baseMetric] = true;
+                }
+                return acc;
+            }, {} as Record<string, boolean>)
+        );
+    }, [chartConfig]);
 
     const handleMetricToggle = (metric: string) => {
         setActiveMetrics(prev => ({ ...prev, [metric]: !prev[metric] }));
