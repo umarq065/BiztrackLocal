@@ -12,9 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type YearlyStatsData } from '@/lib/data/yearly-stats-data';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, BookText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Separator } from '../ui/separator';
 
 interface YearlySummaryTableProps {
     allYearlyData: YearlyStatsData;
@@ -65,6 +67,7 @@ export default function YearlySummaryTable({ allYearlyData, selectedYear }: Year
                 expenses: financials.expenses,
                 netProfit: financials.profit,
                 perfVsPrevMonth: perfChange,
+                notes: financials.notes,
             };
         });
 
@@ -154,6 +157,7 @@ export default function YearlySummaryTable({ allYearlyData, selectedYear }: Year
                                     Perf. vs Prev. Month {getSortIndicator('perfVsPrevMonth')}
                                 </Button>
                             </TableHead>
+                            <TableHead>Notes</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -178,6 +182,28 @@ export default function YearlySummaryTable({ allYearlyData, selectedYear }: Year
                                         </span>
                                     ) : (
                                         <span className="text-muted-foreground">N/A</span>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {row.notes && row.notes.length > 0 && (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <BookText className="h-4 w-4 text-primary" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80 max-h-80 overflow-y-auto">
+                                                <div className="space-y-4">
+                                                    {row.notes.map((note, index) => (
+                                                        <div key={index}>
+                                                            <p className="font-semibold text-sm">{note.title}</p>
+                                                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{note.content}</p>
+                                                            {index < row.notes.length - 1 && <Separator className="mt-4" />}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
                                     )}
                                 </TableCell>
                             </TableRow>
