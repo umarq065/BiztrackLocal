@@ -448,6 +448,7 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
     const calculateGrowthChange = (currentGrowth: number, prevGrowth: number) => currentGrowth - prevGrowth;
 
     const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map((monthStart, index) => {
+        // In a real app, this would be another aggregation by month
         return {
             month: format(monthStart, 'MMM'),
             revenueGrowth: Math.random() * (index + 1) * 2,
@@ -732,4 +733,3 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
-
