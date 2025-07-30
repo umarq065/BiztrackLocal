@@ -4,7 +4,7 @@
 
 import { useState, useEffect, memo, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { format } from 'date-fns';
+import { format, subDays, differenceInDays } from 'date-fns';
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
@@ -107,6 +107,14 @@ const DetailedMetricsPageComponent = () => {
     fetchAllMetrics();
   }, [date, toast]);
 
+  const previousPeriodLabel = useMemo(() => {
+    if (!date?.from || !date?.to) return "vs. previous period";
+    const duration = differenceInDays(date.to, date.from);
+    const prevTo = subDays(date.from, 1);
+    const prevFrom = subDays(prevTo, duration);
+    return `vs. ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
+  }, [date]);
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -120,7 +128,7 @@ const DetailedMetricsPageComponent = () => {
       </div>
 
       <div className="space-y-8">
-        {isLoading ? <Skeleton className="h-[250px] w-full" /> : growthMetrics && <GrowthMetrics data={growthMetrics} />}
+        {isLoading ? <Skeleton className="h-[250px] w-full" /> : growthMetrics && <GrowthMetrics data={growthMetrics} previousPeriodLabel={previousPeriodLabel} />}
         {isLoading ? <Skeleton className="h-[250px] w-full" /> : financialMetrics && <FinancialMetrics data={financialMetrics} />}
         {isLoading ? <Skeleton className="h-[250px] w-full" /> : clientMetrics && <ClientMetrics data={clientMetrics} />}
         <SalesMetrics />

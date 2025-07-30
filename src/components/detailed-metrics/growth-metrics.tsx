@@ -13,9 +13,10 @@ const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/grow
 
 interface GrowthMetricsProps {
     data: GrowthMetricData;
+    previousPeriodLabel: string;
 }
 
-export function GrowthMetrics({ data }: GrowthMetricsProps) {
+export function GrowthMetrics({ data, previousPeriodLabel }: GrowthMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     revenueGrowth: true,
@@ -73,7 +74,7 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
                                 {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                                 {metric.change}
                             </span>
-                            <span className="ml-1 text-muted-foreground">vs previous period</span>
+                            <span className="ml-1 text-muted-foreground">{previousPeriodLabel}</span>
                         </div>
                     )}
                     <p className="text-xs text-muted-foreground">{metric.formula}</p>
