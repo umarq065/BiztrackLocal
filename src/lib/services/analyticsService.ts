@@ -436,8 +436,12 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
     const prevAovGrowth = calculateGrowth(P1_metrics.aov, P0_metrics.aov);
     const currentVipGrowth = calculateGrowth(P2_metrics.vipClients, P1_metrics.vipClients);
     const prevVipGrowth = calculateGrowth(P1_metrics.vipClients, P0_metrics.vipClients);
-    const currentTopSourceGrowth = calculateGrowth(P2_metrics.topSource.revenue, P1_metrics.topSource.revenue);
-    const prevTopSourceGrowth = calculateGrowth(P1_metrics.topSource.revenue, P0_metrics.topSource.revenue);
+    
+    const P2_topSourceRevenue = P2_metrics.topSource.source === P1_metrics.topSource.source ? P1_metrics.topSource.revenue : 0;
+    const P1_topSourceRevenue = P1_metrics.topSource.source === P0_metrics.topSource.source ? P0_metrics.topSource.revenue : 0;
+    const currentTopSourceGrowth = calculateGrowth(P2_metrics.topSource.revenue, P2_topSourceRevenue);
+    const prevTopSourceGrowth = calculateGrowth(P1_metrics.topSource.revenue, P1_topSourceRevenue);
+
     const currentClientGrowth = P1_metrics.clientsAtStart > 0 ? (P2_metrics.newClients / P1_metrics.clientsAtStart) * 100 : (P2_metrics.newClients > 0 ? 100 : 0);
     const prevClientGrowth = P0_metrics.clientsAtStart > 0 ? (P1_metrics.newClients / P0_metrics.clientsAtStart) * 100 : (P1_metrics.newClients > 0 ? 100 : 0);
 
@@ -728,3 +732,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
