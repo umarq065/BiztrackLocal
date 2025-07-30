@@ -11,6 +11,7 @@ import type { Client } from '@/lib/data/clients-data';
 import type { Order } from '@/lib/data/orders-data';
 import type { SingleYearData } from '@/lib/data/yearly-stats-data';
 import type { BusinessNote } from '../data/business-notes-data';
+import { getMonthlyTargets } from './monthlyTargetsService';
 
 // Helper function to get database collections
 async function getIncomesCollection() {
@@ -95,7 +96,7 @@ export interface GrowthMetricTimeSeries {
     profitGrowth: number;
     clientGrowth: number;
     aovGrowth: number;
-    vipClientGrowth: number;
+    highValueClientGrowth: number;
     topSourceGrowth: number;
 }
 export interface GrowthMetricData {
@@ -629,17 +630,15 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
 }
 
 export async function getYearlyStats(year: number): Promise<SingleYearData> {
-    const client = await clientPromise;
-    const db = client.db("biztrack-pro");
-    const ordersCol = db.collection('orders');
-    const competitorsCol = db.collection('competitors');
-    const expensesCol = db.collection('expenses');
+    const ordersCol = await getOrdersCollection();
+    const competitorsCol = await getCompetitorsCollection();
+    const expensesCol = await getExpensesCollection();
     const businessNotesCol = await getBusinessNotesCollection();
 
     const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     
-    const settings = await db.collection('settings').findOne({ _id: 'monthly_targets' });
+    const monthlyTargets = await getMonthlyTargets();
 
     // Initialize with a default structure
     const data: SingleYearData = {
@@ -652,7 +651,7 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
             revenue: 0,
             expenses: 0,
             profit: 0,
-            monthlyTargetRevenue: settings?.[`${year}`]?.[i] ?? 0,
+            monthlyTargetRevenue: monthlyTargets[`${year}-${String(i + 1).padStart(2, '0')}`] ?? 0,
             notes: [],
         })),
     };
