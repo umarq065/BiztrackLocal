@@ -29,12 +29,9 @@ const baseChartColors = {
   target: "hsl(var(--chart-5))",
 };
 
-const colorVariants: { [key: number]: string } = {
-    0: "hsl(var(--chart-1))",
-    1: "hsl(var(--chart-2))",
-    2: "hsl(var(--chart-3))",
-    3: "hsl(var(--chart-4))",
-    4: "hsl(var(--chart-5))",
+const generateColor = (index: number): string => {
+    const hue = (index * 137.508) % 360; // Use golden angle approximation
+    return `hsl(${hue}, 70%, 50%)`;
 };
 
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, '');
@@ -83,6 +80,7 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
 
         const currentSysYear = new Date().getFullYear();
         const currentSysMonth = new Date().getMonth(); // 0-11
+        let colorCounter = 0;
 
         yearsWithData.forEach((year, yearIndex) => {
             const yearData = allYearlyData[year];
@@ -93,10 +91,16 @@ export default function MonthlyRevenueVsTargetChart({ allYearlyData, selectedYea
                 const key = yoy ? `${baseKey}_${year}` : baseKey;
                 const label = yoy ? `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${year}` : `${metric.charAt(0).toUpperCase() + metric.slice(1)}`;
                 
-                const colorIndex = (metricIndex * yearsWithData.length + yearIndex) % Object.keys(colorVariants).length;
+                let color: string;
+                 if (!yoy) {
+                    color = metric === 'revenue' ? baseChartColors.revenue : baseChartColors.target;
+                } else {
+                    color = generateColor(colorCounter++);
+                }
+                
                 config[key] = { 
                     label: label, 
-                    color: colorVariants[colorIndex]
+                    color: color
                 };
 
                 let total = 0;
