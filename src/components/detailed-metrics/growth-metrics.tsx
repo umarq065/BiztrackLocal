@@ -83,7 +83,7 @@ export function GrowthMetrics({ data, previousPeriodLabel }: GrowthMetricsProps)
                                 {changeIsPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                                 {Math.abs(changeValue).toFixed(1)}%
                             </span>
-                            <span className="ml-1 text-muted-foreground">{previousPeriodLabel.replace(/^vs\./, 'From')}</span>
+                            <span className="ml-1 text-muted-foreground">From {previousPeriodLabel}</span>
                         </div>
                     )}
                     <p className="text-xs text-muted-foreground">{metric.formula}</p>
