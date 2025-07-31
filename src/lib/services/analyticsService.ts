@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -137,7 +136,7 @@ export interface FinancialMetricData {
 export interface ClientMetricData {
     totalClients: { value: number; change: number };
     newClients: { value: number; change: number };
-    repeatOrders: { value: number; change: number };
+    repeatClients: { value: number; change: number };
     retentionRate: { value: number; change: number };
     avgLifespan: { value: number; change: number };
     csat: { value: number; change: number };
@@ -506,6 +505,7 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
             { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
             { $match: { 'clientOrders.1': { $exists: true } } }, // Only repeat customers
             { $project: { firstOrder: { $min: '$clientOrders.date' }, lastOrder: { $max: '$clientOrders.date' } } },
+            { $match: { lastOrder: { $lt: startStr } } },
             { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
             { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
         ]).toArray();
@@ -587,16 +587,14 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         const clientsCol = await getClientsCollection();
         
         const [
-            totalClientsInPeriod,
-            newClientsInPeriod,
             ordersInPeriod,
+            newClientsInPeriod,
             cancelledInPeriod,
             csatResults,
             lifespanResults
         ] = await Promise.all([
-            ordersCol.distinct('clientUsername', { date: { $gte: startStr, $lte: endStr } }),
-            clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
             ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray(),
+            clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
             ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled' }),
             ordersCol.aggregate([
                 { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
@@ -611,21 +609,23 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
                 { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
             ]).toArray()
         ]);
-
-        const firstTimeBuyersInPeriod = new Set(
-            (await clientsCol.find({ clientSince: { $gte: startStr, $lte: endStr } }, { projection: { username: 1 } }).toArray()).map(c => c.username)
-        );
-
-        const repeatOrdersCount = ordersInPeriod.filter(o => !firstTimeBuyersInPeriod.has(o.clientUsername)).length;
         
+        const clientOrderCounts = ordersInPeriod.reduce((acc, order) => {
+            acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const totalClientsInPeriod = Object.keys(clientOrderCounts).length;
+        const repeatClientsCount = Object.values(clientOrderCounts).filter(count => count > 1).length;
+
         const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
         const avgRating = csatResults[0]?.avgRating || 0;
         const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
 
         return {
-            totalClients: totalClientsInPeriod.length,
+            totalClients: totalClientsInPeriod,
             newClients: newClientsInPeriod,
-            repeatOrders: repeatOrdersCount,
+            repeatClients: repeatClientsCount,
             retentionRate: 0, // This metric needs a more stable definition across periods.
             avgLifespan: avgLifespanMonths,
             csat,
@@ -648,7 +648,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
     return {
         totalClients: { value: currentMetrics.totalClients, change: calculateChange(currentMetrics.totalClients, prevMetrics.totalClients) },
         newClients: { value: currentMetrics.newClients, change: calculateChange(currentMetrics.newClients, prevMetrics.newClients) },
-        repeatOrders: { value: currentMetrics.repeatOrders, change: calculateChange(currentMetrics.repeatOrders, prevMetrics.repeatOrders) },
+        repeatClients: { value: currentMetrics.repeatClients, change: calculateChange(currentMetrics.repeatClients, prevMetrics.repeatClients) },
         retentionRate: { value: currentMetrics.retentionRate, change: currentMetrics.retentionRate - prevMetrics.retentionRate },
         avgLifespan: { value: currentMetrics.avgLifespan, change: calculateChange(currentMetrics.avgLifespan, prevMetrics.avgLifespan) },
         csat: { value: currentMetrics.csat, change: currentMetrics.csat - prevMetrics.csat },
