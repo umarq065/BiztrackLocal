@@ -1,11 +1,12 @@
 
+
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { type BusinessNote, noteFormSchema, initialNotesData } from '@/lib/data/business-notes-data';
 
-type NoteFromDb = Omit<BusinessNote, 'id' | 'date'> & { date: string };
+type NoteFromDb = Omit<BusinessNote, 'id'> & { _id: ObjectId };
 
 async function getNotesCollection() {
   const client = await clientPromise;
@@ -18,7 +19,11 @@ async function seedNotes() {
     const count = await notesCollection.countDocuments();
     if (count === 0) {
         console.log("Seeding 'businessNotes' collection...");
-        await notesCollection.insertMany(initialNotesData as any[]);
+        const notesToInsert = initialNotesData.map(note => ({
+            ...note,
+            date: parseISO(note.date)
+        }));
+        await notesCollection.insertMany(notesToInsert as any[]);
     }
 }
 
@@ -30,7 +35,6 @@ export async function getNotes(): Promise<BusinessNote[]> {
     return notes.map(s => ({
         ...s,
         id: s._id.toString(),
-        date: parseISO(s.date),
     } as unknown as BusinessNote));
 }
 
@@ -38,7 +42,7 @@ export async function addNote(noteData: z.infer<typeof noteFormSchema>): Promise
     const collection = await getNotesCollection();
     
     const newNote = {
-        date: format(noteData.date, 'yyyy-MM-dd'),
+        date: noteData.date,
         title: noteData.title,
         content: noteData.content,
     };
@@ -64,7 +68,7 @@ export async function updateNote(id: string, noteData: Partial<z.infer<typeof no
     const updateData: any = {};
     if (noteData.title) updateData.title = noteData.title;
     if (noteData.content) updateData.content = noteData.content;
-    if (noteData.date) updateData.date = format(noteData.date, 'yyyy-MM-dd');
+    if (noteData.date) updateData.date = noteData.date;
 
     const result = await collection.findOneAndUpdate(
         { _id },
@@ -79,11 +83,8 @@ export async function updateNote(id: string, noteData: Partial<z.infer<typeof no
     const doc = result as unknown as NoteFromDb;
 
     return {
-        _id: doc._id,
+        ...doc,
         id: doc._id.toString(),
-        date: parseISO(doc.date),
-        title: doc.title,
-        content: doc.content,
     };
 }
 

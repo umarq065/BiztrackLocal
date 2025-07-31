@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -512,7 +513,7 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
         ]).toArray();
 
         const [revenueRes, expensesRes, ordersCount, marketingExpensesRes, newClientsCount, buyerStats, avgLifespanRes] = await Promise.all([
-            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanPromise
+            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanRes
         ]);
         
         const revenue = revenueRes[0]?.total || 0;
@@ -593,7 +594,8 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
             clientsAtStartCount,
             cancelledInPeriod,
             csatResults,
-            lifespanResults
+            lifespanResults,
+            clientsAtStart,
         ] = await Promise.all([
             ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray(),
             clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
@@ -610,13 +612,17 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
                 { $match: { lastOrder: { $lt: startStr } } },
                 { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
                 { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
-            ]).toArray()
+            ]).toArray(),
+            clientsCol.find({ clientSince: { $lt: startStr } }, { projection: { username: 1 } }).toArray(),
         ]);
         
         const clientOrderCounts = ordersInPeriod.reduce((acc, order) => {
             acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
+        
+        const clientsAtStartUsernames = new Set(clientsAtStart.map(c => c.username));
+        const retainedClientsCount = Object.keys(clientOrderCounts).filter(username => clientsAtStartUsernames.has(username)).length;
 
         const totalClientsInPeriod = Object.keys(clientOrderCounts).length;
         const repeatClientsCount = Object.values(clientOrderCounts).filter(count => count > 1).length;
@@ -625,7 +631,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         const avgRating = csatResults[0]?.avgRating || 0;
         const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
         const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) * 100 : 0;
-        const retentionRate = clientsAtStartCount > 0 ? ((totalClientsInPeriod - newClientsInPeriod) / clientsAtStartCount) * 100 : 0;
+        const retentionRate = clientsAtStartCount > 0 ? (retainedClientsCount / clientsAtStartCount) * 100 : 0;
 
         return {
             totalClients: totalClientsInPeriod,
@@ -721,11 +727,11 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     });
     
     const notesForYear = await businessNotesCol.find({
-        date: { $gte: yearStart, $lte: yearEnd }
+        date: { $gte: new Date(yearStart), $lte: new Date(yearEnd) }
     }).project({ title: 1, content: 1, date: 1 }).toArray();
 
     notesForYear.forEach(note => {
-        const monthIndex = parseISO(note.date).getMonth();
+        const monthIndex = (note.date as Date).getMonth();
         if (monthIndex >= 0 && monthIndex < 12) {
             data.monthlyFinancials[monthIndex].notes.push({
                 title: note.title,

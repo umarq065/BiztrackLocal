@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -9,11 +10,11 @@ import {
     endOfWeek, 
     eachDayOfInterval, 
     isSameMonth, 
-    format 
+    format,
+    isSameDay,
 } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
-import type { BusinessNote } from '@/app/business-notes/page';
+import type { BusinessNote } from "@/lib/data/business-notes-data";
 
 interface CalendarViewProps {
     currentDate: Date;
@@ -23,13 +24,6 @@ interface CalendarViewProps {
 }
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-
-const isSameDate = (date1: Date, date2: Date) => {
-    return date1.getUTCFullYear() === date2.getUTCFullYear() &&
-           date1.getUTCMonth() === date2.getUTCMonth() &&
-           date1.getUTCDate() === date2.getUTCDate();
-};
-
 
 export default function CalendarView({ currentDate, notes, onDateClick, onNoteClick }: CalendarViewProps) {
     const daysInMonth = useMemo(() => {
@@ -41,7 +35,8 @@ export default function CalendarView({ currentDate, notes, onDateClick, onNoteCl
     const notesByDate = useMemo(() => {
         const map = new Map<string, BusinessNote[]>();
         notes.forEach(note => {
-            const dateKey = format(note.date, 'yyyy-MM-dd', { timeZone: 'UTC' });
+            const noteDate = new Date(note.date);
+            const dateKey = format(noteDate, 'yyyy-MM-dd');
             if (!map.has(dateKey)) {
                 map.set(dateKey, []);
             }
@@ -66,11 +61,10 @@ export default function CalendarView({ currentDate, notes, onDateClick, onNoteCl
             ))}
             
             {daysInMonth.map((day) => {
-                const zonedDay = toZonedTime(day, 'UTC');
-                const dayKey = format(zonedDay, 'yyyy-MM-dd', { timeZone: 'UTC' });
+                const dayKey = format(day, 'yyyy-MM-dd');
                 const dayNotes = notesByDate.get(dayKey) || [];
                 const isCurrentMonth = isSameMonth(day, currentDate);
-                const isToday = isClient && isSameDate(zonedDay, today);
+                const isToday = isClient && isSameDay(day, today);
 
                 return (
                     <div 
