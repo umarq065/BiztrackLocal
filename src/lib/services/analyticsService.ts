@@ -137,6 +137,7 @@ export interface ClientMetricData {
     totalClients: { value: number; change: number };
     newClients: { value: number; change: number };
     repeatClients: { value: number; change: number };
+    repeatPurchaseRate: { value: number; change: number };
     retentionRate: { value: number; change: number };
     avgLifespan: { value: number; change: number };
     csat: { value: number; change: number };
@@ -602,7 +603,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
             ]).toArray(),
             clientsCol.aggregate([
                 { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
-                { $match: { 'clientOrders.1': { $exists: true } } },
+                { $match: { 'clientOrders.1': { $exists: true } } }, // Only repeat customers
                 { $project: { firstOrder: { $min: '$clientOrders.date' }, lastOrder: { $max: '$clientOrders.date' } } },
                 { $match: { lastOrder: { $lt: startStr } } },
                 { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
@@ -621,11 +622,13 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
         const avgRating = csatResults[0]?.avgRating || 0;
         const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
+        const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) * 100 : 0;
 
         return {
             totalClients: totalClientsInPeriod,
             newClients: newClientsInPeriod,
             repeatClients: repeatClientsCount,
+            repeatPurchaseRate,
             retentionRate: 0, // This metric needs a more stable definition across periods.
             avgLifespan: avgLifespanMonths,
             csat,
@@ -649,6 +652,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         totalClients: { value: currentMetrics.totalClients, change: calculateChange(currentMetrics.totalClients, prevMetrics.totalClients) },
         newClients: { value: currentMetrics.newClients, change: calculateChange(currentMetrics.newClients, prevMetrics.newClients) },
         repeatClients: { value: currentMetrics.repeatClients, change: calculateChange(currentMetrics.repeatClients, prevMetrics.repeatClients) },
+        repeatPurchaseRate: { value: currentMetrics.repeatPurchaseRate, change: currentMetrics.repeatPurchaseRate - prevMetrics.repeatPurchaseRate },
         retentionRate: { value: currentMetrics.retentionRate, change: currentMetrics.retentionRate - prevMetrics.retentionRate },
         avgLifespan: { value: currentMetrics.avgLifespan, change: calculateChange(currentMetrics.avgLifespan, prevMetrics.avgLifespan) },
         csat: { value: currentMetrics.csat, change: currentMetrics.csat - prevMetrics.csat },

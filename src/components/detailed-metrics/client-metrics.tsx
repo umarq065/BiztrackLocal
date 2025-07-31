@@ -32,6 +32,7 @@ export function ClientMetrics({ data }: ClientMetricsProps) {
     { name: "Total Clients", value: data.totalClients.value.toLocaleString(), formula: "Total unique clients in period", change: `${data.totalClients.change.toFixed(1)}%`, changeType: data.totalClients.change >= 0 ? "increase" : "decrease" as const },
     { name: "New Clients", value: data.newClients.value.toLocaleString(), formula: "Clients with their first order in period", change: `${data.newClients.change.toFixed(1)}%`, changeType: data.newClients.change >= 0 ? "increase" : "decrease" as const },
     { name: "Repeat Clients", value: data.repeatClients.value.toLocaleString(), formula: "Clients with more than one order in period", change: `${data.repeatClients.change.toFixed(1)}%`, changeType: data.repeatClients.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Repeat Purchase Rate (%)", value: `${data.repeatPurchaseRate.value.toFixed(1)}%`, formula: "(Number of Customers Who Purchased More Than Once/Total Number of Customers)×100", change: `${data.repeatPurchaseRate.change.toFixed(1)}%`, changeType: data.repeatPurchaseRate.change >= 0 ? "increase" : "decrease" as const },
     { name: "Client Retention Rate (%)", value: `${data.retentionRate.value.toFixed(1)}%`, formula: "((End Clients - New) / Start Clients) × 100", change: `${data.retentionRate.change.toFixed(1)}%`, changeType: data.retentionRate.change >= 0 ? "increase" : "decrease" as const },
     { name: "Avg. Lifespan of Repeat Customer", value: `${data.avgLifespan.value.toFixed(1)} months`, formula: "Avg. time between first & last order of churned repeat clients", change: `${data.avgLifespan.change.toFixed(1)}%`, changeType: data.avgLifespan.change >= 0 ? "increase" : "decrease" as const },
     { name: "Client Satisfaction (CSAT)", value: `${data.csat.value.toFixed(1)}%`, formula: "(Positive Ratings / Total Ratings) × 100", change: `${data.csat.change.toFixed(1)}%`, changeType: data.csat.change >= 0 ? "increase" : "decrease" as const },
@@ -52,7 +53,7 @@ export function ClientMetrics({ data }: ClientMetricsProps) {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {clientMetrics.map((metric) => {
             const isPositive = metric.invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
             return (
