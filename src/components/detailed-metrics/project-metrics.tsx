@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, lazy, Suspense } from "react";
@@ -10,14 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 const ProjectMetricsChart = lazy(() => import("@/components/detailed-metrics/project-metrics-chart"));
 
 const projectMetrics = [
-    { name: "Revisions per Project", value: "1.8", formula: "Total Number of Revisions / Total Projects Delivered", change: "+0.2", changeType: "increase" as const, invertColor: true },
     { name: "Order Completion Rate (%)", value: "96%", formula: "(Completed Tasks / Total Tasks Assigned) × 100", change: "-1%", changeType: "decrease" as const },
 ];
 
 export function ProjectMetrics() {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
-    revisions: true,
     completionRate: true,
   });
 
@@ -40,7 +39,7 @@ export function ProjectMetrics() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           {projectMetrics.map((metric) => {
-            const isPositive = metric.invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
+            const isPositive = (metric as any).invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
             return (
                 <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
                 <div>

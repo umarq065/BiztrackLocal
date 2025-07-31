@@ -448,8 +448,8 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
 
     const calculateGrowthChange = (currentGrowth: number, prevGrowth: number) => currentGrowth - prevGrowth;
 
+    // Time Series data (dummy for now)
     const timeSeries: GrowthMetricTimeSeries[] = eachMonthOfInterval({ start: fromDate, end: toDate }).map((monthStart, index) => {
-        // In a real app, this would be another aggregation by month
         return {
             month: format(monthStart, 'MMM'),
             revenueGrowth: Math.random() * (index + 1) * 2,
@@ -590,12 +590,14 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         const [
             ordersInPeriod,
             newClientsInPeriod,
+            clientsAtStartCount,
             cancelledInPeriod,
             csatResults,
             lifespanResults
         ] = await Promise.all([
             ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray(),
             clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
+            clientsCol.countDocuments({ clientSince: { $lt: startStr } }),
             ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled' }),
             ordersCol.aggregate([
                 { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
@@ -623,13 +625,14 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         const avgRating = csatResults[0]?.avgRating || 0;
         const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
         const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) * 100 : 0;
+        const retentionRate = clientsAtStartCount > 0 ? ((totalClientsInPeriod - newClientsInPeriod) / clientsAtStartCount) * 100 : 0;
 
         return {
             totalClients: totalClientsInPeriod,
             newClients: newClientsInPeriod,
             repeatClients: repeatClientsCount,
             repeatPurchaseRate,
-            retentionRate: 0, // This metric needs a more stable definition across periods.
+            retentionRate,
             avgLifespan: avgLifespanMonths,
             csat,
             avgRating,

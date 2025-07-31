@@ -10,16 +10,15 @@ import { Separator } from '../ui/separator';
 import { BookText } from 'lucide-react';
 
 const chartData = [
-  { month: "Jan", revisions: 2.2, completionRate: 95 },
-  { month: "Feb", revisions: 2.0, completionRate: 97 },
-  { month: "Mar", revisions: 1.9, completionRate: 98, note: "Implemented new QA process." },
-  { month: "Apr", revisions: 1.7, completionRate: 99 },
-  { month: "May", revisions: 1.6, completionRate: 97 },
-  { month: "Jun", revisions: 1.8, completionRate: 96 },
+  { month: "Jan", completionRate: 95 },
+  { month: "Feb", completionRate: 97 },
+  { month: "Mar", completionRate: 98, note: "Implemented new QA process." },
+  { month: "Apr", completionRate: 99 },
+  { month: "May", completionRate: 97 },
+  { month: "Jun", completionRate: 96 },
 ];
 
 const chartConfig = {
-    revisions: { label: "Revisions per Project", color: "hsl(var(--chart-1))" },
     completionRate: { label: "Order Completion Rate (%)", color: "hsl(var(--chart-2))" },
 } satisfies ChartConfig;
 
@@ -42,7 +41,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 <span>{chartConfig[pld.dataKey as keyof typeof chartConfig]?.label}:</span>
               </div>
               <span className="ml-4 font-mono font-medium">
-                {typeof pld.dataKey === 'string' && pld.dataKey.includes('Rate') ? `${pld.value}%` : (pld.value as number).toFixed(1)}
+                {`${pld.value}%`}
               </span>
             </div>
           ) : null
@@ -118,15 +117,7 @@ export default function ProjectMetricsChart({ activeMetrics, onMetricToggle }: P
                             axisLine={false}
                             tickMargin={8}
                         />
-                        <YAxis
-                            yAxisId="left"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                        />
                          <YAxis
-                            yAxisId="right"
-                            orientation="right"
                             tickLine={false}
                             axisLine={false}
                             tickMargin={8}
@@ -136,8 +127,7 @@ export default function ProjectMetricsChart({ activeMetrics, onMetricToggle }: P
                             cursor={false}
                             content={<CustomTooltip />}
                         />
-                        {activeMetrics.revisions && <Line yAxisId="left" dataKey="revisions" type="monotone" stroke="var(--color-revisions)" strokeWidth={2} dot={<CustomDot />} />}
-                        {activeMetrics.completionRate && <Line yAxisId="right" dataKey="completionRate" type="monotone" stroke="var(--color-completionRate)" strokeWidth={2} dot={<CustomDot />} />}
+                        {activeMetrics.completionRate && <Line dataKey="completionRate" type="monotone" stroke="var(--color-completionRate)" strokeWidth={2} dot={<CustomDot />} />}
                     </LineChart>
                 </ChartContainer>
             </CardContent>
