@@ -503,17 +503,30 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
             { $group: { _id: "$clientUsername", orderCount: { $sum: 1 } } }
         ]).toArray();
 
+        // Fetches all repeat clients and their first/last order dates, regardless of when they churned.
         const avgLifespanPromise = clientsCol.aggregate([
             { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
             { $match: { 'clientOrders.1': { $exists: true } } }, // Only repeat customers
-            { $project: { firstOrder: { $min: '$clientOrders.date' }, lastOrder: { $max: '$clientOrders.date' } } },
-            { $match: { lastOrder: { $lt: startStr } } },
-            { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
+            { $project: {
+                firstOrderDate: { $min: '$clientOrders.date' },
+                lastOrderDate: { $max: '$clientOrders.date' }
+            }},
+            { $project: {
+                lifespanDays: {
+                    $divide: [
+                        { $subtract: [
+                            { $dateFromString: { dateString: '$lastOrderDate' } },
+                            { $dateFromString: { dateString: '$firstOrderDate' } }
+                        ]},
+                        1000 * 60 * 60 * 24 // ms in a day
+                    ]
+                }
+            }},
             { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
         ]).toArray();
 
         const [revenueRes, expensesRes, ordersCount, marketingExpensesRes, newClientsCount, buyerStats, avgLifespanRes] = await Promise.all([
-            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanRes
+            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanPromise
         ]);
         
         const revenue = revenueRes[0]?.total || 0;
@@ -607,26 +620,40 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
             ]).toArray(),
             clientsCol.aggregate([
                 { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
-                { $match: { 'clientOrders.1': { $exists: true } } }, // Only repeat customers
-                { $project: { firstOrder: { $min: '$clientOrders.date' }, lastOrder: { $max: '$clientOrders.date' } } },
-                { $match: { lastOrder: { $lt: startStr } } },
-                { $project: { lifespanDays: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrder' } }, { $dateFromString: { dateString: '$firstOrder' } }] }, 1000 * 60 * 60 * 24] } } },
+                { $match: { 'clientOrders.1': { $exists: true } } },
+                { $project: {
+                    firstOrderDate: { $min: '$clientOrders.date' },
+                    lastOrderDate: { $max: '$clientOrders.date' }
+                }},
+                { $project: {
+                    lifespanDays: {
+                        $divide: [
+                            { $subtract: [
+                                { $dateFromString: { dateString: '$lastOrderDate' } },
+                                { $dateFromString: { dateString: '$firstOrderDate' } }
+                            ]},
+                            1000 * 60 * 60 * 24
+                        ]
+                    }
+                }},
                 { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
             ]).toArray(),
             clientsCol.find({ clientSince: { $lt: startStr } }, { projection: { username: 1 } }).toArray(),
         ]);
         
+        const clientUsernamesInPeriod = new Set(ordersInPeriod.map(o => o.clientUsername));
+        const totalClientsInPeriod = clientUsernamesInPeriod.size;
+
         const clientOrderCounts = ordersInPeriod.reduce((acc, order) => {
             acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
         
-        const clientsAtStartUsernames = new Set(clientsAtStart.map(c => c.username));
-        const retainedClientsCount = Object.keys(clientOrderCounts).filter(username => clientsAtStartUsernames.has(username)).length;
-
-        const totalClientsInPeriod = Object.keys(clientOrderCounts).length;
         const repeatClientsCount = Object.values(clientOrderCounts).filter(count => count > 1).length;
-
+        
+        const clientsAtStartUsernames = new Set(clientsAtStart.map(c => c.username));
+        const retainedClientsCount = Array.from(clientUsernamesInPeriod).filter(username => clientsAtStartUsernames.has(username)).length;
+        
         const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
         const avgRating = csatResults[0]?.avgRating || 0;
         const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
