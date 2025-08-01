@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
@@ -16,6 +15,7 @@ import { GrowthMetrics } from "@/components/detailed-metrics/growth-metrics";
 import { type GrowthMetricData, type FinancialMetricData, type ClientMetricData } from "@/lib/services/analyticsService";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const DetailedMetricsPageComponent = () => {
   const router = useRouter();
@@ -112,7 +112,7 @@ const DetailedMetricsPageComponent = () => {
     const duration = differenceInDays(date.to, date.from);
     const prevTo = subDays(date.from, 1);
     const prevFrom = subDays(prevTo, duration);
-    return `${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
+    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
   }, [date]);
 
 
@@ -127,14 +127,34 @@ const DetailedMetricsPageComponent = () => {
         </div>
       </div>
 
-      <div className="space-y-8">
-        {isLoading ? <Skeleton className="h-[250px] w-full" /> : growthMetrics && <GrowthMetrics data={growthMetrics} previousPeriodLabel={previousPeriodLabel} />}
-        {isLoading ? <Skeleton className="h-[250px] w-full" /> : financialMetrics && <FinancialMetrics data={financialMetrics} previousPeriodLabel={previousPeriodLabel} />}
-        {isLoading ? <Skeleton className="h-[250px] w-full" /> : clientMetrics && <ClientMetrics data={clientMetrics} previousPeriodLabel={previousPeriodLabel} />}
-        <SalesMetrics />
-        <MarketingMetrics />
-        <ProjectMetrics />
-      </div>
+      <Tabs defaultValue="financials" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="financials">Financial</TabsTrigger>
+          <TabsTrigger value="clients">Client</TabsTrigger>
+          <TabsTrigger value="growth">Growth</TabsTrigger>
+          <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
+          <TabsTrigger value="project">Project & Delivery</TabsTrigger>
+        </TabsList>
+        <TabsContent value="financials" className="space-y-4">
+          {isLoading ? <Skeleton className="h-[400px] w-full" /> : financialMetrics && <FinancialMetrics data={financialMetrics} previousPeriodLabel={previousPeriodLabel} />}
+        </TabsContent>
+        <TabsContent value="clients" className="space-y-4">
+          {isLoading ? <Skeleton className="h-[400px] w-full" /> : clientMetrics && <ClientMetrics data={clientMetrics} previousPeriodLabel={previousPeriodLabel} />}
+        </TabsContent>
+        <TabsContent value="growth" className="space-y-4">
+          {isLoading ? <Skeleton className="h-[400px] w-full" /> : growthMetrics && <GrowthMetrics data={growthMetrics} previousPeriodLabel={previousPeriodLabel} />}
+        </TabsContent>
+        <TabsContent value="sales" className="space-y-4">
+          <SalesMetrics />
+        </TabsContent>
+        <TabsContent value="marketing" className="space-y-4">
+          <MarketingMetrics />
+        </TabsContent>
+        <TabsContent value="project" className="space-y-4">
+          <ProjectMetrics />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
