@@ -70,6 +70,8 @@ export function FinancialMetrics({ data, previousPeriodLabel }: FinancialMetrics
                     <div className="flex items-center text-xs">
                         {metric.name === "Total Revenue" || metric.name === "Net Profit" ? (
                             <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
+                        ) : metric.name === "Average Order Value (AOV)" ? (
+                             <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
                         ) : (
                              <div className="flex items-center text-xs">
                                 <span
