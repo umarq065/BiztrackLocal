@@ -31,6 +31,7 @@ export default function DetailedMetricsPage() {
                 return;
             }
         }
+        // Fallback to default if params are invalid or not present
         const today = new Date();
         const from = new Date(today.getFullYear(), today.getMonth(), 1);
         setDate({ from, to: today });
