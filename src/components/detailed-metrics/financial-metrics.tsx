@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, lazy, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ArrowUp, ArrowDown, BarChart, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,12 +16,12 @@ const FinancialPercentageChart = lazy(() => import("@/components/detailed-metric
 
 interface FinancialMetricsProps {
     data: FinancialMetricData;
-    previousPeriodLabel: string;
 }
 
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function FinancialMetrics({ data, previousPeriodLabel }: FinancialMetricsProps) {
+export function FinancialMetrics({ data }: FinancialMetricsProps) {
+  const searchParams = useSearchParams();
   const [showChart, setShowChart] = useState(false);
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,
@@ -30,13 +32,26 @@ export function FinancialMetrics({ data, previousPeriodLabel }: FinancialMetrics
     setActivePercentageMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
   
+  const fromParam = searchParams.get('from');
+  const toParam = searchParams.get('to');
+  
+  const previousPeriodLabel = (() => {
+    if (!fromParam || !toParam) return "previous period";
+    const from = new Date(fromParam.replace(/-/g, '/'));
+    const to = new Date(toParam.replace(/-/g, '/'));
+    const duration = differenceInDays(to, from);
+    const prevTo = subDays(from, 1);
+    const prevFrom = subDays(prevTo, duration);
+    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
+  })();
+
   const financialMetrics = [
     { name: "Total Revenue", data: data.totalRevenue, formula: "Sum of all income from services" },
     { name: "Total Expenses", data: data.totalExpenses, formula: "Sum of all business expenses", invertColor: true },
     { name: "Net Profit", data: data.netProfit, formula: "Total Revenue - Total Expenses" },
     { name: "Profit Margin (%)", data: data.profitMargin, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
-    { name: "Gross Margin (%)", data: data.grossMargin, formula: "((Revenue - Cost of Services) / Revenue) × 100", isPercentage: true },
-    { name: "Client Acquisition Cost (CAC)", data: data.cac, formula: "Sales & Marketing Costs / New Clients", invertColor: true },
+    { name: "Gross Margin (%)", data: data.grossMargin, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
+    { name: "Client Acquisition Cost (CAC)", data: data.cac, formula: "Marketing Costs / New Clients", invertColor: true },
     { name: "Customer Lifetime Value (CLTV)", data: data.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
     { name: "Average Order Value (AOV)", data: data.aov, formula: "Total Revenue / Number of Orders" },
   ];
@@ -71,9 +86,9 @@ export function FinancialMetrics({ data, previousPeriodLabel }: FinancialMetrics
                         {metric.name === "Total Revenue" || metric.name === "Net Profit" ? (
                             <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
                         ) : metric.name === "Average Order Value (AOV)" ? (
-                             <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
+                            <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
                         ) : (
-                             <div className="flex items-center text-xs">
+                            <div className="flex items-center text-xs flex-wrap">
                                 <span
                                     className={cn(
                                         "flex items-center gap-1 font-semibold",

@@ -29,7 +29,6 @@ import {
   Gauge,
   CalendarRange,
   LogOut,
-  Tabs,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
@@ -45,7 +44,7 @@ const navItems = [
   { href: "/daily-summary", icon: BookText, label: "Daily Summary" },
   { href: "/business-notes", icon: Notebook, label: "Business Notes" },
   { href: "/competitors", icon: Swords, label: "Competitors" },
-  { href: "/detailed-metrics", icon: Gauge, label: "Detailed Metrics" },
+  { href: "/detailed-metrics/financial", icon: Gauge, label: "Detailed Metrics" },
   { href: "/yearly-stats", icon: CalendarRange, label: "Yearly Stats" },
 ];
 
@@ -114,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={pathname.startsWith(item.href)}
                     tooltip={item.label}
                   >
                     <NProgressLink href={item.href}>

@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, lazy, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,10 +15,10 @@ const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/grow
 
 interface GrowthMetricsProps {
     data: GrowthMetricData;
-    previousPeriodLabel: string;
 }
 
-export function GrowthMetrics({ data, previousPeriodLabel }: GrowthMetricsProps) {
+export function GrowthMetrics({ data }: GrowthMetricsProps) {
+  const searchParams = useSearchParams();
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     revenueGrowth: true,
@@ -30,6 +32,19 @@ export function GrowthMetrics({ data, previousPeriodLabel }: GrowthMetricsProps)
   const handleMetricToggle = (metric: string) => {
     setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
+  
+  const fromParam = searchParams.get('from');
+  const toParam = searchParams.get('to');
+  
+  const previousPeriodLabel = (() => {
+    if (!fromParam || !toParam) return "previous period";
+    const from = new Date(fromParam.replace(/-/g, '/'));
+    const to = new Date(toParam.replace(/-/g, '/'));
+    const duration = differenceInDays(to, from);
+    const prevTo = subDays(from, 1);
+    const prevFrom = subDays(prevTo, duration);
+    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
+  })();
   
   const growthMetrics = [
     { name: "Revenue Growth (%)", value: data.revenueGrowth.value, change: data.revenueGrowth.previousValue, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },

@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, lazy, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ArrowUp, ArrowDown, BarChart, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,10 +15,10 @@ const ClientMetricsChart = lazy(() => import("@/components/detailed-metrics/clie
 
 interface ClientMetricsProps {
     data: ClientMetricData;
-    previousPeriodLabel: string;
 }
 
-export function ClientMetrics({ data, previousPeriodLabel }: ClientMetricsProps) {
+export function ClientMetrics({ data }: ClientMetricsProps) {
+  const searchParams = useSearchParams();
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     totalClients: true,
@@ -28,6 +30,19 @@ export function ClientMetrics({ data, previousPeriodLabel }: ClientMetricsProps)
   const handleMetricToggle = (metric: keyof typeof activeMetrics) => {
     setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
+  
+  const fromParam = searchParams.get('from');
+  const toParam = searchParams.get('to');
+  
+  const previousPeriodLabel = (() => {
+    if (!fromParam || !toParam) return "previous period";
+    const from = new Date(fromParam.replace(/-/g, '/'));
+    const to = new Date(toParam.replace(/-/g, '/'));
+    const duration = differenceInDays(to, from);
+    const prevTo = subDays(from, 1);
+    const prevFrom = subDays(prevTo, duration);
+    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
+  })();
 
   const clientMetrics = [
     { name: "Total Clients", value: data.totalClients.value.toLocaleString(), formula: "Total unique clients in period", change: `${data.totalClients.change.toFixed(1)}%`, changeType: data.totalClients.change >= 0 ? "increase" : "decrease" as const },
