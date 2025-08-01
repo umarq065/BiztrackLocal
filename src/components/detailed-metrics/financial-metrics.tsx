@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, lazy, Suspense } from "react";
@@ -15,45 +14,77 @@ const FinancialValueChart = lazy(() => import("@/components/detailed-metrics/fin
 const FinancialPercentageChart = lazy(() => import("@/components/detailed-metrics/financial-percentage-chart"));
 
 interface FinancialMetricsProps {
-    data: FinancialMetricData;
+    previousPeriodLabel: string;
 }
 
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function FinancialMetrics({ data }: FinancialMetricsProps) {
-  const searchParams = useSearchParams();
+export function FinancialMetrics({ previousPeriodLabel }: FinancialMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,
     grossMargin: true,
   });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [financialMetricsData, setFinancialMetricsData] = useState<FinancialMetricData | null>(null);
+  const searchParams = useSearchParams();
 
   const handlePercentageMetricToggle = (metric: string) => {
     setActivePercentageMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
   
-  const fromParam = searchParams.get('from');
-  const toParam = searchParams.get('to');
-  
-  const previousPeriodLabel = (() => {
-    if (!fromParam || !toParam) return "previous period";
-    const from = new Date(fromParam.replace(/-/g, '/'));
-    const to = new Date(toParam.replace(/-/g, '/'));
-    const duration = differenceInDays(to, from);
-    const prevTo = subDays(from, 1);
-    const prevFrom = subDays(prevTo, duration);
-    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
-  })();
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
 
+  React.useEffect(() => {
+    async function fetchData() {
+        if (!from || !to) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/analytics/financials?from=${from}&to=${to}`);
+            if (!res.ok) throw new Error('Failed to fetch financial metrics');
+            const data = await res.json();
+            setFinancialMetricsData(data);
+        } catch(e) {
+            console.error("Error fetching financial metrics:", e);
+            setFinancialMetricsData(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchData();
+  }, [from, to]);
+  
+  if (isLoading) {
+    return <Skeleton className="h-64 w-full" />
+  }
+
+  if (!financialMetricsData) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-6 w-6 text-primary" />
+                    <span>Financial Metrics</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p>Could not load financial metrics. Please select a valid date range.</p>
+            </CardContent>
+        </Card>
+    );
+  }
+  
   const financialMetrics = [
-    { name: "Total Revenue", data: data.totalRevenue, formula: "Sum of all income from services" },
-    { name: "Total Expenses", data: data.totalExpenses, formula: "Sum of all business expenses", invertColor: true },
-    { name: "Net Profit", data: data.netProfit, formula: "Total Revenue - Total Expenses" },
-    { name: "Profit Margin (%)", data: data.profitMargin, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
-    { name: "Gross Margin (%)", data: data.grossMargin, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
-    { name: "Client Acquisition Cost (CAC)", data: data.cac, formula: "Marketing Costs / New Clients", invertColor: true },
-    { name: "Customer Lifetime Value (CLTV)", data: data.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
-    { name: "Average Order Value (AOV)", data: data.aov, formula: "Total Revenue / Number of Orders" },
+    { name: "Total Revenue", data: financialMetricsData.totalRevenue, formula: "Sum of all income from services" },
+    { name: "Total Expenses", data: financialMetricsData.totalExpenses, formula: "Sum of all business expenses", invertColor: true },
+    { name: "Net Profit", data: financialMetricsData.netProfit, formula: "Total Revenue - Total Expenses" },
+    { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
+    { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
+    { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", invertColor: true },
+    { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
+    { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
   ];
 
   return (
@@ -77,33 +108,33 @@ export function FinancialMetrics({ data }: FinancialMetricsProps) {
 
             return (
                 <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
-                    <p className="text-2xl font-bold mt-1">{displayValue}</p>
-                </div>
-                <div className="mt-2 pt-2 border-t space-y-1">
-                    <div className="flex items-center text-xs">
-                        {metric.name === "Total Revenue" || metric.name === "Net Profit" ? (
-                            <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
-                        ) : metric.name === "Average Order Value (AOV)" ? (
-                            <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
-                        ) : (
-                            <div className="flex items-center text-xs flex-wrap">
-                                <span
-                                    className={cn(
-                                        "flex items-center gap-1 font-semibold",
-                                        isPositive ? "text-green-600" : "text-red-600"
-                                    )}
-                                >
-                                    {change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                    {Math.abs(change).toFixed(1)}%
-                                </span>
-                                <span className="ml-1 text-muted-foreground">from {formatCurrency(previousValue)} ({previousPeriodLabel})</span>
-                            </div>
-                        )}
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
+                        <p className="text-2xl font-bold mt-1">{displayValue}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{metric.formula}</p>
-                </div>
+                    <div className="mt-2 pt-2 border-t space-y-1">
+                       <div className="flex items-center text-xs">
+                          {metric.name === "Total Revenue" || metric.name === "Net Profit" ? (
+                              <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
+                          ) : metric.name === "Average Order Value (AOV)" ? (
+                              <span className="text-muted-foreground">From {previousPeriodLabel}: <span className="font-semibold text-foreground">{formatCurrency(previousValue)}</span></span>
+                          ) : (
+                              <div className="flex items-center text-xs flex-wrap">
+                                  <span
+                                      className={cn(
+                                          "flex items-center gap-1 font-semibold",
+                                          isPositive ? "text-green-600" : "text-red-600"
+                                      )}
+                                  >
+                                      {change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                                      {Math.abs(change).toFixed(1)}%
+                                  </span>
+                                  <span className="ml-1 text-muted-foreground">from {formatCurrency(previousValue)} ({previousPeriodLabel})</span>
+                              </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{metric.formula}</p>
+                    </div>
                 </div>
             )
           })}
@@ -112,11 +143,11 @@ export function FinancialMetrics({ data }: FinancialMetricsProps) {
        {showChart && (
         <CardContent className="space-y-6">
              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <FinancialValueChart data={data.timeSeries} />
+                <FinancialValueChart data={financialMetricsData.timeSeries} />
             </Suspense>
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <FinancialPercentageChart 
-                  data={data.timeSeries}
+                  data={financialMetricsData.timeSeries}
                   activeMetrics={activePercentageMetrics}
                   onMetricToggle={handlePercentageMetricToggle}
                 />

@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +12,7 @@ import type { ClientMetricData } from "@/lib/services/analyticsService";
 
 const ClientMetricsChart = lazy(() => import("@/components/detailed-metrics/client-metrics-chart"));
 
-interface ClientMetricsProps {
-    data: ClientMetricData;
-}
-
-export function ClientMetrics({ data }: ClientMetricsProps) {
-  const searchParams = useSearchParams();
+export function ClientMetrics() {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     totalClients: true,
@@ -26,34 +20,77 @@ export function ClientMetrics({ data }: ClientMetricsProps) {
     retentionRate: false,
     csat: false,
   });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [clientMetricsData, setClientMetricsData] = useState<ClientMetricData | null>(null);
+  const searchParams = useSearchParams();
 
   const handleMetricToggle = (metric: keyof typeof activeMetrics) => {
     setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
   
-  const fromParam = searchParams.get('from');
-  const toParam = searchParams.get('to');
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
   
   const previousPeriodLabel = (() => {
-    if (!fromParam || !toParam) return "previous period";
-    const from = new Date(fromParam.replace(/-/g, '/'));
-    const to = new Date(toParam.replace(/-/g, '/'));
-    const duration = differenceInDays(to, from);
-    const prevTo = subDays(from, 1);
+    if (!from || !to) return "previous period";
+    const fromDate = new Date(from.replace(/-/g, '/'));
+    const toDate = new Date(to.replace(/-/g, '/'));
+    const duration = differenceInDays(toDate, fromDate);
+    const prevTo = subDays(fromDate, 1);
     const prevFrom = subDays(prevTo, duration);
     return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
   })();
 
+  useEffect(() => {
+    async function fetchData() {
+        if (!from || !to) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/analytics/client-metrics?from=${from}&to=${to}`);
+            if (!res.ok) throw new Error('Failed to fetch client metrics');
+            const data = await res.json();
+            setClientMetricsData(data);
+        } catch(e) {
+            console.error("Error fetching client metrics:", e);
+            setClientMetricsData(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchData();
+  }, [from, to]);
+  
+  if (isLoading) {
+    return <Skeleton className="h-64 w-full" />
+  }
+
+  if (!clientMetricsData) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Users className="h-6 w-6 text-primary" />
+                    <span>Client Metrics</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p>Could not load client metrics. Please select a valid date range.</p>
+            </CardContent>
+        </Card>
+    );
+  }
+  
   const clientMetrics = [
-    { name: "Total Clients", value: data.totalClients.value.toLocaleString(), formula: "Total unique clients in period", change: `${data.totalClients.change.toFixed(1)}%`, changeType: data.totalClients.change >= 0 ? "increase" : "decrease" as const },
-    { name: "New Clients", value: data.newClients.value.toLocaleString(), formula: "Clients with their first order in period", change: `${data.newClients.change.toFixed(1)}%`, changeType: data.newClients.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Repeat Clients", value: data.repeatClients.value.toLocaleString(), formula: "Clients with more than one order in period", change: `${data.repeatClients.change.toFixed(1)}%`, changeType: data.repeatClients.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Repeat Purchase Rate (%)", value: `${data.repeatPurchaseRate.value.toFixed(1)}%`, formula: "(Number of Customers Who Purchased More Than Once/Total Number of Customers)×100", change: `${data.repeatPurchaseRate.change.toFixed(1)}%`, changeType: data.repeatPurchaseRate.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Client Retention Rate (%)", value: `${data.retentionRate.value.toFixed(1)}%`, formula: "((End Clients - New) / Start Clients) × 100", change: `${data.retentionRate.change.toFixed(1)}%`, changeType: data.retentionRate.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Avg. Lifespan of Repeat Customer", value: `${data.avgLifespan.value.toFixed(1)} months`, formula: "Avg. time between first & last order of churned repeat clients", change: `${data.avgLifespan.change.toFixed(1)}%`, changeType: data.avgLifespan.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Client Satisfaction (CSAT)", value: `${data.csat.value.toFixed(1)}%`, formula: "(Positive Ratings / Total Ratings) × 100", change: `${data.csat.change.toFixed(1)}%`, changeType: data.csat.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Average Rating", value: `${data.avgRating.value.toFixed(2)} / 5.0`, formula: "Sum of ratings / Number of rated orders", change: data.avgRating.change.toFixed(2), changeType: data.avgRating.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Cancelled Orders", value: data.cancelledOrders.value.toLocaleString(), formula: "Total orders marked as cancelled", change: `${data.cancelledOrders.change.toFixed(1)}%`, changeType: data.cancelledOrders.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
+    { name: "Total Clients", value: clientMetricsData.totalClients.value.toLocaleString(), formula: "Total unique clients in period", change: `${clientMetricsData.totalClients.change.toFixed(1)}%`, changeType: clientMetricsData.totalClients.change >= 0 ? "increase" : "decrease" as const },
+    { name: "New Clients", value: clientMetricsData.newClients.value.toLocaleString(), formula: "Clients with their first order in period", change: `${clientMetricsData.newClients.change.toFixed(1)}%`, changeType: clientMetricsData.newClients.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Repeat Clients", value: clientMetricsData.repeatClients.value.toLocaleString(), formula: "Clients with more than one order in period", change: `${clientMetricsData.repeatClients.change.toFixed(1)}%`, changeType: clientMetricsData.repeatClients.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Repeat Purchase Rate (%)", value: `${clientMetricsData.repeatPurchaseRate.value.toFixed(1)}%`, formula: "(Number of Customers Who Purchased More Than Once/Total Number of Customers)×100", change: `${clientMetricsData.repeatPurchaseRate.change.toFixed(1)}%`, changeType: clientMetricsData.repeatPurchaseRate.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Client Retention Rate (%)", value: `${clientMetricsData.retentionRate.value.toFixed(1)}%`, formula: "((End Clients - New) / Start Clients) × 100", change: `${clientMetricsData.retentionRate.change.toFixed(1)}%`, changeType: clientMetricsData.retentionRate.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Avg. Lifespan of Repeat Customer", value: `${clientMetricsData.avgLifespan.value.toFixed(1)} months`, formula: "Avg. time between first & last order of churned repeat clients", change: `${clientMetricsData.avgLifespan.change.toFixed(1)}%`, changeType: clientMetricsData.avgLifespan.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Client Satisfaction (CSAT)", value: `${clientMetricsData.csat.value.toFixed(1)}%`, formula: "(Positive Ratings / Total Ratings) × 100", change: `${clientMetricsData.csat.change.toFixed(1)}%`, changeType: clientMetricsData.csat.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Average Rating", value: `${clientMetricsData.avgRating.value.toFixed(2)} / 5.0`, formula: "Sum of ratings / Number of rated orders", change: clientMetricsData.avgRating.change.toFixed(2), changeType: clientMetricsData.avgRating.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Cancelled Orders", value: clientMetricsData.cancelledOrders.value.toLocaleString(), formula: "Total orders marked as cancelled", change: `${clientMetricsData.cancelledOrders.change.toFixed(1)}%`, changeType: clientMetricsData.cancelledOrders.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
   ];
 
   return (

@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +13,10 @@ import { type GrowthMetricData } from "@/lib/services/analyticsService";
 const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
 
 interface GrowthMetricsProps {
-    data: GrowthMetricData;
+    previousPeriodLabel: string;
 }
 
-export function GrowthMetrics({ data }: GrowthMetricsProps) {
-  const searchParams = useSearchParams();
+export function GrowthMetrics({ previousPeriodLabel }: GrowthMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     revenueGrowth: true,
@@ -28,31 +26,64 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
     highValueClientGrowth: false,
     sourceGrowth: false,
   });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [growthMetricsData, setGrowthMetricsData] = useState<GrowthMetricData | null>(null);
+  const searchParams = useSearchParams();
 
   const handleMetricToggle = (metric: string) => {
     setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
   };
   
-  const fromParam = searchParams.get('from');
-  const toParam = searchParams.get('to');
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
   
-  const previousPeriodLabel = (() => {
-    if (!fromParam || !toParam) return "previous period";
-    const from = new Date(fromParam.replace(/-/g, '/'));
-    const to = new Date(toParam.replace(/-/g, '/'));
-    const duration = differenceInDays(to, from);
-    const prevTo = subDays(from, 1);
-    const prevFrom = subDays(prevTo, duration);
-    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
-  })();
+  useEffect(() => {
+    async function fetchData() {
+        if (!from || !to) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/analytics/growth?from=${from}&to=${to}`);
+            if (!res.ok) throw new Error('Failed to fetch growth metrics');
+            const data = await res.json();
+            setGrowthMetricsData(data);
+        } catch(e) {
+            console.error("Error fetching growth metrics:", e);
+            setGrowthMetricsData(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchData();
+  }, [from, to]);
   
+  if (isLoading) {
+    return <Skeleton className="h-64 w-full" />
+  }
+
+  if (!growthMetricsData) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <BarChart className="h-6 w-6 text-primary" />
+                    <span>Growth Metrics</span>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p>Could not load growth metrics. Please select a valid date range.</p>
+            </CardContent>
+        </Card>
+    );
+  }
+
   const growthMetrics = [
-    { name: "Revenue Growth (%)", value: data.revenueGrowth.value, change: data.revenueGrowth.previousValue, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },
-    { name: "Net Profit Growth (%)", value: data.profitGrowth.value, change: data.profitGrowth.previousValue, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100" },
-    { name: "Client Growth Rate (%)", value: data.clientGrowth.value, change: data.clientGrowth.previousValue, formula: "((New Clients) / Clients at Start of Period) × 100" },
-    { name: "Average Order Value (AOV) Growth (%)", value: data.aovGrowth.value, change: data.aovGrowth.previousValue, formula: "Growth rate of AOV over a period" },
-    { name: "High-Value Client Growth Rate (%)", value: data.vipClientGrowth.value, change: data.vipClientGrowth.previousValue, formula: "((VIPs at End - VIPs at Start) / VIPs at Start) * 100" },
-    { name: "Top Source Growth Rate (%)", value: data.topSourceGrowth.value, change: data.topSourceGrowth.previousValue, formula: `Growth of '${data.topSourceGrowth.source}'` },
+    { name: "Revenue Growth (%)", value: growthMetricsData.revenueGrowth.value, previousValue: growthMetricsData.revenueGrowth.previousValue, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },
+    { name: "Net Profit Growth (%)", value: growthMetricsData.profitGrowth.value, previousValue: growthMetricsData.profitGrowth.previousValue, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100" },
+    { name: "Client Growth Rate (%)", value: growthMetricsData.clientGrowth.value, previousValue: growthMetricsData.clientGrowth.previousValue, formula: "((New Clients) / Clients at Start of Period) × 100" },
+    { name: "Average Order Value (AOV) Growth (%)", value: growthMetricsData.aovGrowth.value, previousValue: growthMetricsData.aovGrowth.previousValue, formula: "Growth rate of AOV over a period" },
+    { name: "High-Value Client Growth Rate (%)", value: growthMetricsData.vipClientGrowth.value, previousValue: growthMetricsData.vipClientGrowth.previousValue, formula: "((VIPs at End - VIPs at Start) / VIPs at Start) * 100" },
+    { name: "Top Source Growth Rate (%)", value: growthMetricsData.topSourceGrowth.value, previousValue: growthMetricsData.topSourceGrowth.previousValue, formula: `Growth of '${growthMetricsData.topSourceGrowth.source}'` },
 ];
 
   return (
@@ -71,8 +102,7 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {growthMetrics.map((metric) => {
             const isPositive = metric.value >= 0;
-            const changeValue = metric.change;
-            const changeIsPositive = changeValue != null && changeValue >= 0;
+            const changeIsPositive = metric.previousValue != null && metric.previousValue >= 0;
 
             return (
                 <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
@@ -87,7 +117,7 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
                     </p>
                 </div>
                 <div className="mt-2 pt-2 border-t space-y-1">
-                    {changeValue != null && (
+                    {metric.previousValue != null && (
                         <div className="flex items-center text-xs">
                              <span
                                 className={cn(
@@ -96,7 +126,7 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
                                 )}
                             >
                                 {changeIsPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                {changeValue.toFixed(1)}%
+                                {metric.previousValue.toFixed(1)}%
                             </span>
                             <span className="ml-1 text-muted-foreground">{previousPeriodLabel}</span>
                         </div>
@@ -111,7 +141,7 @@ export function GrowthMetrics({ data }: GrowthMetricsProps) {
       {showChart && (
         <CardContent>
              <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                <GrowthMetricsChart data={data.timeSeries} activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
+                <GrowthMetricsChart data={growthMetricsData.timeSeries} activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
             </Suspense>
         </CardContent>
       )}
