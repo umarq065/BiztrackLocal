@@ -32,12 +32,12 @@ export function GrowthMetrics({ data, previousPeriodLabel }: GrowthMetricsProps)
   };
   
   const growthMetrics = [
-    { name: "Revenue Growth (%)", value: data.revenueGrowth.value, change: data.revenueGrowth.change, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },
-    { name: "Net Profit Growth (%)", value: data.profitGrowth.value, change: data.profitGrowth.change, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100" },
-    { name: "Client Growth Rate (%)", value: data.clientGrowth.value, change: data.clientGrowth.change, formula: "((New Clients) / Clients at Start of Period) × 100" },
-    { name: "Average Order Value (AOV) Growth (%)", value: data.aovGrowth.value, change: data.aovGrowth.change, formula: "Growth rate of AOV over a period" },
-    { name: "High-Value Client Growth Rate (%)", value: data.vipClientGrowth.value, change: data.vipClientGrowth.change, formula: "Growth rate of clients marked as VIP" },
-    { name: "Top Source Growth Rate (%)", value: data.topSourceGrowth.value, change: data.topSourceGrowth.change, formula: `Growth of '${data.topSourceGrowth.source}'` },
+    { name: "Revenue Growth (%)", value: data.revenueGrowth.value, change: data.revenueGrowth.previousValue, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },
+    { name: "Net Profit Growth (%)", value: data.profitGrowth.value, change: data.profitGrowth.previousValue, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100" },
+    { name: "Client Growth Rate (%)", value: data.clientGrowth.value, change: data.clientGrowth.previousValue, formula: "((New Clients) / Clients at Start of Period) × 100" },
+    { name: "Average Order Value (AOV) Growth (%)", value: data.aovGrowth.value, change: data.aovGrowth.previousValue, formula: "Growth rate of AOV over a period" },
+    { name: "High-Value Client Growth Rate (%)", value: data.vipClientGrowth.value, change: data.vipClientGrowth.previousValue, formula: "((VIPs at End - VIPs at Start) / VIPs at Start) * 100" },
+    { name: "Top Source Growth Rate (%)", value: data.topSourceGrowth.value, change: data.topSourceGrowth.previousValue, formula: `Growth of '${data.topSourceGrowth.source}'` },
 ];
 
   return (
