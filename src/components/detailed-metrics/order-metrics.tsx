@@ -43,6 +43,7 @@ export function OrderMetrics() {
             const isPositive = metric.invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
             const isCurrency = metric.value.includes("$");
             const previousValueDisplay = isCurrency ? metric.previousValue : metric.previousValue;
+            const dummyDateRange = "(from Jul 19 - Jul 28, 2025)";
 
             return (
                 <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
@@ -50,22 +51,20 @@ export function OrderMetrics() {
                     <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
                     <p className="text-2xl font-bold mt-1">{metric.value}</p>
                 </div>
-                <div className="mt-2 pt-2 border-t space-y-1">
+                <div className="mt-2 pt-2 border-t space-y-1 text-xs">
                     {metric.change && (
-                        <div className="flex items-center text-xs">
-                            <span
-                                className={cn(
-                                    "flex items-center gap-1 font-semibold",
-                                    isPositive ? "text-green-600" : "text-red-600"
-                                )}
-                            >
-                                {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${metric.change.toFixed(1)}%`}
-                            </span>
-                            <span className="ml-1 text-muted-foreground">from {previousValueDisplay} (vs selected period)</span>
-                        </div>
+                        <p
+                            className={cn(
+                                "flex items-center gap-1 font-semibold",
+                                isPositive ? "text-green-600" : "text-red-600"
+                            )}
+                        >
+                            {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                            {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${metric.change.toFixed(1)}%`}
+                        </p>
                     )}
-                    <p className="text-xs text-muted-foreground">{metric.formula}</p>
+                    <p className="text-muted-foreground">from {previousValueDisplay} {dummyDateRange}</p>
+                    <p className="text-muted-foreground pt-1">{metric.formula}</p>
                 </div>
                 </div>
             )
