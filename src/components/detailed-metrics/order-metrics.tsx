@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, lazy, Suspense, useEffect } from "react";
+import { useState, lazy, Suspense, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { format, subDays, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,8 +152,8 @@ export function OrderMetrics() {
       
       const metricsToShow = [
         { name: "Total Orders", data: dynamicMetrics.totalOrders, formula: "Total number of completed orders" },
-        { name: "Orders From New Buyers", data: dynamicMetrics.newBuyerOrders, formula: "Orders from clients making their first purchase" },
-        { name: "Orders From Repeat Buyers", data: dynamicMetrics.repeatBuyerOrders, formula: "Orders from clients who have purchased before" },
+        { name: "Orders From New Buyers", data: dynamicMetrics.newBuyerOrders, formula: "Orders from clients making their first purchase in this period" },
+        { name: "Orders From Repeat Buyers", data: dynamicMetrics.repeatBuyerOrders, formula: "Orders from clients who have purchased before this period" },
       ];
       
        return (
@@ -164,35 +164,35 @@ export function OrderMetrics() {
               const isPositive = metric.invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
               return (
                   <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
-                  <div>
-                      <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
-                          {metric.change && (
-                              <span
-                                  className={cn(
-                                      "flex items-center gap-1 text-xs font-semibold",
-                                      isPositive ? "text-green-600" : "text-red-600"
-                                  )}
-                              >
-                                  (
-                                  {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                  {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${Math.abs(metric.change).toFixed(1)}%`}
-                                  )
-                              </span>
-                          )}
-                      </div>
-                      <p className="text-2xl font-bold mt-1">{metric.value}</p>
-                  </div>
-                  <div className="mt-2 pt-2 border-t space-y-1 text-xs">
-                      {metric.change && (
-                          <p className={cn("flex items-center gap-1 font-semibold", isPositive ? "text-green-600" : "text-red-600")}>
-                              {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                              {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${metric.change.toFixed(1)}%`}
-                          </p>
-                      )}
-                      <p className="text-muted-foreground">from {metric.previousValue} ({previousPeriodDateRange})</p>
-                      <p className="text-muted-foreground pt-1">{metric.formula}</p>
-                  </div>
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
+                            {metric.change && (
+                                <span
+                                    className={cn(
+                                        "flex items-center gap-1 text-xs font-semibold",
+                                        isPositive ? "text-green-600" : "text-red-600"
+                                    )}
+                                >
+                                    (
+                                    {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                                    {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${Math.abs(metric.change).toFixed(1)}%`}
+                                    )
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-2xl font-bold mt-1">{metric.value}</p>
+                    </div>
+                    <div className="mt-2 pt-2 border-t space-y-1 text-xs">
+                        {metric.change && (
+                            <p className={cn("flex items-center gap-1 font-semibold", isPositive ? "text-green-600" : "text-red-600")}>
+                                {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                                {metric.name === "Average Rating" ? metric.change.toFixed(1) : `${metric.change.toFixed(1)}%`}
+                            </p>
+                        )}
+                        <p className="text-muted-foreground">from {metric.previousValue} (from Jul 19 - Jul 28, 2025)</p>
+                        <p className="text-muted-foreground pt-1">{metric.formula}</p>
+                    </div>
                   </div>
               )
             })}
