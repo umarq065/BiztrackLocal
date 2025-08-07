@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -743,6 +744,75 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
     };
 }
 
+export async function getOrderCountAnalytics(from: string, to: string): Promise<OrderCountAnalytics> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+    
+    const durationInDays = differenceInDays(toDate, fromDate);
+    if (durationInDays < 0) throw new Error("Invalid date range");
+
+    const p2_from = fromDate;
+    const p2_to = toDate;
+    const p1_to = subDays(p2_from, 1);
+    const p1_from = subDays(p1_to, durationInDays);
+    const p0_to = subDays(p1_from, 1);
+    const p0_from = subDays(p0_to, durationInDays);
+    
+    const ordersCol = await getOrdersCollection();
+    const clientsCol = await getClientsCollection();
+    
+    const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+
+        const ordersInPeriod = await ordersCol.find({
+            date: { $gte: startStr, $lte: endStr },
+            status: 'Completed'
+        }).toArray();
+
+        const totalOrders = ordersInPeriod.length;
+        if (totalOrders === 0) return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0 };
+        
+        const clientsInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
+
+        const clientsWithFirstOrderDate = await clientsCol.aggregate([
+            { $match: { username: { $in: clientsInPeriod } } },
+            { $project: { username: 1, firstOrderDate: "$clientSince" }}
+        ]).toArray();
+        
+        const firstOrderDateMap = new Map(clientsWithFirstOrderDate.map(c => [c.username, c.firstOrderDate]));
+        
+        const newBuyerUsernames = new Set<string>();
+        const repeatBuyerUsernames = new Set<string>();
+
+        clientsInPeriod.forEach(username => {
+            const firstOrderDate = firstOrderDateMap.get(username);
+            if (firstOrderDate && firstOrderDate >= startStr && firstOrderDate <= endStr) {
+                newBuyerUsernames.add(username);
+            } else {
+                repeatBuyerUsernames.add(username);
+            }
+        });
+
+        const newBuyerOrders = ordersInPeriod.filter(o => newBuyerUsernames.has(o.clientUsername)).length;
+        const repeatBuyerOrders = ordersInPeriod.filter(o => repeatBuyerUsernames.has(o.clientUsername)).length;
+        
+        return { total: totalOrders, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders };
+    }
+
+    const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
+        getPeriodStats(p2_from, p2_to),
+        getPeriodStats(p1_from, p1_to),
+        getPeriodStats(p0_from, p0_to)
+    ]);
+    
+    return {
+        currentPeriodOrders,
+        previousPeriodOrders,
+        periodBeforePreviousOrders
+    };
+}
+
 export async function getYearlyStats(year: number): Promise<SingleYearData> {
     const ordersCol = await getOrdersCollection();
     const competitorsCol = await getCompetitorsCollection();
@@ -843,71 +913,3 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     return data;
 }
 
-export async function getOrderCountAnalytics(from: string, to: string): Promise<OrderCountAnalytics> {
-    const fromDate = parseISO(from);
-    const toDate = parseISO(to);
-    
-    const durationInDays = differenceInDays(toDate, fromDate);
-    if (durationInDays < 0) throw new Error("Invalid date range");
-
-    const p2_from = fromDate;
-    const p2_to = toDate;
-    const p1_to = subDays(p2_from, 1);
-    const p1_from = subDays(p1_to, durationInDays);
-    const p0_to = subDays(p1_from, 1);
-    const p0_from = subDays(p0_to, durationInDays);
-    
-    const ordersCol = await getOrdersCollection();
-    const clientsCol = await getClientsCollection();
-    
-    const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-
-        const ordersInPeriod = await ordersCol.find({
-            date: { $gte: startStr, $lte: endStr },
-            status: 'Completed'
-        }).toArray();
-
-        const totalOrders = ordersInPeriod.length;
-        if (totalOrders === 0) return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0 };
-        
-        const clientsInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
-
-        const clientsWithFirstOrderDate = await clientsCol.aggregate([
-            { $match: { username: { $in: clientsInPeriod } } },
-            { $project: {
-                username: 1,
-                firstOrderDate: "$clientSince" // clientSince is already a 'YYYY-MM-DD' string
-            }}
-        ]).toArray();
-        
-        const firstOrderDateMap = new Map(clientsWithFirstOrderDate.map(c => [c.username, c.firstOrderDate]));
-        
-        let newBuyerOrders = 0;
-        let repeatBuyerOrders = 0;
-
-        for (const order of ordersInPeriod) {
-            const firstOrderDate = firstOrderDateMap.get(order.clientUsername);
-            if (firstOrderDate && firstOrderDate >= startStr && firstOrderDate <= endStr) {
-                newBuyerOrders++;
-            } else {
-                repeatBuyerOrders++;
-            }
-        }
-        
-        return { total: totalOrders, fromNewBuyers, fromRepeatBuyers };
-    }
-
-    const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
-        getPeriodStats(p2_from, p2_to),
-        getPeriodStats(p1_from, p1_to),
-        getPeriodStats(p0_from, p0_to)
-    ]);
-    
-    return {
-        currentPeriodOrders,
-        previousPeriodOrders,
-        periodBeforePreviousOrders
-    };
-}
