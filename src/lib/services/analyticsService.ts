@@ -146,6 +146,11 @@ export interface ClientMetricData {
     cancelledOrders: { value: number; change: number };
 }
 
+export interface OrderCountAnalytics {
+    currentPeriodOrders: number;
+    previousPeriodOrders: number;
+    periodBeforePreviousOrders: number;
+}
 
 // Shared data processing function
 async function processAnalytics(
@@ -833,3 +838,38 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     return data;
 }
 
+export async function getOrderCountAnalytics(from: string, to: string): Promise<OrderCountAnalytics> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+    
+    const durationInDays = differenceInDays(toDate, fromDate);
+    if (durationInDays < 0) throw new Error("Invalid date range");
+
+    const p2_from = fromDate;
+    const p2_to = toDate;
+    const p1_to = subDays(p2_from, 1);
+    const p1_from = subDays(p1_to, durationInDays);
+    const p0_to = subDays(p1_from, 1);
+    const p0_from = subDays(p0_to, durationInDays);
+    
+    const ordersCol = await getOrdersCollection();
+    
+    const getCount = (start: Date, end: Date) => {
+        return ordersCol.countDocuments({
+            date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
+            status: 'Completed'
+        });
+    }
+
+    const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
+        getCount(p2_from, p2_to),
+        getCount(p1_from, p1_to),
+        getCount(p0_from, p0_to)
+    ]);
+    
+    return {
+        currentPeriodOrders,
+        previousPeriodOrders,
+        periodBeforePreviousOrders
+    };
+}
