@@ -146,10 +146,15 @@ export interface ClientMetricData {
     cancelledOrders: { value: number; change: number };
 }
 
+interface PeriodOrderStats {
+    total: number;
+    fromNewBuyers: number;
+    fromRepeatBuyers: number;
+}
 export interface OrderCountAnalytics {
-    currentPeriodOrders: number;
-    previousPeriodOrders: number;
-    periodBeforePreviousOrders: number;
+    currentPeriodOrders: PeriodOrderStats;
+    previousPeriodOrders: PeriodOrderStats;
+    periodBeforePreviousOrders: PeriodOrderStats;
 }
 
 // Shared data processing function
@@ -853,18 +858,51 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
     const p0_from = subDays(p0_to, durationInDays);
     
     const ordersCol = await getOrdersCollection();
+    const clientsCol = await getClientsCollection();
     
-    const getCount = (start: Date, end: Date) => {
-        return ordersCol.countDocuments({
-            date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
+    const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+
+        const ordersInPeriod = await ordersCol.find({
+            date: { $gte: startStr, $lte: endStr },
             status: 'Completed'
-        });
+        }).toArray();
+
+        const totalOrders = ordersInPeriod.length;
+        if (totalOrders === 0) return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0 };
+        
+        const clientsInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
+
+        const clientsWithFirstOrderDate = await clientsCol.aggregate([
+            { $match: { username: { $in: clientsInPeriod } } },
+            { $project: {
+                username: 1,
+                firstOrderDate: "$clientSince" // clientSince is already a 'YYYY-MM-DD' string
+            }}
+        ]).toArray();
+        
+        const firstOrderDateMap = new Map(clientsWithFirstOrderDate.map(c => [c.username, c.firstOrderDate]));
+        
+        let newBuyerOrders = 0;
+        let repeatBuyerOrders = 0;
+
+        for (const order of ordersInPeriod) {
+            const firstOrderDate = firstOrderDateMap.get(order.clientUsername);
+            if (firstOrderDate && firstOrderDate >= startStr && firstOrderDate <= endStr) {
+                newBuyerOrders++;
+            } else {
+                repeatBuyerOrders++;
+            }
+        }
+        
+        return { total: totalOrders, fromNewBuyers, fromRepeatBuyers };
     }
 
     const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
-        getCount(p2_from, p2_to),
-        getCount(p1_from, p1_to),
-        getCount(p0_from, p0_to)
+        getPeriodStats(p2_from, p2_to),
+        getPeriodStats(p1_from, p1_to),
+        getPeriodStats(p0_from, p0_to)
     ]);
     
     return {
