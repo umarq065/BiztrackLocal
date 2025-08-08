@@ -1,10 +1,10 @@
 
+
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { type Expense, expenseFormSchema, type ExpenseFormValues } from '@/lib/data/expenses-data';
-import { initialExpenses } from '@/lib/data/expenses-data';
 
 interface ExpenseCategory {
     _id: ObjectId;
@@ -24,33 +24,9 @@ async function getExpenseCategoriesCollection() {
   return db.collection<ExpenseCategory>('expenseCategories');
 }
 
-// --- Seeding ---
-async function seedExpenses() {
-    const expensesCollection = await getExpensesCollection();
-    const count = await expensesCollection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'expenses' collection...");
-        await expensesCollection.insertMany(initialExpenses as any[]);
-    }
-}
-
-async function seedCategories() {
-    const categoriesCollection = await getExpenseCategoriesCollection();
-    const count = await categoriesCollection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'expenseCategories' collection...");
-        const initialCategories = [
-            "Software", "Subscription", "Office Supplies", "Hardware", "Marketing", 
-            "Cloud Hosting", "Freelancer Payment", "Salary", "Travel", "Other"
-        ];
-        await categoriesCollection.insertMany(initialCategories.map(name => ({ _id: new ObjectId(), name })));
-    }
-}
-
 // --- Expense Service Functions ---
 export async function getExpenses(): Promise<Expense[]> {
   const expensesCollection = await getExpensesCollection();
-  await seedExpenses();
   const expenses = await expensesCollection.find({}).sort({ date: -1 }).toArray();
   return expenses.map(expense => ({ ...expense, id: expense._id.toString() }));
 }
@@ -101,8 +77,19 @@ export async function deleteExpense(expenseId: string): Promise<boolean> {
 // --- Category Service Functions ---
 export async function getExpenseCategories(): Promise<string[]> {
     const categoriesCollection = await getExpenseCategoriesCollection();
-    await seedCategories();
     const categories = await categoriesCollection.find({}).sort({ name: 1 }).toArray();
+    
+    // Seed if empty
+    if (categories.length === 0) {
+        console.log("Seeding 'expenseCategories' collection...");
+        const initialCategories = [
+            "Software", "Subscription", "Office Supplies", "Hardware", "Marketing", 
+            "Cloud Hosting", "Freelancer Payment", "Salary", "Travel", "Other"
+        ];
+        await categoriesCollection.insertMany(initialCategories.map(name => ({ _id: new ObjectId(), name })));
+        return initialCategories.sort();
+    }
+    
     return categories.map(cat => cat.name);
 }
 
@@ -164,5 +151,3 @@ export async function deleteExpenseCategory(name: string): Promise<void> {
         throw new Error(`Category "${name}" not found.`);
     }
 }
-
-    

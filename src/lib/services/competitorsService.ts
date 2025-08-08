@@ -1,9 +1,10 @@
 
+
 import { z } from 'zod';
 import { format, parseISO, toZonedTime } from 'date-fns';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { type Competitor, type CompetitorFormValues, competitorFormSchema, initialCompetitorsData, type CompetitorDataFormValues } from '@/lib/data/competitors-data';
+import { type Competitor, type CompetitorFormValues, competitorFormSchema, type CompetitorDataFormValues } from '@/lib/data/competitors-data';
 
 type CompetitorFromDb = Omit<Competitor, 'id' | 'workingSince'> & { workingSince?: string };
 
@@ -13,18 +14,8 @@ async function getCompetitorsCollection() {
   return db.collection<Omit<CompetitorFromDb, '_id'>>('competitors');
 }
 
-async function seedCompetitors() {
-    const collection = await getCompetitorsCollection();
-    const count = await collection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'competitors' collection...");
-        await collection.insertMany(initialCompetitorsData as any[]);
-    }
-}
-
 export async function getCompetitors(): Promise<Competitor[]> {
     const collection = await getCompetitorsCollection();
-    await seedCompetitors();
     const competitors = await collection.find({}).toArray();
     return competitors.map(c => ({
         ...c,

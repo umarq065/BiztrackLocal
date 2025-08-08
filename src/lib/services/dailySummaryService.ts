@@ -1,9 +1,10 @@
 
+
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { type DailySummary, summaryFormSchema, initialSummaries } from '@/lib/data/daily-summary-data';
+import { type DailySummary, summaryFormSchema } from '@/lib/data/daily-summary-data';
 
 type DailySummaryFromDb = {
     _id: ObjectId;
@@ -17,22 +18,8 @@ async function getSummariesCollection() {
   return db.collection<Omit<DailySummaryFromDb, '_id'>>('dailySummaries');
 }
 
-async function seedSummaries() {
-    const summariesCollection = await getSummariesCollection();
-    const count = await summariesCollection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'dailySummaries' collection...");
-        const summariesToInsert = initialSummaries.map(s => ({
-            date: format(s.date, 'yyyy-MM-dd'),
-            content: s.content,
-        }));
-        await summariesCollection.insertMany(summariesToInsert as any[]);
-    }
-}
-
 export async function getDailySummaries(): Promise<DailySummary[]> {
     const collection = await getSummariesCollection();
-    await seedSummaries();
     const summaries = await collection.find({}).sort({ date: -1 }).toArray();
 
     return summaries.map(s => ({

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { type BusinessNote, noteFormSchema, initialNotesData } from '@/lib/data/business-notes-data';
+import { type BusinessNote, noteFormSchema } from '@/lib/data/business-notes-data';
 
 type NoteFromDb = Omit<BusinessNote, 'id'> & { _id: ObjectId };
 
@@ -14,22 +14,8 @@ async function getNotesCollection() {
   return db.collection<Omit<NoteFromDb, '_id'>>('businessNotes');
 }
 
-async function seedNotes() {
-    const notesCollection = await getNotesCollection();
-    const count = await notesCollection.countDocuments();
-    if (count === 0) {
-        console.log("Seeding 'businessNotes' collection...");
-        const notesToInsert = initialNotesData.map(note => ({
-            ...note,
-            date: parseISO(note.date)
-        }));
-        await notesCollection.insertMany(notesToInsert as any[]);
-    }
-}
-
 export async function getNotes(): Promise<BusinessNote[]> {
     const collection = await getNotesCollection();
-    await seedNotes();
     const notes = await collection.find({}).sort({ date: -1 }).toArray();
 
     return notes.map(s => ({
