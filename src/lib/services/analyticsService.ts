@@ -548,17 +548,17 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
             { $project: {
                 lifespanDays: {
                     $cond: {
-                        if: { $and: [{ $ne: ['$firstOrderDate', null] }, { $ne: ['$lastOrderDate', null] }, { $ne: ['$firstOrderDate', '$lastOrderDate'] }] },
-                        then: {
+                         if: { $and: [{ $ne: ['$firstOrderDate', null] }, { $ne: ['$lastOrderDate', null] }, { $ne: ['$firstOrderDate', '$lastOrderDate'] }] },
+                         then: {
                             $divide: [
                                 { $subtract: [
                                     { $dateFromString: { dateString: '$lastOrderDate' } },
                                     { $dateFromString: { dateString: '$firstOrderDate' } }
-                                ] },
-                                86400000 // ms in a day
+                                ]},
+                                1000 * 60 * 60 * 24
                             ]
-                        },
-                        else: 0
+                         },
+                         else: 0
                     }
                 }
             }},
@@ -566,7 +566,7 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
         ]).toArray();
 
         const [revenueRes, expensesRes, ordersCount, marketingExpensesRes, salaryExpensesRes, newClientsCount, buyerStats, avgLifespanRes] = await Promise.all([
-            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, salaryExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanPromise
+            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, salaryExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanResPromise
         ]);
         
         const revenue = revenueRes[0]?.total || 0;
@@ -787,8 +787,9 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
 
         clientUsernamesInPeriod.forEach(username => {
             const clientSinceStr = clientSinceMap.get(username);
-            if (!clientSinceStr) return; // Should not happen if data is consistent
+            if (!clientSinceStr) return; 
             
+            // The clientSince date needs to be parsed correctly
             const clientSinceDate = parseISO(clientSinceStr);
             if (clientSinceDate >= start && clientSinceDate <= end) {
                 newBuyerUsernames.add(username);
@@ -916,3 +917,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     return data;
 }
 
+    
