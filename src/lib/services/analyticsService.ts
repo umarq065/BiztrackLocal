@@ -666,7 +666,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
                 { $match: { 'clientOrders.1': { $exists: true } } },
                 { $project: {
                     firstOrderDate: { $min: '$clientOrders.date' },
-                    lastOrderDate: { $max: '$clientOrders.date' }
+                    lastOrderDate: { $max: '$clientOrders.date' },
                 }},
                 { $project: {
                     lifespanDays: {
@@ -773,21 +773,24 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
         const totalOrders = ordersInPeriod.length;
         if (totalOrders === 0) return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0 };
         
-        const clientsInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
+        const clientUsernamesInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
 
-        const clientsWithFirstOrderDate = await clientsCol.aggregate([
-            { $match: { username: { $in: clientsInPeriod } } },
-            { $project: { username: 1, firstOrderDate: "$clientSince" }}
-        ]).toArray();
+        const clientsFromDB = await clientsCol.find(
+            { username: { $in: clientUsernamesInPeriod } },
+            { projection: { username: 1, clientSince: 1 } }
+        ).toArray();
         
-        const firstOrderDateMap = new Map(clientsWithFirstOrderDate.map(c => [c.username, c.firstOrderDate]));
-        
+        const clientSinceMap = new Map(clientsFromDB.map(c => [c.username, c.clientSince]));
+
         const newBuyerUsernames = new Set<string>();
         const repeatBuyerUsernames = new Set<string>();
 
-        clientsInPeriod.forEach(username => {
-            const firstOrderDate = firstOrderDateMap.get(username);
-            if (firstOrderDate && firstOrderDate >= startStr && firstOrderDate <= endStr) {
+        clientUsernamesInPeriod.forEach(username => {
+            const clientSinceStr = clientSinceMap.get(username);
+            if (!clientSinceStr) return; // Should not happen if data is consistent
+            
+            const clientSinceDate = parseISO(clientSinceStr);
+            if (clientSinceDate >= start && clientSinceDate <= end) {
                 newBuyerUsernames.add(username);
             } else {
                 repeatBuyerUsernames.add(username);
