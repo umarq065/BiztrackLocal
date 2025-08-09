@@ -185,7 +185,6 @@ async function processAnalytics(
         ? [source.gigs.find(g => g.id === filter.gigId)?.name] 
         : source.gigs.map(g => g.name);
     
-    // This function was previously removed, but is needed by getFinancialMetrics.
     const getOrdersForPeriod = async (start: Date, end: Date) => {
         return ordersCollection.aggregate([
             { $match: { 
@@ -780,7 +779,7 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
             { projection: { username: 1, clientSince: 1 } }
         ).toArray();
         
-        const clientSinceMap = new Map(clientsFromDB.map(c => [c.username, parseISO(c.clientSince)]));
+        const clientSinceMap = new Map(clientsFromDB.map(c => [c.username, parseISO(c.clientSince as string)]));
         
         const newBuyerUsernames = new Set<string>();
         clientUsernamesInPeriod.forEach(username => {
