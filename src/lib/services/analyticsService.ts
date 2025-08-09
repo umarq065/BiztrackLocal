@@ -781,19 +781,21 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
 
         const newBuyerUsernames = new Set<string>();
         const repeatBuyerUsernames = new Set<string>();
+        
+        const periodStartDate = parseISO(startStr);
 
-        clientsFromDB.forEach(client => {
+        for (const client of clientsFromDB) {
             const clientSinceDate = parseISO(client.clientSince as string);
-            if (clientSinceDate >= start) {
+            if (clientSinceDate >= periodStartDate) {
                 newBuyerUsernames.add(client.username);
             } else {
                 repeatBuyerUsernames.add(client.username);
             }
-        });
+        }
         
         const newBuyerOrders = ordersInPeriod.filter(o => newBuyerUsernames.has(o.clientUsername)).length;
         const repeatBuyerOrders = ordersInPeriod.filter(o => repeatBuyerUsernames.has(o.clientUsername)).length;
-
+        
         return { total: totalOrders, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders };
     };
 
