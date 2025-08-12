@@ -74,7 +74,7 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                             checked={isAllSelected}
                                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                                             aria-label="Select all"
-                                            indeterminate={isSomeSelected && !isAllSelected}
+                                            data-indeterminate={isSomeSelected && !isAllSelected}
                                         />
                                     </TableHead>
                                     <TableHead className="w-[250px]">
