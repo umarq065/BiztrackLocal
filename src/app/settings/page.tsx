@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, memo } from "react";
@@ -304,19 +303,19 @@ const SettingsPageComponent = () => {
                     <AlertDialogTitle>
                         {deleteStep === 1 ? "Are you absolutely sure?" : "Final Confirmation"}
                     </AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDescription asChild>
                          {deleteStep === 1 ? (
-                            <>
+                            <div>
                                 You are about to permanently delete all data from the following collection(s):
                                 <ul className="list-disc pl-5 mt-2 font-medium">
                                     {Object.keys(selectedCollections).filter(k => selectedCollections[k]).map(k => (
                                         <li key={k}>{collectionsToClear.find(c => c.id === k)?.label}</li>
                                     ))}
                                 </ul>
-                                <br/>This action cannot be undone.
-                            </>
+                                <p className="mt-2">This action cannot be undone.</p>
+                            </div>
                          ) : (
-                            "This is your final warning. Once deleted, the data cannot be recovered."
+                            <div>This is your final warning. Once deleted, the data cannot be recovered.</div>
                          )}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
