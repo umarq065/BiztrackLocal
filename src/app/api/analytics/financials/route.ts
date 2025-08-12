@@ -14,10 +14,6 @@ export async function GET(request: Request) {
     const query = Object.fromEntries(searchParams.entries());
     const { from, to } = querySchema.parse(query);
 
-    if (!from || !to) {
-        return NextResponse.json({ error: 'A "from" and "to" date range is required.' }, { status: 400 });
-    }
-
     const financialData = await getFinancialMetrics(from, to);
 
     return NextResponse.json(financialData);

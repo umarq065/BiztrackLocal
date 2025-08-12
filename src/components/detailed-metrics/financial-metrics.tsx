@@ -36,26 +36,32 @@ export function FinancialMetrics() {
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   
-  const previousPeriodLabel = (() => {
-    if (!from || !to) return "previous period";
+  const { previousPeriodLabel, periodBeforePreviousLabel } = React.useMemo(() => {
+    if (!from || !to) return { previousPeriodLabel: "previous period", periodBeforePreviousLabel: "prior period" };
     const fromDate = new Date(from.replace(/-/g, '/'));
     const toDate = new Date(to.replace(/-/g, '/'));
     const duration = differenceInDays(toDate, fromDate);
+
     const prevTo = subDays(fromDate, 1);
     const prevFrom = subDays(prevTo, duration);
-    return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
-  })();
+    
+    const periodBeforePrevTo = subDays(prevFrom, 1);
+    const periodBeforePrevFrom = subDays(periodBeforePrevTo, duration);
+
+    return {
+        previousPeriodLabel: `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`,
+        periodBeforePreviousLabel: `from ${format(periodBeforePrevFrom, 'MMM d')} - ${format(periodBeforePrevTo, 'MMM d, yyyy')}`
+    }
+  }, [from, to]);
 
   React.useEffect(() => {
     async function fetchData() {
-        if (!from || !to) {
-            setIsLoading(false);
-            setFinancialMetricsData(null);
-            return;
-        }
+        const fromParam = searchParams.get('from');
+        const toParam = searchParams.get('to');
+        
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/analytics/financials?from=${from}&to=${to}`);
+            const res = await fetch(`/api/analytics/financials?from=${fromParam}&to=${toParam}`);
             if (!res.ok) throw new Error('Failed to fetch financial metrics');
             const data = await res.json();
             setFinancialMetricsData(data);
@@ -67,7 +73,7 @@ export function FinancialMetrics() {
         }
     }
     fetchData();
-  }, [from, to]);
+  }, [searchParams]);
   
   if (isLoading) {
     return <Skeleton className="h-64 w-full" />
@@ -93,12 +99,11 @@ export function FinancialMetrics() {
     { name: "Total Revenue", data: financialMetricsData.totalRevenue, formula: "Sum of all income from services" },
     { name: "Total Expenses", data: financialMetricsData.totalExpenses, formula: "Sum of all business expenses", invertColor: true },
     { name: "Net Profit", data: financialMetricsData.netProfit, formula: "Total Revenue - Total Expenses" },
-    // Other metrics remain zero as requested
-    { name: "Profit Margin (%)", data: { value: 0, change: 0, previousValue: 0 }, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
-    { name: "Gross Margin (%)", data: { value: 0, change: 0, previousValue: 0 }, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
-    { name: "Client Acquisition Cost (CAC)", data: { value: 0, change: 0, previousValue: 0 }, formula: "Marketing Costs / New Clients", invertColor: true },
-    { name: "Customer Lifetime Value (CLTV)", data: { value: 0, change: 0, previousValue: 0 }, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
-    { name: "Average Order Value (AOV)", data: { value: 0, change: 0, previousValue: 0 }, formula: "Total Revenue / Number of Orders" },
+    { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
+    { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
+    { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", invertColor: true },
+    { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
+    { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
   ];
 
   return (
@@ -116,12 +121,10 @@ export function FinancialMetrics() {
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {metricsToShow.map((metric) => {
-            const { value, change, previousValue } = metric.data;
+            const { value, change, previousValue, previousPeriodChange } = metric.data;
             const isPositive = metric.invertColor ? change < 0 : change >= 0;
             const displayValue = metric.isPercentage ? `${value.toFixed(1)}%` : formatCurrency(value);
-            const displayPrevValue = metric.isPercentage ? `${previousValue.toFixed(1)}%` : formatCurrency(previousValue);
             
-            // Only show detailed change for the first three metrics
             const showDetailedChange = ["Total Revenue", "Total Expenses", "Net Profit"].includes(metric.name);
 
             return (
@@ -142,20 +145,22 @@ export function FinancialMetrics() {
                         <p className="text-2xl font-bold mt-1">{displayValue}</p>
                     </div>
                     <div className="mt-2 pt-2 border-t space-y-1">
-                        {showDetailedChange && (
+                        {showDetailedChange && previousPeriodChange != null ? (
                             <div className="flex items-center text-xs flex-wrap">
-                                <span
-                                    className={cn(
-                                        "flex items-center gap-1 font-semibold",
-                                        previousValue >= 0 ? "text-foreground" : "text-red-600"
-                                    )}
-                                >
+                                <span className={cn("font-semibold", previousValue >= 0 ? "text-foreground" : "text-red-600")}>
                                     {formatCurrency(previousValue)}
+                                </span>
+                                <span className={cn(
+                                    "ml-1 flex items-center gap-0.5",
+                                    (metric.invertColor ? previousPeriodChange < 0 : previousPeriodChange >= 0) ? "text-green-600" : "text-red-600"
+                                )}>
+                                    ({previousPeriodChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{Math.abs(previousPeriodChange).toFixed(1)}%)
                                 </span>
                                 <span className="ml-1 text-muted-foreground">{previousPeriodLabel}</span>
                             </div>
+                        ) : (
+                             <p className="text-xs text-muted-foreground">{metric.formula}</p>
                         )}
-                        <p className="text-xs text-muted-foreground">{metric.formula}</p>
                     </div>
                 </div>
             )

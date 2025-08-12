@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -122,9 +123,9 @@ export interface FinancialMetricTimeSeries {
 }
 
 export interface FinancialMetricData {
-    totalRevenue: { value: number; change: number; previousValue: number };
-    totalExpenses: { value: number; change: number; previousValue: number };
-    netProfit: { value: number; change: number; previousValue: number };
+    totalRevenue: { value: number; change: number; previousValue: number; previousPeriodChange: number };
+    totalExpenses: { value: number; change: number; previousValue: number; previousPeriodChange: number };
+    netProfit: { value: number; change: number; previousValue: number; previousPeriodChange: number };
     profitMargin: { value: number; change: number; previousValue: number };
     grossMargin: { value: number; change: number; previousValue: number };
     cac: { value: number; change: number; previousValue: number };
@@ -503,28 +504,32 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
 }
 
 
-export async function getFinancialMetrics(from: string, to: string): Promise<FinancialMetricData> {
-    const fromDate = parseISO(from);
-    const toDate = parseISO(to);
-    
-    const durationInDays = differenceInDays(toDate, fromDate);
-    if (durationInDays < 0) throw new Error("Invalid date range");
+export async function getFinancialMetrics(from?: string, to?: string): Promise<FinancialMetricData> {
+    const fromDate = from ? parseISO(from) : undefined;
+    const toDate = to ? parseISO(to) : undefined;
 
-    const prevTo = subDays(fromDate, 1);
-    const prevFrom = subDays(prevTo, durationInDays);
+    const calculateChange = (current: number, prev: number) => {
+        if (prev === 0) return current > 0 ? 100 : 0;
+        return ((current - prev) / prev) * 100;
+    };
 
-    const getPeriodFinancials = async (start: Date, end: Date) => {
+    const getPeriodFinancials = async (start?: Date, end?: Date) => {
         const ordersCol = await getOrdersCollection();
         const expensesCol = await getExpensesCollection();
+        
+        const matchQuery: any = {};
+        if (start && end) {
+            matchQuery.date = { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') };
+        }
 
         const revenueRes = await ordersCol.aggregate([
-            { $match: { date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') }, status: 'Completed' } },
+            { $match: { ...matchQuery, status: 'Completed' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]).toArray();
         const totalRevenue = revenueRes[0]?.total || 0;
 
         const expensesRes = await expensesCol.aggregate([
-            { $match: { date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') } } },
+            { $match: matchQuery },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]).toArray();
         const totalExpenses = expensesRes[0]?.total || 0;
@@ -536,20 +541,44 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
         };
     };
 
-    const [currentPeriod, previousPeriod] = await Promise.all([
-        getPeriodFinancials(fromDate, toDate),
-        getPeriodFinancials(prevFrom, prevTo)
-    ]);
-    
-    const calculateChange = (current: number, prev: number) => {
-        if (prev === 0) return current > 0 ? 100 : 0;
-        return ((current - prev) / prev) * 100;
-    };
+    const [currentPeriod, previousPeriod, periodBeforePrevious] = await (async () => {
+        if (fromDate && toDate) {
+            const durationInDays = differenceInDays(toDate, fromDate);
+            const p1_to = subDays(fromDate, 1);
+            const p1_from = subDays(p1_to, durationInDays);
+            const p0_to = subDays(p1_from, 1);
+            const p0_from = subDays(p0_to, durationInDays);
+
+            return Promise.all([
+                getPeriodFinancials(fromDate, toDate),
+                getPeriodFinancials(p1_from, p1_to),
+                getPeriodFinancials(p0_from, p0_to)
+            ]);
+        }
+        // Fallback for "All Time" - only current period has data
+        const allTime = await getPeriodFinancials();
+        return [allTime, { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }, { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }];
+    })();
 
     return {
-        totalRevenue: { value: currentPeriod.totalRevenue, change: calculateChange(currentPeriod.totalRevenue, previousPeriod.totalRevenue), previousValue: previousPeriod.totalRevenue },
-        totalExpenses: { value: currentPeriod.totalExpenses, change: calculateChange(currentPeriod.totalExpenses, previousPeriod.totalExpenses), previousValue: previousPeriod.totalExpenses },
-        netProfit: { value: currentPeriod.netProfit, change: calculateChange(currentPeriod.netProfit, previousPeriod.netProfit), previousValue: previousPeriod.netProfit },
+        totalRevenue: {
+            value: currentPeriod.totalRevenue,
+            change: calculateChange(currentPeriod.totalRevenue, previousPeriod.totalRevenue),
+            previousValue: previousPeriod.totalRevenue,
+            previousPeriodChange: calculateChange(previousPeriod.totalRevenue, periodBeforePrevious.totalRevenue),
+        },
+        totalExpenses: {
+            value: currentPeriod.totalExpenses,
+            change: calculateChange(currentPeriod.totalExpenses, previousPeriod.totalExpenses),
+            previousValue: previousPeriod.totalExpenses,
+            previousPeriodChange: calculateChange(previousPeriod.totalExpenses, periodBeforePrevious.totalExpenses),
+        },
+        netProfit: {
+            value: currentPeriod.netProfit,
+            change: calculateChange(currentPeriod.netProfit, previousPeriod.netProfit),
+            previousValue: previousPeriod.netProfit,
+            previousPeriodChange: calculateChange(previousPeriod.netProfit, periodBeforePrevious.netProfit),
+        },
         profitMargin: { value: 0, change: 0, previousValue: 0 },
         grossMargin: { value: 0, change: 0, previousValue: 0 },
         cac: { value: 0, change: 0, previousValue: 0 },
