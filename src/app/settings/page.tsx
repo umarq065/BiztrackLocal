@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, memo } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -299,8 +299,8 @@ const SettingsPageComponent = () => {
                     {clearDataStep === 1 && "Are you absolutely sure?"}
                     {clearDataStep === 2 && "Final Confirmation"}
                 </AlertDialogTitle>
-                <div className="text-sm text-muted-foreground">
-                    {clearDataStep === 1 && (
+                <AlertDialogDescription asChild>
+                    {clearDataStep === 1 ? (
                         <div>
                             <p>This will permanently delete all data from the following collection(s):</p>
                             <ul className="list-disc pl-5 mt-2 font-medium text-destructive">
@@ -310,13 +310,12 @@ const SettingsPageComponent = () => {
                             </ul>
                             <p className="mt-2">This action is irreversible.</p>
                         </div>
-                    )}
-                    {clearDataStep === 2 && (
+                    ) : (
                          <div>
                             <p>This is your final warning. To proceed, please type "DELETE" in the box below.</p>
                          </div>
                     )}
-                </div>
+                </AlertDialogDescription>
             </AlertDialogHeader>
              {clearDataStep === 2 && (
                 <Input
