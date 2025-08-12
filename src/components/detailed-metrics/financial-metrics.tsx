@@ -14,13 +14,9 @@ import type { FinancialMetricData } from "@/lib/services/analyticsService";
 const FinancialValueChart = lazy(() => import("@/components/detailed-metrics/financial-value-chart"));
 const FinancialPercentageChart = lazy(() => import("@/components/detailed-metrics/financial-percentage-chart"));
 
-interface FinancialMetricsProps {
-    previousPeriodLabel: string;
-}
-
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function FinancialMetrics({ previousPeriodLabel }: FinancialMetricsProps) {
+export function FinancialMetrics() {
   const [showChart, setShowChart] = useState(false);
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,

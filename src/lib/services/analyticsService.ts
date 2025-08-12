@@ -109,6 +109,18 @@ export interface GrowthMetricData {
   timeSeries: GrowthMetricTimeSeries[];
 }
 
+export interface FinancialMetricTimeSeries {
+    month: string;
+    totalRevenue: number;
+    totalExpenses: number;
+    netProfit: number;
+    profitMargin: number;
+    grossMargin: number;
+    cac: number;
+    cltv: number;
+    aov: number;
+}
+
 export interface FinancialMetricData {
     totalRevenue: { value: number; change: number; previousValue: number };
     totalExpenses: { value: number; change: number; previousValue: number };
@@ -539,7 +551,7 @@ export async function getFinancialMetrics(): Promise<FinancialMetricData> {
         ]).toArray();
 
         const [revenueRes, expensesRes, ordersCount, marketingExpensesRes, salaryExpensesRes, newClientsCount, buyerStats, avgLifespanRes] = await Promise.all([
-            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, salaryExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanPromise
+            revenuePromise, expensesPromise, ordersCountPromise, marketingExpensesPromise, salaryExpensesPromise, newClientsCountPromise, buyerStatsPromise, avgLifespanRes
         ]);
         
         const revenue = revenueRes[0]?.total || 0;
@@ -747,8 +759,8 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
             { username: { $in: clientUsernamesInPeriod } },
             { projection: { username: 1, clientSince: 1 } }
         ).toArray();
-
-        const periodStartDate = start;
+        
+        const periodStartDate = parseISO(startStr);
 
         const newBuyerUsernames = new Set<string>();
         const repeatBuyerUsernames = new Set<string>();
@@ -881,5 +893,3 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
-
-    
