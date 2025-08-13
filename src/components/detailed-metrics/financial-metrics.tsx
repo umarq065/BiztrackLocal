@@ -36,8 +36,8 @@ export function FinancialMetrics() {
   const from = searchParams.get('from');
   const to = searchParams.get('to');
   
-  const { previousPeriodLabel, periodBeforePreviousLabel } = React.useMemo(() => {
-    if (!from || !to) return { previousPeriodLabel: "previous period", periodBeforePreviousLabel: "prior period" };
+  const { previousPeriodLabel } = React.useMemo(() => {
+    if (!from || !to) return { previousPeriodLabel: "previous period" };
     const fromDate = new Date(from.replace(/-/g, '/'));
     const toDate = new Date(to.replace(/-/g, '/'));
     const duration = differenceInDays(toDate, fromDate);
@@ -45,12 +45,8 @@ export function FinancialMetrics() {
     const prevTo = subDays(fromDate, 1);
     const prevFrom = subDays(prevTo, duration);
     
-    const periodBeforePrevTo = subDays(prevFrom, 1);
-    const periodBeforePrevFrom = subDays(periodBeforePrevTo, duration);
-
     return {
         previousPeriodLabel: `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`,
-        periodBeforePreviousLabel: `from ${format(periodBeforePrevFrom, 'MMM d')} - ${format(periodBeforePrevTo, 'MMM d, yyyy')}`
     }
   }, [from, to]);
 
@@ -76,7 +72,11 @@ export function FinancialMetrics() {
   }, [searchParams]);
   
   if (isLoading) {
-    return <Skeleton className="h-64 w-full" />
+    return (
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({length: 8}).map((_, i) => <Skeleton key={i} className="h-[180px] w-full" />)}
+       </div>
+    )
   }
 
   if (!financialMetricsData) {
@@ -99,8 +99,8 @@ export function FinancialMetrics() {
     { name: "Total Revenue", data: financialMetricsData.totalRevenue, formula: "Sum of all income from services" },
     { name: "Total Expenses", data: financialMetricsData.totalExpenses, formula: "Sum of all business expenses", invertColor: true },
     { name: "Net Profit", data: financialMetricsData.netProfit, formula: "Total Revenue - Total Expenses" },
-    { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "(Net Profit / Total Revenue) × 100", isPercentage: true },
-    { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary Cost) / Revenue) × 100", isPercentage: true },
+    { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "((Revenue - Expenses) / Revenue) * 100", isPercentage: true },
+    { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary) / Revenue) * 100", isPercentage: true },
     { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", invertColor: true },
     { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
     { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
@@ -125,14 +125,12 @@ export function FinancialMetrics() {
             const isPositive = metric.invertColor ? change < 0 : change >= 0;
             const displayValue = metric.isPercentage ? `${value.toFixed(1)}%` : formatCurrency(value);
             
-            const showDetailedChange = ["Total Revenue", "Total Expenses", "Net Profit"].includes(metric.name);
-
             return (
-                <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
+                <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between min-h-[160px]">
                     <div>
                         <div className="flex items-center justify-between">
                             <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
-                            {showDetailedChange && (
+                             {change != null && (
                                 <span className={cn(
                                     "flex items-center gap-1 text-xs font-semibold",
                                     isPositive ? "text-green-600" : "text-red-600"
@@ -145,10 +143,10 @@ export function FinancialMetrics() {
                         <p className="text-2xl font-bold mt-1">{displayValue}</p>
                     </div>
                     <div className="mt-2 pt-2 border-t space-y-1">
-                        {showDetailedChange && previousPeriodChange != null ? (
+                        {previousPeriodChange != null && previousValue != null ? (
                             <div className="flex items-center text-xs flex-wrap">
-                                <span className={cn("font-semibold", previousValue >= 0 ? "text-foreground" : "text-red-600")}>
-                                    {formatCurrency(previousValue)}
+                                <span className={cn("font-semibold", (metric.isPercentage || previousValue >= 0) ? "text-foreground" : "text-red-600")}>
+                                   {metric.isPercentage ? `${previousValue.toFixed(1)}%` : formatCurrency(previousValue)}
                                 </span>
                                 <span className={cn(
                                     "ml-1 flex items-center gap-0.5",

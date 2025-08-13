@@ -122,15 +122,22 @@ export interface FinancialMetricTimeSeries {
     aov: number;
 }
 
+export interface FinancialMetric {
+    value: number;
+    change: number;
+    previousValue: number;
+    previousPeriodChange: number;
+}
+
 export interface FinancialMetricData {
-    totalRevenue: { value: number; change: number; previousValue: number; previousPeriodChange: number };
-    totalExpenses: { value: number; change: number; previousValue: number; previousPeriodChange: number };
-    netProfit: { value: number; change: number; previousValue: number; previousPeriodChange: number };
-    profitMargin: { value: number; change: number; previousValue: number };
-    grossMargin: { value: number; change: number; previousValue: number };
-    cac: { value: number; change: number; previousValue: number };
-    cltv: { value: number; change: number; previousValue: number };
-    aov: { value: number; change: number; previousValue: number };
+    totalRevenue: FinancialMetric;
+    totalExpenses: FinancialMetric;
+    netProfit: FinancialMetric;
+    profitMargin: FinancialMetric;
+    grossMargin: FinancialMetric;
+    cac: FinancialMetric;
+    cltv: FinancialMetric;
+    aov: FinancialMetric;
     timeSeries: FinancialMetricTimeSeries[];
 }
 
@@ -533,11 +540,21 @@ export async function getFinancialMetrics(from?: string, to?: string): Promise<F
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]).toArray();
         const totalExpenses = expensesRes[0]?.total || 0;
+        
+        const salaryExpensesRes = await expensesCol.aggregate([
+            { $match: { ...matchQuery, category: "Salary" } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]).toArray();
+        const salaryExpenses = salaryExpensesRes[0]?.total || 0;
+
 
         return {
             totalRevenue,
             totalExpenses,
-            netProfit: totalRevenue - totalExpenses
+            salaryExpenses,
+            netProfit: totalRevenue - totalExpenses,
+            profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0,
+            grossMargin: totalRevenue > 0 ? ((totalRevenue - salaryExpenses) / totalRevenue) * 100 : 0,
         };
     };
 
@@ -555,35 +572,28 @@ export async function getFinancialMetrics(from?: string, to?: string): Promise<F
                 getPeriodFinancials(p0_from, p0_to)
             ]);
         }
-        // Fallback for "All Time" - only current period has data
+        // Fallback for "All Time"
         const allTime = await getPeriodFinancials();
-        return [allTime, { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }, { totalRevenue: 0, totalExpenses: 0, netProfit: 0 }];
+        return [allTime, { totalRevenue: 0, totalExpenses: 0, salaryExpenses: 0, netProfit: 0, profitMargin: 0, grossMargin: 0 }, { totalRevenue: 0, totalExpenses: 0, salaryExpenses: 0, netProfit: 0, profitMargin: 0, grossMargin: 0 }];
     })();
 
+    const createMetric = (currentVal: number, prevVal: number, prevPeriodVal: number): FinancialMetric => ({
+        value: currentVal,
+        change: calculateChange(currentVal, prevVal),
+        previousValue: prevVal,
+        previousPeriodChange: calculateChange(prevVal, prevPeriodVal)
+    });
+
     return {
-        totalRevenue: {
-            value: currentPeriod.totalRevenue,
-            change: calculateChange(currentPeriod.totalRevenue, previousPeriod.totalRevenue),
-            previousValue: previousPeriod.totalRevenue,
-            previousPeriodChange: calculateChange(previousPeriod.totalRevenue, periodBeforePrevious.totalRevenue),
-        },
-        totalExpenses: {
-            value: currentPeriod.totalExpenses,
-            change: calculateChange(currentPeriod.totalExpenses, previousPeriod.totalExpenses),
-            previousValue: previousPeriod.totalExpenses,
-            previousPeriodChange: calculateChange(previousPeriod.totalExpenses, periodBeforePrevious.totalExpenses),
-        },
-        netProfit: {
-            value: currentPeriod.netProfit,
-            change: calculateChange(currentPeriod.netProfit, previousPeriod.netProfit),
-            previousValue: previousPeriod.netProfit,
-            previousPeriodChange: calculateChange(previousPeriod.netProfit, periodBeforePrevious.netProfit),
-        },
-        profitMargin: { value: 0, change: 0, previousValue: 0 },
-        grossMargin: { value: 0, change: 0, previousValue: 0 },
-        cac: { value: 0, change: 0, previousValue: 0 },
-        cltv: { value: 0, change: 0, previousValue: 0 },
-        aov: { value: 0, change: 0, previousValue: 0 },
+        totalRevenue: createMetric(currentPeriod.totalRevenue, previousPeriod.totalRevenue, periodBeforePrevious.totalRevenue),
+        totalExpenses: createMetric(currentPeriod.totalExpenses, previousPeriod.totalExpenses, periodBeforePrevious.totalExpenses),
+        netProfit: createMetric(currentPeriod.netProfit, previousPeriod.netProfit, periodBeforePrevious.netProfit),
+        profitMargin: createMetric(currentPeriod.profitMargin, previousPeriod.profitMargin, periodBeforePrevious.profitMargin),
+        grossMargin: createMetric(currentPeriod.grossMargin, previousPeriod.grossMargin, periodBeforePrevious.grossMargin),
+        // Placeholders for other metrics
+        cac: { value: 0, change: 0, previousValue: 0, previousPeriodChange: 0 },
+        cltv: { value: 0, change: 0, previousValue: 0, previousPeriodChange: 0 },
+        aov: { value: 0, change: 0, previousValue: 0, previousPeriodChange: 0 },
         timeSeries: [] // Placeholder
     };
 }
