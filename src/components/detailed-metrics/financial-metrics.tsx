@@ -102,8 +102,8 @@ export function FinancialMetrics() {
     { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "((Revenue - Expenses) / Revenue) * 100", isPercentage: true },
     { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary) / Revenue) * 100", isPercentage: true },
     { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", invertColor: true },
-    { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
-    { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
+    { name: "Customer Lifetime Value (CLTV)", data: { value: 0, change: 0, previousValue: 0, previousPeriodChange: 0 }, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
+    { name: "Average Order Value (AOV)", data: { value: 0, change: 0, previousValue: 0, previousPeriodChange: 0 }, formula: "Total Revenue / Number of Orders" },
   ];
 
   return (
