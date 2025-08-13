@@ -317,6 +317,29 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
     const existingClients = new Set((await existingClientsCursor.toArray()).map(c => c.username));
     let sourceGigs = new Map(source.gigs.map(g => [g.name.toLowerCase(), g]));
 
+    // Pre-process rows to find the first order date for each new client
+    const newClientFirstOrderDates = new Map<string, Date>();
+    for (const row of rows) {
+        const orderData = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), value]));
+        const clientUsername = orderData['client username'];
+        const dateStr = orderData['date'];
+
+        if (!clientUsername || !dateStr || existingClients.has(clientUsername)) continue;
+
+        try {
+            let orderDate = parse(dateStr, 'M/d/yyyy', new Date());
+            if (isNaN(orderDate.getTime())) orderDate = parse(dateStr, 'yyyy-MM-dd', new Date());
+            if (isNaN(orderDate.getTime())) continue;
+
+            if (!newClientFirstOrderDates.has(clientUsername) || orderDate < newClientFirstOrderDates.get(clientUsername)!) {
+                newClientFirstOrderDates.set(clientUsername, orderDate);
+            }
+        } catch (e) {
+            // Ignore rows with invalid dates during this pre-processing step
+        }
+    }
+
+
     const newClientsToCreate: any[] = [];
     const newGigsToCreate: any[] = [];
     const newOrdersToCreate: any[] = [];
@@ -364,6 +387,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
         
         // Add client to creation list if new
         if (!existingClients.has(clientUsername) && !newClientsToCreate.some(c => c.username === clientUsername)) {
+            const clientSinceDate = newClientFirstOrderDates.get(clientUsername) || orderDate; // Use pre-calculated first order date
             newClientsToCreate.push({
                 username: clientUsername,
                 source: sourceName,
@@ -374,7 +398,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
                 notes: `Client auto-created from bulk import.`,
                 tags: ['auto-created', 'bulk-import'],
                 isVip: false,
-                clientSince: orderDate
+                clientSince: clientSinceDate
             });
             existingClients.add(clientUsername);
         }
