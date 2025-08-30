@@ -70,7 +70,7 @@ export default function IncomeSourceFilter({ sources, selectedSources, onSelecti
           <CommandList>
             <CommandEmpty>No sources found.</CommandEmpty>
             <CommandGroup>
-                <CommandItem onSelect={handleSelectAll}>
+                <CommandItem onSelect={handleSelectAll} className="cursor-pointer">
                      <div
                         className={cn(
                         "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
@@ -91,6 +91,7 @@ export default function IncomeSourceFilter({ sources, selectedSources, onSelecti
                   key={source}
                   value={source}
                   onSelect={() => handleSelect(source)}
+                  className="cursor-pointer"
                 >
                   <div
                     className={cn(

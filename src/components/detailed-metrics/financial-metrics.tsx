@@ -34,16 +34,12 @@ export function FinancialMetrics() {
   
   const from = searchParams.get('from');
   const to = searchParams.get('to');
-  const sources = searchParams.get('sources');
 
   React.useEffect(() => {
     async function fetchData() {
         if (!from || !to) return;
         setIsLoading(true);
         const query = new URLSearchParams({ from, to });
-        if (sources) {
-            query.set('sources', sources);
-        }
 
         try {
             const res = await fetch(`/api/analytics/financials?${query.toString()}`);
@@ -58,7 +54,7 @@ export function FinancialMetrics() {
         }
     }
     fetchData();
-  }, [from, to, sources]);
+  }, [from, to]);
   
   const renderMetricCard = (
       name: string,

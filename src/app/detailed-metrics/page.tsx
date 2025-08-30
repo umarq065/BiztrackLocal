@@ -14,9 +14,6 @@ import { MarketingMetrics } from "@/components/detailed-metrics/marketing-metric
 import { ProjectMetrics } from "@/components/detailed-metrics/project-metrics";
 import { OrderMetrics } from "@/components/detailed-metrics/order-metrics";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { IncomeSource } from "@/lib/data/incomes-data";
-
-const IncomeSourceFilter = lazy(() => import("@/components/detailed-metrics/income-source-filter"));
 
 
 export default function DetailedMetricsPage() {
@@ -25,25 +22,6 @@ export default function DetailedMetricsPage() {
     const searchParams = useSearchParams();
 
     const [date, setDate] = useState<DateRange | undefined>(undefined);
-    const [incomeSources, setIncomeSources] = useState<string[]>([]);
-    const [selectedSources, setSelectedSources] = useState<string[]>([]);
-    const [isSourcesLoading, setIsSourcesLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchSources() {
-            try {
-                const res = await fetch('/api/incomes');
-                if (!res.ok) throw new Error('Failed to fetch sources');
-                const data: IncomeSource[] = await res.json();
-                setIncomeSources(data.map(s => s.name));
-            } catch (error) {
-                console.error("Failed to fetch income sources:", error);
-            } finally {
-                setIsSourcesLoading(false);
-            }
-        }
-        fetchSources();
-    }, []);
 
     useEffect(() => {
         const fromParam = searchParams.get('from');
@@ -59,9 +37,6 @@ export default function DetailedMetricsPage() {
              const from = new Date(today.getFullYear(), today.getMonth(), 1);
              setDate({ from, to: today });
         }
-
-        const sourcesParam = searchParams.get('sources');
-        setSelectedSources(sourcesParam ? sourcesParam.split(',') : []);
 
     }, [searchParams]);
 
@@ -91,11 +66,6 @@ export default function DetailedMetricsPage() {
             to: newDate?.to ? format(newDate.to, 'yyyy-MM-dd') : null,
         });
     };
-    
-    const handleSetSources = (newSources: string[]) => {
-        setSelectedSources(newSources);
-        updateUrl({ sources: newSources.length > 0 ? newSources.join(',') : null });
-    };
 
     const previousPeriodLabel = (() => {
         if (!date?.from || !date?.to) return "previous period";
@@ -116,14 +86,6 @@ export default function DetailedMetricsPage() {
                 </h1>
                 <div className="ml-auto flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                     <DateFilter date={date} setDate={handleSetDate} />
-                     <Suspense fallback={<Skeleton className="h-10 w-[200px]" />}>
-                        <IncomeSourceFilter 
-                            sources={incomeSources}
-                            selectedSources={selectedSources}
-                            onSelectionChange={handleSetSources}
-                            isLoading={isSourcesLoading}
-                        />
-                    </Suspense>
                 </div>
             </div>
 
