@@ -343,7 +343,7 @@ const CompetitorsPageComponent = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Competitor Overview</CardTitle>
+          <CardTitle>Competitive Landscape</CardTitle>
           <CardDescription>
             Keep track of your main competitors.
           </CardDescription>
