@@ -4,7 +4,7 @@
 import * as React from "react";
 import { useState, lazy, Suspense, useEffect, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
-import { format, subDays, differenceInDays } from "date-fns";
+import { format, subDays, differenceInDays, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ArrowUp, ArrowDown, BarChart, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
     }
     fetchData();
   }, [date]);
-
+  
   const previousPeriodLabel = useMemo(() => {
     if (!date?.from || !date?.to) return "previous period";
     const from = date.from;
@@ -69,16 +69,19 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
     return `from ${format(prevFrom, 'MMM d')} to ${format(prevTo, 'MMM d, yyyy')}`;
   }, [date]);
 
-  const metricsToShow = financialMetricsData ? [
-    { name: "Total Revenue", data: financialMetricsData.totalRevenue, formula: "Sum of all income from services" },
-    { name: "Total Expenses", data: financialMetricsData.totalExpenses, formula: "Sum of all business expenses", options: { invertColor: true } },
-    { name: "Net Profit", data: financialMetricsData.netProfit, formula: "Total Revenue - Total Expenses" },
-    { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "((Revenue - Expenses) / Revenue) * 100", options: { isPercentage: true } },
-    { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary) / Revenue) * 100", options: { isPercentage: true } },
-    { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", options: { invertColor: true } },
-    { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
-    { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
-  ] : [];
+  const metricsToShow = useMemo(() => {
+    if (!financialMetricsData) return [];
+    return [
+        { name: "Total Revenue", data: financialMetricsData.totalRevenue, formula: "Sum of all income from services" },
+        { name: "Total Expenses", data: financialMetricsData.totalExpenses, formula: "Sum of all business expenses", options: { invertColor: true } },
+        { name: "Net Profit", data: financialMetricsData.netProfit, formula: "Total Revenue - Total Expenses" },
+        { name: "Profit Margin (%)", data: financialMetricsData.profitMargin, formula: "((Revenue - Expenses) / Revenue) * 100", options: { isPercentage: true } },
+        { name: "Gross Margin (%)", data: financialMetricsData.grossMargin, formula: "((Revenue - Salary) / Revenue) * 100", options: { isPercentage: true } },
+        { name: "Client Acquisition Cost (CAC)", data: financialMetricsData.cac, formula: "Marketing Costs / New Clients", options: { invertColor: true } },
+        { name: "Customer Lifetime Value (CLTV)", data: financialMetricsData.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
+        { name: "Average Order Value (AOV)", data: financialMetricsData.aov, formula: "Total Revenue / Number of Orders" },
+    ];
+  }, [financialMetricsData]);
   
   if (isLoading) {
     return (
