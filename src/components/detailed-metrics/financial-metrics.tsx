@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FinancialMetricData } from "@/lib/services/analyticsService";
-import { useSearchParams } from "next/navigation";
 
 const FinancialValueChart = lazy(() => import("@/components/detailed-metrics/financial-value-chart"));
 const FinancialPercentageChart = lazy(() => import("@/components/detailed-metrics/financial-percentage-chart"));
@@ -20,7 +19,6 @@ const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { mi
 
 export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
   const [showChart, setShowChart] = useState(false);
-  const searchParams = useSearchParams();
   const [activePercentageMetrics, setActivePercentageMetrics] = useState({
     profitMargin: true,
     grossMargin: true,
@@ -35,8 +33,9 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
   
   useEffect(() => {
     async function fetchData() {
-        if (!date?.from || !date?.to) {
+        if (!date?.from || !date.to) {
             setIsLoading(false);
+            setFinancialMetricsData(null);
             return;
         }
         setIsLoading(true);
@@ -126,7 +125,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
         </div>
     );
   };
-
+  
   const metricsToShow = [
     { name: "Total Revenue", data: financialMetricsData?.totalRevenue, formula: "Sum of all income from services" },
     { name: "Total Expenses", data: financialMetricsData?.totalExpenses, formula: "Sum of all business expenses", options: { invertColor: true } },
@@ -169,7 +168,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
           <DollarSign className="h-6 w-6 text-primary" />
           <span>Financial Metrics</span>
         </Title>
-        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)} disabled>
+        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)} disabled={!financialMetricsData.timeSeries || financialMetricsData.timeSeries.length === 0}>
             {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />}
             {showChart ? "Hide Graphs" : "Show Graphs"}
         </Button>
