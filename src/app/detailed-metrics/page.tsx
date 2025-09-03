@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format, subDays, differenceInDays } from 'date-fns';
 import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
-import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
 import { ClientMetrics } from "@/components/detailed-metrics/client-metrics";
 import { GrowthMetrics } from "@/components/detailed-metrics/growth-metrics";
 import { SalesMetrics } from "@/components/detailed-metrics/sales-metrics";
@@ -89,7 +88,6 @@ export default function DetailedMetricsPage() {
             </div>
 
             <div className="space-y-6">
-                <FinancialMetrics date={date} />
                 <OrderMetrics date={date} />
                 <ClientMetrics date={date} />
                 <GrowthMetrics date={date} previousPeriodLabel={previousPeriodLabel} />
