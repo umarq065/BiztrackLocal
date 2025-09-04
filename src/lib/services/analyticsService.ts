@@ -472,7 +472,7 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
     const P1_to = subDays(P2_from, 1);
     const P1_from = subDays(P1_to, durationInDays);
     const P0_to = subDays(P1_from, 1);
-    const P0_from = subDays(p0_to, durationInDays);
+    const P0_from = subDays(P0_to, durationInDays);
     
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
@@ -844,8 +844,8 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         data.competitors = competitors.map(comp => {
             const monthlyOrders = Array(12).fill(0);
             (comp.monthlyData || [])
-                .filter(d => d.year === year)
-                .forEach(d => {
+                .filter((d: { year: number; }) => d.year === year)
+                .forEach((d: { month: number; orders: any; }) => {
                     if(d.month >= 1 && d.month <= 12) {
                         monthlyOrders[d.month - 1] = d.orders;
                     }
@@ -861,4 +861,5 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     }
 
     return data;
+
 }
