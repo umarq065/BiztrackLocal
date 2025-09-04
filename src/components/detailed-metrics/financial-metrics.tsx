@@ -14,7 +14,12 @@ import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
+interface FinancialMetricsProps {
+    date: DateRange | undefined;
+    selectedSources: string[];
+}
+
+export function FinancialMetrics({ date, selectedSources }: FinancialMetricsProps) {
     const [showChart, setShowChart] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [metrics, setMetrics] = useState<FinancialMetricData | null>(null);
@@ -22,12 +27,13 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
 
     useEffect(() => {
         async function fetchData() {
-            if (!date?.from || !date?.to) return;
+            if (!date?.from || !date?.to || selectedSources.length === 0) return;
             setIsLoading(true);
             try {
                 const query = new URLSearchParams({
                     from: date.from.toISOString(),
-                    to: date.to.toISOString()
+                    to: date.to.toISOString(),
+                    sources: selectedSources.join(','),
                 });
                 const res = await fetch(`/api/analytics/financial-metrics?${query.toString()}`);
                 if (!res.ok) {
@@ -49,7 +55,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
             }
         }
         fetchData();
-    }, [date, toast]);
+    }, [date, selectedSources, toast]);
     
 
     const previousPeriodLabel = useMemo(() => {

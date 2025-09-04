@@ -90,10 +90,8 @@ export default function DetailedMetricsPage() {
 
     const previousPeriodLabel = (() => {
         if (!date?.from || !date?.to) return "previous period";
-        const from = date.from;
-        const to = date.to;
-        const duration = differenceInDays(to, from);
-        const prevTo = subDays(from, 1);
+        const duration = differenceInDays(date.to, date.from);
+        const prevTo = subDays(date.from, 1);
         const prevFrom = subDays(prevTo, duration);
         return `from ${format(prevFrom, 'MMM d')} - ${format(prevTo, 'MMM d, yyyy')}`;
     })();
@@ -101,7 +99,7 @@ export default function DetailedMetricsPage() {
 
     return (
         <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="font-headline text-lg font-semibold md:text-2xl">
                     Detailed Metrics
                 </h1>
@@ -120,7 +118,7 @@ export default function DetailedMetricsPage() {
             </div>
 
             <div className="space-y-6">
-                <FinancialMetrics date={date} />
+                <FinancialMetrics date={date} selectedSources={selectedSources} />
                 <OrderMetrics date={date} />
                 <ClientMetrics date={date} />
                 <GrowthMetrics date={date} previousPeriodLabel={previousPeriodLabel} />

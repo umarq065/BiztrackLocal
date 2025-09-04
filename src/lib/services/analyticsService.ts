@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -707,7 +706,7 @@ export async function getOrderCountAnalytics(from: string, to: string): Promise<
     };
 }
 
-export async function getFinancialMetrics(from: string, to: string): Promise<FinancialMetricData> {
+export async function getFinancialMetrics(from: string, to: string, sources?: string[]): Promise<FinancialMetricData> {
     const fromDate = parseISO(from);
     const toDate = parseISO(to);
     
@@ -729,16 +728,19 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
     const calculateMetricsForPeriod = async (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
+
+        const sourceFilter = sources ? { source: { $in: sources } } : {};
         
-        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const totalOrdersPromise = ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Completed' });
+        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed', ...sourceFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const totalOrdersPromise = ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Completed', ...sourceFilter });
+        // Expenses are not filtered by source for now
         const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const salaryExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Salary' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const marketingExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
         
         // Client Metrics for CLTV
-        const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray();
+        const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, ...sourceFilter }).toArray();
         const clientsAtStartPromise = clientsCol.find({ clientSince: { $lt: startStr } }).project({ username: 1 }).toArray();
         const lifespanResultsPromise = clientsCol.aggregate([
             { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
