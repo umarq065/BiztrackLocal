@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -200,7 +199,7 @@ async function processAnalytics(
             { $group: {
                 _id: "$date",
                 orders: { $sum: 1 },
-                revenue: { $sum: "$amount" }
+                revenue: { $sum: '$amount' }
             }}
         ]).toArray();
     }
@@ -862,3 +861,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+    
