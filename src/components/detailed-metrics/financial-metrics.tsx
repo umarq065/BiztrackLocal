@@ -69,13 +69,10 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
 
     const renderMetricCard = (metric: (typeof metricsToShow)[0]) => {
         const { name, data, formula, invertColor, isPercentage } = metric;
-        const { value, change, previousValue, previousPeriodChange } = data;
+        const { value, change, previousValue } = data;
 
         const changeType = change >= 0 ? "increase" : "decrease";
         const isPositive = invertColor ? changeType === "decrease" : changeType === "increase";
-        
-        const prevChangeType = previousPeriodChange >= 0 ? "increase" : "decrease";
-        const isPrevPositive = invertColor ? prevChangeType === "decrease" : prevChangeType === "increase";
 
         const displayValue = isPercentage ? `${value.toFixed(1)}%` : formatCurrency(value);
         const displayPrevValue = isPercentage ? `${previousValue.toFixed(1)}%` : formatCurrency(previousValue);
@@ -97,14 +94,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
                     <p className="text-2xl font-bold mt-1">{displayValue}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t space-y-1 text-xs">
-                    {previousPeriodChange != null && (
-                         <div className="flex items-center gap-1">
-                            <span className={cn("font-semibold", isPrevPositive ? "text-green-600" : "text-red-600")}>
-                             {prevChangeType === 'increase' ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />} {Math.abs(previousPeriodChange).toFixed(1)}%
-                            </span>
-                             <p className="text-muted-foreground font-normal ml-1"> from previous period</p>
-                         </div>
-                    )}
+                     <p className="text-muted-foreground">vs. {displayPrevValue} ({previousPeriodLabel})</p>
                     <p className="text-muted-foreground pt-1">{formula}</p>
                 </div>
             </div>
@@ -140,10 +130,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
                                 <p className="text-2xl font-bold mt-1">{metric.value}</p>
                             </div>
                             <div className="mt-2 pt-2 border-t space-y-1 text-xs">
-                                <div className={cn("flex items-center gap-1 font-semibold", isPositive ? "text-green-600" : "text-red-600")}>
-                                    {isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />} {metric.change}%
-                                    <p className="text-muted-foreground font-normal ml-1"> from {metric.previousValue} ({previousPeriodLabel})</p>
-                                </div>
+                                <p className="text-muted-foreground">vs. {metric.previousValue} ({previousPeriodLabel})</p>
                                 <p className="text-muted-foreground pt-1">{metric.formula}</p>
                             </div>
                         </div>
