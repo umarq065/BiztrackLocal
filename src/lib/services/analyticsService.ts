@@ -147,6 +147,7 @@ export interface ClientMetricData {
     repeatPurchaseRate: { value: number; change: number };
     retentionRate: { value: number; change: number };
     avgLifespan: { value: number; change: number };
+    medianLifespan: { value: number; change: number };
     csat: { value: number; change: number };
     avgRating: { value: number; change: number };
     cancelledOrders: { value: number; change: number };
@@ -536,15 +537,14 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
                 { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
                 { $group: { _id: null, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, totalRatings: { $sum: 1 }, avgRating: { $avg: '$rating' } } }
             ]).toArray(),
-             clientsCol.aggregate([
+            clientsCol.aggregate([
                 { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
                 { $addFields: { clientOrders: { $filter: { input: "$clientOrders", as: "order", cond: { $ne: ["$$order.status", "Cancelled"] } } } } },
-                { $match: { 'clientOrders.1': { $exists: true } } }, // Filter for repeat customers
+                { $match: { 'clientOrders.1': { $exists: true } } },
                 { $addFields: {
                     firstOrderDate: { $min: '$clientOrders.date' },
                     lastOrderDate: { $max: '$clientOrders.date' },
                 }},
-                // Filter for clients whose last order is within the specified period
                 { $match: { lastOrderDate: { $gte: startStr, $lte: endStr } } },
                 { $project: {
                     lifespanDays: {
@@ -563,7 +563,6 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
                         }
                     }
                 }},
-                { $group: { _id: null, avgLifespan: { $avg: '$lifespanDays' } } }
             ]).toArray(),
         ]);
         
@@ -581,7 +580,20 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         
         const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
         const avgRating = csatResults[0]?.avgRating || 0;
-        const avgLifespanMonths = (lifespanResults[0]?.avgLifespan || 0) / 30.44;
+        
+        const allLifespans = lifespanResults.map(r => r.lifespanDays).sort((a,b) => a - b);
+        const avgLifespanDays = allLifespans.length > 0 ? allLifespans.reduce((sum, val) => sum + val, 0) / allLifespans.length : 0;
+        
+        let medianLifespanDays = 0;
+        if (allLifespans.length > 0) {
+            const mid = Math.floor(allLifespans.length / 2);
+            if (allLifespans.length % 2 === 0) {
+                medianLifespanDays = (allLifespans[mid - 1] + allLifespans[mid]) / 2;
+            } else {
+                medianLifespanDays = allLifespans[mid];
+            }
+        }
+        
         const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) * 100 : 0;
         const retentionRate = clientsAtStart.length > 0 ? (retainedClientsCount / clientsAtStart.length) * 100 : 0;
 
@@ -591,7 +603,8 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
             repeatClients: repeatClientsCount,
             repeatPurchaseRate,
             retentionRate,
-            avgLifespan: avgLifespanMonths,
+            avgLifespan: avgLifespanDays / 30.44,
+            medianLifespan: medianLifespanDays / 30.44,
             csat,
             avgRating,
             cancelledOrders: cancelledInPeriod
@@ -616,6 +629,7 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
         repeatPurchaseRate: { value: currentMetrics.repeatPurchaseRate, change: currentMetrics.repeatPurchaseRate - prevMetrics.repeatPurchaseRate },
         retentionRate: { value: currentMetrics.retentionRate, change: currentMetrics.retentionRate - prevMetrics.retentionRate },
         avgLifespan: { value: currentMetrics.avgLifespan, change: calculateChange(currentMetrics.avgLifespan, prevMetrics.avgLifespan) },
+        medianLifespan: { value: currentMetrics.medianLifespan, change: calculateChange(currentMetrics.medianLifespan, prevMetrics.medianLifespan) },
         csat: { value: currentMetrics.csat, change: currentMetrics.csat - prevMetrics.csat },
         avgRating: { value: currentMetrics.avgRating, change: currentMetrics.avgRating - prevMetrics.avgRating },
         cancelledOrders: { value: currentMetrics.cancelledOrders, change: calculateChange(currentMetrics.cancelledOrders, prevMetrics.cancelledOrders) },

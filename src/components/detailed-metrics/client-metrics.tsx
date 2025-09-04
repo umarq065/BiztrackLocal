@@ -87,6 +87,7 @@ export function ClientMetrics({ date }: { date: DateRange | undefined }) {
     { name: "Repeat Purchase Rate (%)", value: `${clientMetricsData.repeatPurchaseRate.value.toFixed(1)}%`, formula: "(Number of Customers Who Purchased More Than Once/Total Number of Customers)×100", change: `${clientMetricsData.repeatPurchaseRate.change.toFixed(1)}%`, changeType: clientMetricsData.repeatPurchaseRate.change >= 0 ? "increase" : "decrease" as const },
     { name: "Client Retention Rate (%)", value: `${clientMetricsData.retentionRate.value.toFixed(1)}%`, formula: "((End Clients - New) / Start Clients) × 100", change: `${clientMetricsData.retentionRate.change.toFixed(1)}%`, changeType: clientMetricsData.retentionRate.change >= 0 ? "increase" : "decrease" as const },
     { name: "Avg. Lifespan of Repeat Customer", value: `${clientMetricsData.avgLifespan.value.toFixed(1)} months`, formula: "Avg. time between first & last order of churned repeat clients", change: `${clientMetricsData.avgLifespan.change.toFixed(1)}%`, changeType: clientMetricsData.avgLifespan.change >= 0 ? "increase" : "decrease" as const },
+    { name: "Median Lifespan of Repeat Customer", value: `${clientMetricsData.medianLifespan.value.toFixed(1)} months`, formula: "The 'middle' customer's lifespan, resistant to outliers", change: `${clientMetricsData.medianLifespan.change.toFixed(1)}%`, changeType: clientMetricsData.medianLifespan.change >= 0 ? "increase" : "decrease" as const },
     { name: "Client Satisfaction (CSAT)", value: `${clientMetricsData.csat.value.toFixed(1)}%`, formula: "(Positive Ratings / Total Ratings) × 100", change: `${clientMetricsData.csat.change.toFixed(1)}%`, changeType: clientMetricsData.csat.change >= 0 ? "increase" : "decrease" as const },
     { name: "Average Rating", value: `${clientMetricsData.avgRating.value.toFixed(2)} / 5.0`, formula: "Sum of ratings / Number of rated orders", change: clientMetricsData.avgRating.change.toFixed(2), changeType: clientMetricsData.avgRating.change >= 0 ? "increase" : "decrease" as const },
     { name: "Cancelled Orders", value: clientMetricsData.cancelledOrders.value.toLocaleString(), formula: "Total orders marked as cancelled", change: `${clientMetricsData.cancelledOrders.change.toFixed(1)}%`, changeType: clientMetricsData.cancelledOrders.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
@@ -105,7 +106,7 @@ export function ClientMetrics({ date }: { date: DateRange | undefined }) {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {clientMetrics.map((metric) => {
             const isPositive = metric.invertColor ? metric.changeType === "decrease" : metric.changeType === "increase";
             return (
