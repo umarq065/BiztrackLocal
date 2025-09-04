@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { format, differenceInDays, differenceInWeeks, differenceInMonths, subDays } from "date-fns";
+import { format, differenceInDays, differenceInWeeks } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -37,7 +37,8 @@ export function DateFilter({
   
   const handlePredefinedRangeClick = (days: number) => {
     const today = new Date();
-    const fromDate = subDays(today, days - 1);
+    // subDays(today, 6) for a 7 day period including today
+    const fromDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
     setDate({ from: fromDate, to: today });
     setIsOpen(false); // Close popover if open
   }
@@ -49,11 +50,12 @@ export function DateFilter({
       const parts = [];
       if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
       if (days >= 7) {
-        const weeks = differenceInWeeks(date.to, date.from);
+        const weeks = differenceInWeeks(date.to, date.from, { roundingMethod: 'floor' });
         if (weeks > 0) parts.push(`${weeks} week${weeks > 1 ? 's' : ''}`);
       }
       if (days >= 30) {
-        const months = differenceInMonths(date.to, date.from);
+        // More precise month calculation
+        const months = parseFloat((days / 30.44).toFixed(1));
         if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
       }
 
