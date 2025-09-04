@@ -105,7 +105,7 @@ export default function DetailedMetricsPage() {
                 <h1 className="font-headline text-lg font-semibold md:text-2xl">
                     Detailed Metrics
                 </h1>
-                <div className="ml-auto flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center ml-auto">
                     <IncomeSourceFilter 
                         sources={incomeSources}
                         selectedSources={selectedSources}
