@@ -105,13 +105,16 @@ export default function DetailedMetricsPage() {
                 <h1 className="font-headline text-lg font-semibold md:text-2xl">
                     Detailed Metrics
                 </h1>
-                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center ml-auto">
-                    <IncomeSourceFilter 
-                        sources={incomeSources}
-                        selectedSources={selectedSources}
-                        onSelectionChange={setSelectedSources}
-                        isLoading={isSourcesLoading}
-                    />
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start ml-auto">
+                    <div className="grid gap-1">
+                      <IncomeSourceFilter 
+                          sources={incomeSources}
+                          selectedSources={selectedSources}
+                          onSelectionChange={setSelectedSources}
+                          isLoading={isSourcesLoading}
+                      />
+                      <div className="h-5"></div>
+                    </div>
                     <DateFilter date={date} setDate={handleSetDate} />
                 </div>
             </div>
