@@ -722,19 +722,26 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]).toArray();
 
-        const [revenueRes, expensesRes] = await Promise.all([revenuePromise, expensesPromise]);
+        const salaryExpensesPromise = expensesCol.aggregate([
+            { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Salary' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]).toArray();
+
+        const [revenueRes, expensesRes, salaryExpensesRes] = await Promise.all([revenuePromise, expensesPromise, salaryExpensesPromise]);
         
         const totalRevenue = revenueRes[0]?.total || 0;
         const totalExpenses = expensesRes[0]?.total || 0;
+        const salaryExpenses = salaryExpensesRes[0]?.total || 0;
         const netProfit = totalRevenue - totalExpenses;
         const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+        const grossMargin = totalRevenue > 0 ? ((totalRevenue - salaryExpenses) / totalRevenue) * 100 : 0;
         
         return {
             totalRevenue,
             totalExpenses,
             netProfit,
             profitMargin,
-            grossMargin: profitMargin, // Assuming Gross Margin is the same as Profit Margin for simplicity
+            grossMargin,
         };
     };
 
