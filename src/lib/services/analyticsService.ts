@@ -137,6 +137,7 @@ export interface FinancialMetricData {
     grossMargin: FinancialMetric;
     cac: FinancialMetric;
     aov: FinancialMetric;
+    cltv: FinancialMetric;
 }
 
 
@@ -729,33 +730,31 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
         
-        const revenuePromise = ordersCol.aggregate([
-            { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]).toArray();
-        
+        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const totalOrdersPromise = ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Completed' });
-
-        const expensesPromise = expensesCol.aggregate([
-            { $match: { date: { $gte: startStr, $lte: endStr } } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]).toArray();
-
-        const salaryExpensesPromise = expensesCol.aggregate([
-            { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Salary' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]).toArray();
-        
-        const marketingExpensesPromise = expensesCol.aggregate([
-            { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]).toArray();
-        
+        const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const salaryExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Salary' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
+        const marketingExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
+        
+        // Client Metrics for CLTV
+        const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray();
+        const clientsAtStartPromise = clientsCol.find({ clientSince: { $lt: startStr } }).project({ username: 1 }).toArray();
+        const lifespanResultsPromise = clientsCol.aggregate([
+            { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
+            { $addFields: { clientOrders: { $filter: { input: "$clientOrders", as: "order", cond: { $ne: ["$$order.status", "Cancelled"] } } } } },
+            { $match: { 'clientOrders.1': { $exists: true } } },
+            { $addFields: { firstOrderDate: { $min: '$clientOrders.date' }, lastOrderDate: { $max: '$clientOrders.date' } } },
+            { $match: { lastOrderDate: { $gte: startStr, $lte: endStr } } },
+            { $project: { lifespanDays: { $cond: { if: { $and: [{ $ne: ['$firstOrderDate', null] }, { $ne: ['$lastOrderDate', null] }, { $ne: ['$firstOrderDate', '$lastOrderDate'] }] }, then: { $divide: [ { $subtract: [ { $dateFromString: { dateString: '$lastOrderDate' } }, { $dateFromString: { dateString: '$firstOrderDate' } } ]}, 1000 * 60 * 60 * 24 ] }, else: 0 } } } }
+        ]).toArray();
 
-
-        const [revenueRes, totalOrders, expensesRes, salaryExpensesRes, marketingExpensesRes, newClientsCount] = await Promise.all([
-            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsPromise
+        const [
+            revenueRes, totalOrders, expensesRes, salaryExpensesRes, marketingExpensesRes, newClientsCount,
+            ordersInPeriod, clientsAtStart, lifespanResults
+        ] = await Promise.all([
+            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsPromise,
+            ordersInPeriodPromise, clientsAtStartPromise, lifespanResultsPromise
         ]);
         
         const totalRevenue = revenueRes[0]?.total || 0;
@@ -768,15 +767,20 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
         const grossMargin = totalRevenue > 0 ? ((totalRevenue - salaryExpenses) / totalRevenue) * 100 : 0;
         const cac = newClientsCount > 0 ? marketingExpenses / newClientsCount : 0;
         const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-        
+
+        // CLTV Calculations
+        const clientUsernamesInPeriod = new Set(ordersInPeriod.map(o => o.clientUsername));
+        const totalClientsInPeriod = clientUsernamesInPeriod.size;
+        const clientOrderCounts = ordersInPeriod.reduce((acc, order) => { acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1; return acc; }, {} as Record<string, number>);
+        const repeatClientsCount = Object.values(clientOrderCounts).filter(count => count > 1).length;
+        const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) : 0; // As a decimal
+        const allLifespans = lifespanResults.map(r => r.lifespanDays).sort((a,b) => a - b);
+        const avgLifespanDays = allLifespans.length > 0 ? allLifespans.reduce((sum, val) => sum + val, 0) / allLifespans.length : 0;
+        const avgLifespanMonths = avgLifespanDays / 30.44;
+        const cltv = aov * repeatPurchaseRate * avgLifespanMonths;
+
         return {
-            totalRevenue,
-            totalExpenses,
-            netProfit,
-            profitMargin,
-            grossMargin,
-            cac,
-            aov
+            totalRevenue, totalExpenses, netProfit, profitMargin, grossMargin, cac, aov, cltv
         };
     };
 
@@ -833,6 +837,12 @@ export async function getFinancialMetrics(from: string, to: string): Promise<Fin
             change: calculateChangePercentage(metricsP2.aov, metricsP1.aov),
             previousPeriodChange: calculateChangePercentage(metricsP1.aov, metricsP0.aov),
             previousValue: metricsP1.aov,
+        },
+        cltv: {
+            value: metricsP2.cltv,
+            change: calculateChangePercentage(metricsP2.cltv, metricsP1.cltv),
+            previousPeriodChange: calculateChangePercentage(metricsP1.cltv, metricsP0.cltv),
+            previousValue: metricsP1.cltv,
         }
     };
 }

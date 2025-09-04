@@ -12,10 +12,6 @@ import { format, subDays, differenceInDays } from 'date-fns';
 import type { FinancialMetricData } from '@/lib/services/analyticsService';
 import { useToast } from '@/hooks/use-toast';
 
-const otherFinancialMetrics = [
-    { name: "Customer Lifetime Value (CLTV)", value: "$1,000", formula: "AOV × Repeat Purchase Rate × Avg. Lifespan", change: 5, previousPeriodChange: 8, previousValue: "$950", changeType: "increase" as const },
-];
-
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
@@ -73,6 +69,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
             { name: "Profit Margin (%)", data: metrics.profitMargin, formula: "((Revenue - Expenses) / Revenue) * 100", isPercentage: true },
             { name: "Gross Margin (%)", data: metrics.grossMargin, formula: "((Revenue - Salary) / Revenue) * 100", isPercentage: true },
             { name: "Client Acquisition Cost (CAC)", data: metrics.cac, formula: "Marketing Costs / New Clients", invertColor: true },
+            { name: "Customer Lifetime Value (CLTV)", data: metrics.cltv, formula: "AOV × Repeat Purchase Rate × Avg. Lifespan" },
             { name: "Average Order Value (AOV)", data: metrics.aov, formula: "Total Revenue / Number of Orders" },
         ];
     }, [metrics]);
@@ -89,10 +86,7 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
         
         let displayValue: string, displayPreviousValue: string;
         
-        if (name === "Client Acquisition Cost (CAC)" || name === "Average Order Value (AOV)") {
-             displayValue = formatCurrency(value);
-             displayPreviousValue = formatCurrency(previousValue);
-        } else if (isPercentage) {
+        if (isPercentage) {
             displayValue = `${value.toFixed(1)}%`;
             displayPreviousValue = `${previousValue.toFixed(1)}%`;
         } else {
@@ -142,35 +136,6 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
         return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {metricsToShow.map(renderMetricCard)}
-                {otherFinancialMetrics.map((metric) => {
-                    const isCurrentPositive = metric.changeType === "increase";
-                    const prevChangeType = metric.previousPeriodChange >= 0 ? "increase" : "decrease";
-                    const isPrevPositive = prevChangeType === "increase";
-                    return (
-                        <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between opacity-50">
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
-                                    <span className={cn("flex items-center gap-1 text-xs font-semibold", isCurrentPositive ? "text-green-600" : "text-red-600")}>
-                                        {isCurrentPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                        {metric.change}%
-                                    </span>
-                                </div>
-                                <p className="text-2xl font-bold mt-1">{metric.value}</p>
-                            </div>
-                            <div className="mt-2 pt-2 border-t space-y-1 text-xs">
-                                <div className="flex items-center text-xs">
-                                    <span className={cn("flex items-center gap-1 font-semibold", isPrevPositive ? "text-green-600" : "text-red-600")}>
-                                        {prevChangeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                        {`${Math.abs(metric.previousPeriodChange).toFixed(1)}%`}
-                                    </span>
-                                </div>
-                                <p className="text-muted-foreground">from {metric.previousValue} ({previousPeriodLabel})</p>
-                                <p className="text-muted-foreground pt-1">{metric.formula}</p>
-                            </div>
-                        </div>
-                    );
-                })}
             </div>
         )
     };
