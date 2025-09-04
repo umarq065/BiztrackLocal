@@ -19,6 +19,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface IncomeSourceFilterProps {
   sources: string[];
