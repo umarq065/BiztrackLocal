@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { format, differenceInDays, differenceInWeeks } from "date-fns";
+import { format, differenceInDays, differenceInWeeks, subMonths, subYears } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -21,11 +21,13 @@ interface DateFilterProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const predefinedRanges = [
-    { label: "7d", days: 7 },
-    { label: "14d", days: 14 },
-    { label: "30d", days: 30 },
-    { label: "60d", days: 60 },
-    { label: "90d", days: 90 },
+    { label: "7d", value: { days: 7 } },
+    { label: "14d", value: { days: 14 } },
+    { label: "30d", value: { days: 30 } },
+    { label: "60d", value: { days: 60 } },
+    { label: "90d", value: { days: 90 } },
+    { label: "6M", value: { months: 6 } },
+    { label: "1Y", value: { years: 1 } },
 ];
 
 export function DateFilter({
@@ -35,12 +37,22 @@ export function DateFilter({
 }: DateFilterProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   
-  const handlePredefinedRangeClick = (days: number) => {
+  const handlePredefinedRangeClick = (range: { days?: number, months?: number, years?: number }) => {
     const today = new Date();
-    // subDays(today, 6) for a 7 day period including today
-    const fromDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
+    let fromDate: Date;
+
+    if (range.days) {
+      fromDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (range.days - 1));
+    } else if (range.months) {
+      fromDate = subMonths(today, range.months);
+    } else if (range.years) {
+      fromDate = subYears(today, range.years);
+    } else {
+      return;
+    }
+    
     setDate({ from: fromDate, to: today });
-    setIsOpen(false); // Close popover if open
+    setIsOpen(false);
   }
 
   const renderDuration = () => {
@@ -129,7 +141,7 @@ export function DateFilter({
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2 text-xs"
-                    onClick={() => handlePredefinedRangeClick(range.days)}
+                    onClick={() => handlePredefinedRangeClick(range.value)}
                 >
                     {range.label}
                 </Button>
