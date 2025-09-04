@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, lazy, Suspense, useEffect, useMemo } from 'react';
@@ -10,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, differenceInDays } from 'date-fns';
-import type { FinancialMetricData } from '@/lib/services/analyticsService';
 
 const otherFinancialMetrics = [
     { name: "Client Acquisition Cost (CAC)", value: "$100", formula: "Marketing Costs / New Clients", change: -10, previousValue: "$110", changeType: "decrease" as const },
@@ -20,10 +18,34 @@ const otherFinancialMetrics = [
 
 const formatCurrency = (value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+interface FinancialMetric {
+    value: number;
+    change: number;
+    previousValue: number;
+}
+
+interface FinancialMetricData {
+    totalRevenue: FinancialMetric;
+    totalExpenses: FinancialMetric;
+    netProfit: FinancialMetric;
+    profitMargin: FinancialMetric;
+    grossMargin: FinancialMetric;
+}
+
+// Dummy data to replace the backend call
+const getDummyFinancialMetrics = (): FinancialMetricData => ({
+    totalRevenue: { value: 125000, change: 12.5, previousValue: 111111 },
+    totalExpenses: { value: 75000, change: 8.2, previousValue: 69316 },
+    netProfit: { value: 50000, change: 19.6, previousValue: 41800 },
+    profitMargin: { value: 40, change: 5.5, previousValue: 37.6 },
+    grossMargin: { value: 60, change: 2.1, previousValue: 58.7 },
+});
+
+
 export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
     const [showChart, setShowChart] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [metrics, setMetrics] = useState<FinancialMetricData | null>(null);
+    const [isLoading, setIsLoading] = useState(false); // Set to false as we are using dummy data
+    const [metrics, setMetrics] = useState<FinancialMetricData | null>(getDummyFinancialMetrics());
 
     const previousPeriodLabel = useMemo(() => {
         if (!date?.from || !date?.to) return "previous period";
@@ -33,29 +55,6 @@ export function FinancialMetrics({ date }: { date: DateRange | undefined }) {
         return `from ${format(prevFrom, 'MMM d')} to ${format(prevTo, 'MMM d')}`;
     }, [date]);
     
-    useEffect(() => {
-        async function fetchMetrics() {
-            if (!date?.from || !date?.to) return;
-            setIsLoading(true);
-            try {
-                const query = new URLSearchParams({
-                    from: date.from.toISOString(),
-                    to: date.to.toISOString()
-                });
-                const res = await fetch(`/api/analytics/financial-metrics?${query.toString()}`);
-                if (!res.ok) throw new Error('Failed to fetch financial metrics');
-                const data = await res.json();
-                setMetrics(data);
-            } catch (e) {
-                console.error("Error fetching financial metrics:", e);
-                setMetrics(null);
-            } finally {
-                setIsLoading(false);
-            }
-        }
-        fetchMetrics();
-    }, [date]);
-
     const metricsToShow = useMemo(() => {
         if (!metrics) return [];
         return [
