@@ -991,8 +991,8 @@ export async function getConversionMetrics(from: string, to: string, sources?: s
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
-        const sourceFilter = sources ? { name: { $in: sources } } : {};
         const orderSourceFilter = sources ? { source: { $in: sources } } : {};
+        const incomeSourceFilter = sources ? { name: { $in: sources } } : {};
         
         const ordersCol = await getOrdersCollection();
         const incomesCol = await getIncomesCollection();
@@ -1003,22 +1003,18 @@ export async function getConversionMetrics(from: string, to: string, sources?: s
             ...orderSourceFilter
         });
         
-        const incomesInPeriod = await incomesCol.find(sourceFilter).toArray();
-
-        let totalMessages = 0;
-        incomesInPeriod.forEach(source => {
-            (source.dataPoints || []).forEach(dp => {
-                const dpDate = parseISO(dp.date);
-                if (dpDate >= start && dpDate <= end) {
-                    totalMessages += dp.messages;
-                }
-            });
-        });
-
+        const messagesResult = await incomesCol.aggregate([
+            { $match: incomeSourceFilter },
+            { $unwind: "$dataPoints" },
+            { $match: { "dataPoints.date": { $gte: startStr, $lte: endStr } } },
+            { $group: { _id: null, totalMessages: { $sum: "$dataPoints.messages" } } }
+        ]).toArray();
+        
+        const totalMessages = messagesResult[0]?.totalMessages || 0;
         const totalOrders = await totalOrdersPromise;
         const leadConversionRate = totalMessages > 0 ? (totalOrders / totalMessages) * 100 : 0;
 
-        return { totalOrders, totalMessages, leadConversionRate };
+        return { leadConversionRate };
     };
 
     const [currentMetrics, prevMetrics] = await Promise.all([
