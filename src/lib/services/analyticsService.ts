@@ -1059,14 +1059,15 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
         const endStr = format(end, 'yyyy-MM-dd');
         
         const incomesCol = await getIncomesCollection();
-        const sourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1 }).toArray();
+        const sourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1, gigs: 1 }).toArray();
         const sourceIds = sourceDocs.map(s => s._id.toString());
+        const allGigIds = sourceDocs.flatMap(s => s.gigs.map(g => g.id));
         
         const gigPerformancesCol = await getGigPerformancesCollection();
         const messagesCol = await getMessagesCollection();
         
         const perfPromise = gigPerformancesCol.aggregate([
-            { $match: { sourceId: { $in: sourceIds }, date: { $gte: startStr, $lte: endStr } } },
+            { $match: { gigId: { $in: allGigIds }, date: { $gte: startStr, $lte: endStr } } },
             { $group: { _id: null, impressions: { $sum: '$impressions' }, clicks: { $sum: '$clicks' } } }
         ]).toArray();
         

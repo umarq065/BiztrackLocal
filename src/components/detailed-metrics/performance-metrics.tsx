@@ -21,15 +21,36 @@ const formatValue = (value: number, type: 'number' | 'currency' | 'percentage') 
 }
 
 interface PerformanceMetricsProps {
-    date: DateRange | undefined;
-    selectedSources: string[];
 }
 
-export function PerformanceMetrics({ date, selectedSources }: PerformanceMetricsProps) {
+export function PerformanceMetrics() {
   const [showChart, setShowChart] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [metrics, setMetrics] = useState<PerformanceMetricData | null>(null);
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // This is a temporary solution to get filters from the parent page.
+    // In a real app, this would be handled by a state management library.
+    const searchParams = new URLSearchParams(window.location.search);
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    const sourcesParam = searchParams.get('sources');
+
+    if (fromParam && toParam) {
+        setDate({ from: new Date(fromParam.replace(/-/g, '/')), to: new Date(toParam.replace(/-/g, '/'))});
+    } else {
+        const today = new Date();
+        setDate({ from: new Date(today.getFullYear(), today.getMonth(), 1), to: today });
+    }
+    
+    if (sourcesParam) {
+        setSelectedSources(sourcesParam.split(','));
+    }
+
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
