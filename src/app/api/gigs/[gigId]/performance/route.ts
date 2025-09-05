@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { addOrUpdateGigPerformance } from '@/lib/services/gigPerformanceService';
 import { z } from 'zod';
 
+// Note: This schema does not include gigId as it comes from the URL params.
 const addGigPerformanceSchema = z.object({
     date: z.date({ required_error: "A date is required." }),
     impressions: z.coerce.number().int().min(0),
@@ -13,12 +14,19 @@ const addGigPerformanceSchema = z.object({
 export async function POST(request: Request, { params }: { params: { gigId: string } }) {
   try {
     const json = await request.json();
+    // Combine json body with the gigId from the URL parameter before parsing.
     const parsedJson = { 
         ...json, 
         gigId: params.gigId,
         date: new Date(json.date) 
     };
-    const parsedData = addGigPerformanceSchema.parse(parsedJson);
+    
+    // The service now expects gigId, so we need a slightly different schema for the service layer
+    const serviceSchema = addGigPerformanceSchema.extend({
+        gigId: z.string().min(1),
+    });
+
+    const parsedData = serviceSchema.parse(parsedJson);
 
     const performanceData = await addOrUpdateGigPerformance(parsedData);
 
