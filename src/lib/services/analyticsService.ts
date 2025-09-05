@@ -750,11 +750,25 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         
         // Client Metrics for CLTV
         const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, ...sourceFilter }).toArray();
-        const clientsAtStartPromise = clientsCol.find({ clientSince: { $lt: startStr }, ...sourceFilter }).project({ username: 1 }).toArray();
+        
         const lifespanResultsPromise = clientsCol.aggregate([
             { $match: sourceFilter },
-            { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
-            { $addFields: { clientOrders: { $filter: { input: "$clientOrders", as: "order", cond: { $ne: ["$$order.status", "Cancelled"] } } } } },
+             {
+                $lookup: {
+                    from: 'orders',
+                    let: { client_username: '$username' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ['$clientUsername', '$$client_username'] },
+                                ...sourceFilter, // Filter orders by source here
+                                status: { $ne: 'Cancelled' }
+                            }
+                        }
+                    ],
+                    as: 'clientOrders'
+                }
+            },
             { $match: { 'clientOrders.1': { $exists: true } } },
             { $addFields: { firstOrderDate: { $min: '$clientOrders.date' }, lastOrderDate: { $max: '$clientOrders.date' } } },
             { $match: { lastOrderDate: { $gte: startStr, $lte: endStr } } },
@@ -763,10 +777,10 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
 
         const [
             revenueRes, totalOrders, expensesRes, salaryExpensesRes, marketingExpensesRes, newClientsCount,
-            ordersInPeriod, clientsAtStart, lifespanResults
+            ordersInPeriod, lifespanResults
         ] = await Promise.all([
             revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsCount,
-            ordersInPeriodPromise, clientsAtStartPromise, lifespanResultsPromise
+            ordersInPeriodPromise, lifespanResultsPromise
         ]);
         
         const totalRevenue = revenueRes[0]?.total || 0;
