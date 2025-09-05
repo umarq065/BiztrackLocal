@@ -150,15 +150,6 @@ export interface MarketingMetricData {
     romi: MarketingMetric;
 }
 
-export interface PerformanceMetricData {
-    messages: {
-        value: number;
-        change: number;
-        previousValue: number;
-    };
-}
-
-
 export interface ClientMetricData {
     totalClients: { value: number; change: number };
     newClients: { value: number; change: number };
@@ -966,54 +957,6 @@ export async function getMarketingMetrics(from: string, to: string, sources: str
         }
     };
 }
-
-
-export async function getPerformanceMetrics(from: string, to: string, sources: string[]): Promise<PerformanceMetricData> {
-    const fromDate = parseISO(from);
-    const toDate = parseISO(to);
-
-    const durationDays = differenceInDays(toDate, fromDate);
-    if (durationDays < 0) throw new Error("Invalid date range.");
-
-    const P2_to = toDate;
-    const P2_from = fromDate;
-    const P1_to = subDays(P2_from, 1);
-    const P1_from = subDays(P1_to, durationDays);
-
-    const calculateMessagesForPeriod = async (start: Date, end: Date) => {
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-        
-        const incomesCol = await getIncomesCollection();
-        const messagesRes = await incomesCol.aggregate([
-            { $match: { name: { $in: sources } } },
-            { $unwind: "$dataPoints" },
-            { $match: { "dataPoints.date": { $gte: startStr, $lte: endStr } } },
-            { $group: { _id: null, total: { $sum: '$messages' } } }
-        ]).toArray();
-
-        return messagesRes[0]?.total || 0;
-    };
-
-    const [messagesP2, messagesP1] = await Promise.all([
-        calculateMessagesForPeriod(P2_from, P2_to),
-        calculateMessagesForPeriod(P1_from, P1_to),
-    ]);
-
-    const calculateChange = (current: number, previous: number) => {
-        if (previous === 0) return current > 0 ? 100 : 0;
-        return ((current - previous) / previous) * 100;
-    };
-
-    return {
-        messages: {
-            value: messagesP2,
-            change: calculateChange(messagesP2, messagesP1),
-            previousValue: messagesP1,
-        }
-    };
-}
-
 
 export async function getYearlyStats(year: number): Promise<SingleYearData> {
     const ordersCol = await getOrdersCollection();
