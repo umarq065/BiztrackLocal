@@ -14,6 +14,7 @@ import { OrderMetrics } from "@/components/detailed-metrics/order-metrics";
 import { FinancialMetrics } from "@/components/detailed-metrics/financial-metrics";
 import IncomeSourceFilter from "@/components/detailed-metrics/income-source-filter";
 import type { IncomeSource } from "@/lib/data/incomes-data";
+import { PerformanceMetrics } from "@/components/detailed-metrics/performance-metrics";
 
 
 export default function DetailedMetricsPage() {
@@ -49,7 +50,14 @@ export default function DetailedMetricsPage() {
                 const data: IncomeSource[] = await res.json();
                 const sourceNames = data.map(s => s.name);
                 setAllIncomeSources(sourceNames);
-                setSelectedSources(sourceNames); // Initially select all
+                
+                const sourcesParam = searchParams.get('sources');
+                if (sourcesParam) {
+                    setSelectedSources(sourcesParam.split(','));
+                } else {
+                    setSelectedSources(sourceNames); // Initially select all
+                }
+
             } catch (error) {
                 console.error("Error fetching income sources:", error);
             } finally {
@@ -87,6 +95,13 @@ export default function DetailedMetricsPage() {
         });
     };
 
+    const handleSetSources = (sources: string[]) => {
+        setSelectedSources(sources);
+        updateUrl({
+            sources: sources.length > 0 ? sources.join(',') : null,
+        });
+    }
+
     const previousPeriodLabel = (() => {
         if (!date?.from || !date?.to) return "previous period";
         const duration = differenceInDays(date.to, date.from);
@@ -107,7 +122,7 @@ export default function DetailedMetricsPage() {
                         <IncomeSourceFilter 
                             sources={allIncomeSources}
                             selectedSources={selectedSources}
-                            onSelectionChange={setSelectedSources}
+                            onSelectionChange={handleSetSources}
                             isLoading={isSourcesLoading}
                         />
                         <div className="h-5"></div>
@@ -118,11 +133,12 @@ export default function DetailedMetricsPage() {
 
             <div className="space-y-6">
                 <FinancialMetrics date={date} selectedSources={selectedSources} />
+                <PerformanceMetrics />
                 <OrderMetrics date={date} selectedSources={selectedSources} />
                 <ClientMetrics date={date} selectedSources={selectedSources} />
                 <GrowthMetrics date={date} selectedSources={selectedSources} previousPeriodLabel={previousPeriodLabel} />
-                <MarketingMetrics date={date} />
-                <ProjectMetrics date={date} />
+                <MarketingMetrics date={date} selectedSources={selectedSources} />
+                <ProjectMetrics />
             </div>
         </main>
     );
