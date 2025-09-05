@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, lazy, Suspense } from "react";
@@ -10,8 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 const MarketingMetricsChart = lazy(() => import("@/components/detailed-metrics/marketing-metrics-chart"));
 
 const marketingMetrics = [
-    { name: "Cost per Lead (CPL)", value: "$25.50", formula: "Total Marketing Spend / Number of Leads Generated", change: "-5.0%", changeType: "decrease" as const, invertColor: true },
-    { name: "Marketing ROI (ROMI)", value: "450%", formula: "((Revenue from Marketing - Marketing Cost) / Marketing Cost) × 100", change: "+50%", changeType: "increase" as const },
+    { name: "Cost per Lead (CPL)", value: "$25.50", formula: "Total Marketing Spend / Number of Leads Generated", change: -5.0, changeType: "decrease" as const, invertColor: true },
+    { name: "Marketing ROI (ROMI)", value: "450%", formula: "((Revenue from Marketing - Marketing Cost) / Marketing Cost) × 100", change: 50, changeType: "increase" as const },
 ];
 
 export function MarketingMetrics() {
@@ -44,25 +45,19 @@ export function MarketingMetrics() {
             return (
                 <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
                 <div>
-                    <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
+                       {metric.change != null && (
+                          <span className={cn("flex items-center gap-1 text-xs font-semibold", isPositive ? "text-green-600" : "text-red-600")}>
+                              {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                              {`${Math.abs(metric.change).toFixed(1)}%`}
+                          </span>
+                      )}
+                    </div>
                     <p className="text-2xl font-bold mt-1">{metric.value}</p>
                 </div>
-                <div className="mt-2 pt-2 border-t space-y-1">
-                    {metric.change && (
-                        <div className="flex items-center text-xs">
-                            <span
-                                className={cn(
-                                    "flex items-center gap-1 font-semibold",
-                                    isPositive ? "text-green-600" : "text-red-600"
-                                )}
-                            >
-                                {metric.changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                {metric.change}
-                            </span>
-                            <span className="ml-1 text-muted-foreground">vs selected period</span>
-                        </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">{metric.formula}</p>
+                <div className="mt-2 pt-2 border-t space-y-1 text-xs">
+                    <p className="text-muted-foreground pt-1">{metric.formula}</p>
                 </div>
                 </div>
             )
