@@ -122,12 +122,6 @@ export function IncomesDashboard() {
     );
   };
   
-  const handleGigDataAdded = (updatedSourceWithGig: IncomeSource) => {
-    setIncomeSources(prev => 
-        prev.map(source => source.id === updatedSourceWithGig.id ? updatedSourceWithGig : source)
-    );
-  }
-
   const handleDeleteGig = async (gig: Gig, sourceId: string) => {
       setIncomeSources(prev => 
           prev.map(source => {
@@ -265,7 +259,9 @@ export function IncomesDashboard() {
             open={isAddGigDataDialogOpen}
             onOpenChange={setIsAddGigDataDialogOpen}
             updatingGigInfo={updatingGigInfo}
-            onGigDataAdded={handleGigDataAdded}
+            onGigDataAdded={() => {
+                // No need to update state here as performance data is separate
+            }}
         />
       )}
 
