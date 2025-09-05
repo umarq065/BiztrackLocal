@@ -57,6 +57,8 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
           totalOrders: { value: 0, growth: 0, prevPeriodGrowth: 0, prevValue: 0 },
           newBuyerOrders: { value: 0, growth: 0, prevPeriodGrowth: 0, prevValue: 0 },
           repeatBuyerOrders: { value: 0, growth: 0, prevPeriodGrowth: 0, prevValue: 0 },
+          cancelledOrders: { value: 0, growth: 0, prevPeriodGrowth: 0, prevValue: 0 },
+          avgRating: { value: 0, growth: 0, prevPeriodGrowth: 0, prevValue: 0 },
       };
 
       return {
@@ -78,6 +80,18 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
               prevPeriodGrowth: calculateGrowth(analyticsData.previousPeriodOrders.fromRepeatBuyers, analyticsData.periodBeforePreviousOrders.fromRepeatBuyers),
               prevValue: analyticsData.previousPeriodOrders.fromRepeatBuyers,
           },
+          cancelledOrders: {
+              value: analyticsData.currentPeriodOrders.cancelled,
+              growth: calculateGrowth(analyticsData.currentPeriodOrders.cancelled, analyticsData.previousPeriodOrders.cancelled),
+              prevPeriodGrowth: calculateGrowth(analyticsData.previousPeriodOrders.cancelled, analyticsData.periodBeforePreviousOrders.cancelled),
+              prevValue: analyticsData.previousPeriodOrders.cancelled,
+          },
+           avgRating: {
+              value: analyticsData.currentPeriodOrders.avgRating,
+              growth: analyticsData.currentPeriodOrders.avgRating - analyticsData.previousPeriodOrders.avgRating, // Absolute change
+              prevPeriodGrowth: analyticsData.previousPeriodOrders.avgRating - analyticsData.periodBeforePreviousOrders.avgRating, // Absolute change
+              prevValue: analyticsData.previousPeriodOrders.avgRating,
+          },
       }
   }, [analyticsData]);
 
@@ -93,11 +107,17 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
       name: string,
       metricData: { value: number, growth: number, prevPeriodGrowth: number, prevValue: number },
       formula: string,
-      invertColor = false
+      invertColor = false,
+      isRating = false
     ) => {
         const isGrowthPositive = !invertColor ? metricData.growth >= 0 : metricData.growth < 0;
         const isPrevGrowthPositive = !invertColor ? metricData.prevPeriodGrowth >= 0 : metricData.prevPeriodGrowth < 0;
         
+        const displayValue = isRating ? `${metricData.value.toFixed(2)} / 5.0` : metricData.value.toLocaleString();
+        const displayChange = isRating ? metricData.growth.toFixed(2) : `${Math.abs(metricData.growth).toFixed(1)}%`;
+        const displayPrevChange = isRating ? metricData.prevPeriodGrowth.toFixed(2) : `${metricData.prevPeriodGrowth.toFixed(1)}%`;
+        const displayPrevValue = isRating ? metricData.prevValue.toFixed(2) : metricData.prevValue.toLocaleString();
+
         return (
              <div key={name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
                 <div>
@@ -109,20 +129,18 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
                                 isGrowthPositive ? "text-green-600" : "text-red-600"
                             )}
                         >
-                            (
-                            {metricData.growth >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                            {`${Math.abs(metricData.growth).toFixed(1)}%`}
-                            )
+                            {isRating ? null : (metricData.growth >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                            {displayChange}{isRating ? '' : '%'}
                         </span>
                     </div>
-                    <p className="text-2xl font-bold mt-1">{metricData.value.toLocaleString()}</p>
+                    <p className="text-2xl font-bold mt-1">{displayValue}</p>
                 </div>
                 <div className="mt-2 pt-2 border-t space-y-1 text-xs">
                      <p className={cn("flex items-center gap-1 font-semibold", isPrevGrowthPositive ? "text-green-600" : "text-red-600")}>
-                        {isPrevGrowthPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                        {metricData.prevPeriodGrowth.toFixed(1)}%
+                        {isRating ? null : (isPrevGrowthPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                        {displayPrevChange}{isRating ? '' : '%'}
                     </p>
-                    <p className="text-muted-foreground">from {metricData.prevValue.toLocaleString()} ({previousPeriodDateRange})</p>
+                    <p className="text-muted-foreground">from {displayPrevValue} ({previousPeriodDateRange})</p>
                     <p className="text-muted-foreground pt-1">{formula}</p>
                 </div>
             </div>
@@ -132,8 +150,8 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
   const renderContent = () => {
       if (isLoading) {
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }).map((_, i) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between min-h-[180px]">
                   <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-8 w-1/2 mt-1" />
@@ -151,11 +169,13 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
         { name: "Total Orders", data: dynamicMetrics.totalOrders, formula: "Total number of completed orders" },
         { name: "Orders From New Buyers", data: dynamicMetrics.newBuyerOrders, formula: "Orders from clients making their first purchase in this period" },
         { name: "Orders From Repeat Buyers", data: dynamicMetrics.repeatBuyerOrders, formula: "Orders from clients who have purchased before this period" },
+        { name: "Average Rating", data: dynamicMetrics.avgRating, formula: "Average of all order ratings", isRating: true },
+        { name: "Cancelled Orders", data: dynamicMetrics.cancelledOrders, formula: "Total orders marked as cancelled", invertColor: true },
       ];
       
        return (
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {metricsToShow.map(m => renderMetricCard(m.name, m.data, m.formula))}
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {metricsToShow.map(m => renderMetricCard(m.name, m.data, m.formula, m.invertColor, m.isRating))}
         </div>
       )
   };

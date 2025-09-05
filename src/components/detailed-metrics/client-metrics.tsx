@@ -98,8 +98,6 @@ export function ClientMetrics({ date, selectedSources }: ClientMetricsProps) {
     { name: "Avg. Lifespan of Repeat Customer", value: `${clientMetricsData.avgLifespan.value.toFixed(1)} months`, formula: "Avg. time between first & last order of churned repeat clients", change: `${clientMetricsData.avgLifespan.change.toFixed(1)}%`, changeType: clientMetricsData.avgLifespan.change >= 0 ? "increase" : "decrease" as const },
     { name: "Median Lifespan of Repeat Customer", value: `${clientMetricsData.medianLifespan.value.toFixed(1)} months`, formula: "The 'middle' customer's lifespan, resistant to outliers", change: `${clientMetricsData.medianLifespan.change.toFixed(1)}%`, changeType: clientMetricsData.medianLifespan.change >= 0 ? "increase" : "decrease" as const },
     { name: "Client Satisfaction (CSAT)", value: `${clientMetricsData.csat.value.toFixed(1)}%`, formula: "(Positive Ratings / Total Ratings) × 100", change: `${clientMetricsData.csat.change.toFixed(1)}%`, changeType: clientMetricsData.csat.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Average Rating", value: `${clientMetricsData.avgRating.value.toFixed(2)} / 5.0`, formula: "Sum of ratings / Number of rated orders", change: clientMetricsData.avgRating.change.toFixed(2), changeType: clientMetricsData.avgRating.change >= 0 ? "increase" : "decrease" as const },
-    { name: "Cancelled Orders", value: clientMetricsData.cancelledOrders.value.toLocaleString(), formula: "Total orders marked as cancelled", change: `${clientMetricsData.cancelledOrders.change.toFixed(1)}%`, changeType: clientMetricsData.cancelledOrders.change >= 0 ? "increase" : "decrease" as const, invertColor: true },
   ];
 
   return (

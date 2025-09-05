@@ -185,14 +185,14 @@ export interface ClientMetricData {
     avgLifespan: { value: number; change: number };
     medianLifespan: { value: number; change: number };
     csat: { value: number; change: number };
-    avgRating: { value: number; change: number };
-    cancelledOrders: { value: number; change: number };
 }
 
 interface PeriodOrderStats {
     total: number;
     fromNewBuyers: number;
     fromRepeatBuyers: number;
+    cancelled: number;
+    avgRating: number;
 }
 export interface OrderCountAnalytics {
     currentPeriodOrders: PeriodOrderStats;
@@ -620,17 +620,15 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
             ordersInPeriod,
             newClientsInPeriodCount,
             clientsAtStart,
-            cancelledInPeriod,
             csatResults,
             lifespanResults,
         ] = await Promise.all([
             ordersCol.find({ date: { $gte: startStr, $lte: endStr }, ...sourceFilter }).toArray(),
             clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr }, ...sourceFilter }),
             clientsCol.find({ clientSince: { $lt: startStr }, ...sourceFilter }).project({ username: 1 }).toArray(),
-            ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled', ...sourceFilter }),
             ordersCol.aggregate([
                 { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null }, ...sourceFilter } },
-                { $group: { _id: null, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, totalRatings: { $sum: 1 }, avgRating: { $avg: '$rating' } } }
+                { $group: { _id: null, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, totalRatings: { $sum: 1 } } }
             ]).toArray(),
             clientsCol.aggregate([
                 { $match: sourceFilter },
@@ -670,7 +668,6 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
         const retainedClientsCount = Array.from(clientUsernamesInPeriod).filter(username => clientsAtStartUsernames.has(username)).length;
         
         const csat = (csatResults[0]?.totalRatings > 0) ? (csatResults[0].positiveRatings / csatResults[0].totalRatings) * 100 : 0;
-        const avgRating = csatResults[0]?.avgRating || 0;
         
         const allLifespans = lifespanResults.map(r => r.lifespanDays).sort((a,b) => a - b);
         const avgLifespanDays = allLifespans.length > 0 ? allLifespans.reduce((sum, val) => sum + val, 0) / allLifespans.length : 0;
@@ -697,8 +694,6 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
             avgLifespan: avgLifespanDays / 30.44,
             medianLifespan: medianLifespanDays / 30.44,
             csat,
-            avgRating,
-            cancelledOrders: cancelledInPeriod
         };
     };
 
@@ -722,8 +717,6 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
         avgLifespan: { value: currentMetrics.avgLifespan, change: calculateChange(currentMetrics.avgLifespan, prevMetrics.avgLifespan) },
         medianLifespan: { value: currentMetrics.medianLifespan, change: calculateChange(currentMetrics.medianLifespan, prevMetrics.medianLifespan) },
         csat: { value: currentMetrics.csat, change: currentMetrics.csat - prevMetrics.csat },
-        avgRating: { value: currentMetrics.avgRating, change: currentMetrics.avgRating - prevMetrics.avgRating },
-        cancelledOrders: { value: currentMetrics.cancelledOrders, change: calculateChange(currentMetrics.cancelledOrders, prevMetrics.cancelledOrders) },
     };
 }
 
@@ -752,15 +745,17 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
 
         const ordersInPeriod = await ordersCol.find({
             date: { $gte: startStr, $lte: endStr },
-            status: 'Completed',
             ...sourceFilter
         }).toArray();
 
-        if (ordersInPeriod.length === 0) {
-            return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0 };
+        const completedOrders = ordersInPeriod.filter(o => o.status === 'Completed');
+        const cancelledOrdersCount = ordersInPeriod.filter(o => o.status === 'Cancelled').length;
+
+        if (completedOrders.length === 0) {
+            return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0, cancelled: cancelledOrdersCount, avgRating: 0 };
         }
         
-        const clientUsernamesInPeriod = [...new Set(ordersInPeriod.map(o => o.clientUsername))];
+        const clientUsernamesInPeriod = [...new Set(completedOrders.map(o => o.clientUsername))];
 
         const clientsFromDB = await clientsCol.find(
             { username: { $in: clientUsernamesInPeriod }, ...sourceFilter },
@@ -781,10 +776,15 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
             }
         }
         
-        const newBuyerOrders = ordersInPeriod.filter(o => newBuyerUsernames.has(o.clientUsername)).length;
-        const repeatBuyerOrders = ordersInPeriod.filter(o => repeatBuyerUsernames.has(o.clientUsername)).length;
+        const newBuyerOrders = completedOrders.filter(o => newBuyerUsernames.has(o.clientUsername)).length;
+        const repeatBuyerOrders = completedOrders.filter(o => repeatBuyerUsernames.has(o.clientUsername)).length;
+
+        const ratedOrders = completedOrders.filter(o => o.rating != null);
+        const avgRating = ratedOrders.length > 0
+            ? ratedOrders.reduce((sum, o) => sum + (o.rating ?? 0), 0) / ratedOrders.length
+            : 0;
         
-        return { total: ordersInPeriod.length, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders };
+        return { total: completedOrders.length, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders, cancelled: cancelledOrdersCount, avgRating };
     };
 
     const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
