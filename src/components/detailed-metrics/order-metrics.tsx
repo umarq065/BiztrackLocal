@@ -115,7 +115,7 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
         
         const displayValue = isRating ? `${metricData.value.toFixed(2)} / 5.0` : metricData.value.toLocaleString();
         const displayChange = isRating ? metricData.growth.toFixed(2) : `${Math.abs(metricData.growth).toFixed(1)}%`;
-        const displayPrevChange = isRating ? metricData.prevPeriodGrowth.toFixed(2) : `${metricData.prevPeriodGrowth.toFixed(1)}%`;
+        const displayPrevChange = isRating ? metricData.prevPeriodGrowth.toFixed(2) : `${metricData.prevPeriodGrowth.toFixed(1)}`;
         const displayPrevValue = isRating ? metricData.prevValue.toFixed(2) : metricData.prevValue.toLocaleString();
 
         return (
@@ -130,7 +130,7 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
                             )}
                         >
                             {isRating ? null : (metricData.growth >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
-                            {displayChange}{isRating ? '' : '%'}
+                            {displayChange}
                         </span>
                     </div>
                     <p className="text-2xl font-bold mt-1">{displayValue}</p>
