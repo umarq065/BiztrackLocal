@@ -1,13 +1,16 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUp, ArrowDown, EyeOff, BarChart, Eye, MousePointerClick, MessageSquare, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { format, subDays, differenceInDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { Skeleton } from "../ui/skeleton";
+import type { PerformanceMetricData } from "@/lib/services/analyticsService";
+import { useToast } from "@/hooks/use-toast";
 
 const formatValue = (value: number, type: 'number' | 'currency' | 'percentage') => {
     switch (type) {
@@ -17,19 +20,52 @@ const formatValue = (value: number, type: 'number' | 'currency' | 'percentage') 
     }
 }
 
-const dummyMetrics = [
-    { name: "Impressions", value: 1250000, change: 12.5, previousValue: 1100000, previousPeriodChange: 10.2, type: 'number' as const, formula: "Total views of your gigs/profiles" },
-    { name: "Clicks", value: 75000, change: 8.2, previousValue: 69316, previousPeriodChange: 7.5, type: 'number' as const, formula: "Total clicks on your gigs/profiles" },
-    { name: "Messages", value: 1250, change: 15.1, previousValue: 1086, previousPeriodChange: 11.8, type: 'number' as const, formula: "Total initial messages from new clients" },
-    { name: "Click-Through Rate (CTR)", value: 6.0, change: -3.8, previousValue: 6.3, previousPeriodChange: -0.5, type: 'percentage' as const, formula: "(Clicks / Impressions) * 100" },
-];
-
 interface PerformanceMetricsProps {
     date: DateRange | undefined;
+    selectedSources: string[];
 }
 
-export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
+export function PerformanceMetrics({ date, selectedSources }: PerformanceMetricsProps) {
   const [showChart, setShowChart] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [metrics, setMetrics] = useState<PerformanceMetricData | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchData() {
+        if (!date?.from || !date?.to || selectedSources.length === 0) {
+            setIsLoading(false);
+            setMetrics(null);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const query = new URLSearchParams({
+                from: format(date.from, 'yyyy-MM-dd'),
+                to: format(date.to, 'yyyy-MM-dd'),
+                sources: selectedSources.join(','),
+            });
+            const res = await fetch(`/api/analytics/performance-metrics?${query.toString()}`);
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to fetch performance metrics');
+            }
+            const data: PerformanceMetricData = await res.json();
+            setMetrics(data);
+        } catch (e) {
+            console.error("Error fetching performance metrics:", e);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: (e as Error).message || "Could not load performance metrics.",
+            });
+            setMetrics(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchData();
+  }, [date, selectedSources, toast]);
 
   const previousPeriodLabel = useMemo(() => {
       if (!date?.from || !date?.to) return "previous period";
@@ -41,7 +77,7 @@ export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
 
   const renderMetricCard = (
       name: string,
-      data: { value: number, change: number, previousValue: number, previousPeriodChange?: number },
+      data: PerformanceMetricData[keyof PerformanceMetricData],
       formula: string,
       type: 'number' | 'percentage' = 'number',
       invertColor = false
@@ -51,11 +87,15 @@ export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
       const changeType = change >= 0 ? "increase" : "decrease";
       const isPositive = invertColor ? changeType === "decrease" : changeType === "increase";
 
-      const prevChangeType = previousPeriodChange && previousPeriodChange >= 0 ? "increase" : "decrease";
-      const isPrevPositive = previousPeriodChange ? (invertColor ? prevChangeType === "decrease" : prevChangeType === "increase") : false;
-
+      const prevChangeType = previousPeriodChange >= 0 ? "increase" : "decrease";
+      const isPrevPositive = invertColor ? prevChangeType === "decrease" : prevChangeType === "increase";
+      
       const displayValue = formatValue(value, type);
       const displayPreviousValue = formatValue(previousValue, type);
+
+      const displayChange = type === 'percentage' ? `${change.toFixed(1)}pp` : `${Math.abs(change).toFixed(1)}%`;
+      const displayPrevChange = type === 'percentage' ? `${previousPeriodChange.toFixed(1)}pp` : `${Math.abs(previousPeriodChange).toFixed(1)}%`;
+
 
       return (
           <div key={name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
@@ -65,7 +105,7 @@ export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
                       {change != null && (
                           <span className={cn("flex items-center gap-1 text-xs font-semibold", isPositive ? "text-green-600" : "text-red-600")}>
                               {changeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                              {`${Math.abs(change).toFixed(1)}%`}
+                              {displayChange}
                           </span>
                       )}
                   </div>
@@ -75,7 +115,7 @@ export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
                    {previousPeriodChange != null && (
                         <p className={cn("flex items-center gap-1 font-semibold", isPrevPositive ? "text-green-600" : "text-red-600")}>
                             {prevChangeType === "increase" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                            {`${Math.abs(previousPeriodChange).toFixed(1)}%`}
+                            {displayPrevChange}
                         </p>
                    )}
                    <p className="text-muted-foreground">vs {displayPreviousValue} ({previousPeriodLabel})</p>
@@ -86,9 +126,28 @@ export function PerformanceMetrics({ date }: PerformanceMetricsProps) {
   }
 
   const renderContent = () => {
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[180px] w-full" />)}
+            </div>
+        )
+    }
+
+    if (!metrics) {
+        return <p className="text-muted-foreground">Could not load performance data. Please select a valid date range and at least one income source.</p>
+    }
+    
+    const metricsToShow = [
+        { name: "Impressions", data: metrics.impressions, formula: "Total views of your gigs/profiles", type: 'number' as const },
+        { name: "Clicks", data: metrics.clicks, formula: "Total clicks on your gigs/profiles", type: 'number' as const },
+        { name: "Messages", data: metrics.messages, formula: "Total initial messages from new clients", type: 'number' as const },
+        { name: "Click-Through Rate (CTR)", data: metrics.ctr, formula: "(Clicks / Impressions) * 100", type: 'percentage' as const },
+    ];
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {dummyMetrics.map(m => renderMetricCard(m.name, { ...m, previousPeriodChange: m.previousPeriodChange }, m.formula, m.type, m.name === 'Click-Through Rate (CTR)'))}
+        {metricsToShow.map(m => renderMetricCard(m.name, m.data, m.formula, m.type))}
       </div>
     )
   };

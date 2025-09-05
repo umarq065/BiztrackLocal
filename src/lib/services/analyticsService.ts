@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for fetching and processing analytics data.
  */
@@ -96,7 +97,7 @@ export interface GigAnalyticsData {
 export interface SourceAnalyticsData {
     sourceId: string;
     sourceName: string;
-    gigs: { id: string; name: string; date: string }[];
+    gigs: { id: string; name: string; date: string; messages?: number; }[];
     timeSeries: TimeSeriesDataPoint[];
     totals: Omit<Totals, 'conversionRate'> & {ctr: number};
     previousTotals: Omit<Totals, 'conversionRate'> & {ctr: number};
@@ -149,6 +150,19 @@ export interface FinancialMetricData {
     cac: FinancialMetric;
     aov: FinancialMetric;
     cltv: FinancialMetric;
+}
+
+export interface PerformanceMetric {
+  value: number;
+  change: number;
+  previousValue: number;
+  previousPeriodChange: number;
+}
+export interface PerformanceMetricData {
+  impressions: PerformanceMetric;
+  clicks: PerformanceMetric;
+  messages: PerformanceMetric;
+  ctr: PerformanceMetric;
 }
 
 export interface MarketingMetric {
@@ -448,11 +462,18 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
     if (!result) return null;
     
     const { source, timeSeries, totals, previousTotals } = result;
+
+    const messagesCollection = await getMessagesCollection();
+    const messagesPerGig = await messagesCollection.aggregate([
+        { $match: { sourceId: sourceId } },
+        { $group: { _id: "$gigId", messages: { $sum: "$messages" } } }
+    ]).toArray();
+    const messageMap = new Map(messagesPerGig.map(m => [m._id, m.messages]));
     
     return {
         sourceId,
         sourceName: source.name,
-        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date })),
+        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: messageMap.get(g.id) })),
         timeSeries,
         totals: { ...totals, ctr: totals.ctr },
         previousTotals: { ...previousTotals, ctr: previousTotals.ctr }
@@ -1018,6 +1039,91 @@ export async function getMarketingMetrics(from: string, to: string, sources: str
         }
     };
 }
+
+export async function getPerformanceMetrics(from: string, to: string, sources: string[]): Promise<PerformanceMetricData> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+
+    const durationDays = differenceInDays(toDate, fromDate);
+    if (durationDays < 0) throw new Error("Invalid date range.");
+
+    const p2_to = toDate;
+    const p2_from = fromDate;
+    const p1_to = subDays(p2_from, 1);
+    const p1_from = subDays(p1_to, durationDays);
+    const p0_to = subDays(p1_from, 1);
+    const p0_from = subDays(p0_to, durationDays);
+
+    const calculateMetricsForPeriod = async (start: Date, end: Date) => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+        
+        const incomesCol = await getIncomesCollection();
+        const sourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1 }).toArray();
+        const sourceIds = sourceDocs.map(s => s._id.toString());
+        
+        const gigPerformancesCol = await getGigPerformancesCollection();
+        const messagesCol = await getMessagesCollection();
+        
+        const perfPromise = gigPerformancesCol.aggregate([
+            { $match: { sourceId: { $in: sourceIds }, date: { $gte: startStr, $lte: endStr } } },
+            { $group: { _id: null, impressions: { $sum: '$impressions' }, clicks: { $sum: '$clicks' } } }
+        ]).toArray();
+        
+        const messagesPromise = messagesCol.aggregate([
+            { $match: { sourceId: { $in: sourceIds }, date: { $gte: startStr, $lte: endStr } } },
+            { $group: { _id: null, messages: { $sum: '$messages' } } }
+        ]).toArray();
+        
+        const [perfRes, messagesRes] = await Promise.all([perfPromise, messagesPromise]);
+        
+        const impressions = perfRes[0]?.impressions || 0;
+        const clicks = perfRes[0]?.clicks || 0;
+        const messages = messagesRes[0]?.messages || 0;
+        const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+        
+        return { impressions, clicks, messages, ctr };
+    };
+
+    const [metricsP2, metricsP1, metricsP0] = await Promise.all([
+        calculateMetricsForPeriod(p2_from, p2_to),
+        calculateMetricsForPeriod(p1_from, p1_to),
+        calculateMetricsForPeriod(p0_from, p0_to),
+    ]);
+    
+    const calculateChangePercentage = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous) * 100;
+    };
+
+    return {
+        impressions: {
+            value: metricsP2.impressions,
+            change: calculateChangePercentage(metricsP2.impressions, metricsP1.impressions),
+            previousPeriodChange: calculateChangePercentage(metricsP1.impressions, metricsP0.impressions),
+            previousValue: metricsP1.impressions,
+        },
+        clicks: {
+            value: metricsP2.clicks,
+            change: calculateChangePercentage(metricsP2.clicks, metricsP1.clicks),
+            previousPeriodChange: calculateChangePercentage(metricsP1.clicks, metricsP0.clicks),
+            previousValue: metricsP1.clicks,
+        },
+        messages: {
+            value: metricsP2.messages,
+            change: calculateChangePercentage(metricsP2.messages, metricsP1.messages),
+            previousPeriodChange: calculateChangePercentage(metricsP1.messages, metricsP0.messages),
+            previousValue: metricsP1.messages,
+        },
+        ctr: {
+            value: metricsP2.ctr,
+            change: metricsP2.ctr - metricsP1.ctr, // Absolute change for percentage
+            previousPeriodChange: metricsP1.ctr - metricsP0.ctr,
+            previousValue: metricsP1.ctr,
+        },
+    };
+}
+
 
 export async function getYearlyStats(year: number): Promise<SingleYearData> {
     const ordersCol = await getOrdersCollection();
