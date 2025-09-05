@@ -753,7 +753,7 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         
         const lifespanResultsPromise = clientsCol.aggregate([
             { $match: sourceFilter },
-             {
+            {
                 $lookup: {
                     from: 'orders',
                     let: { client_username: '$username' },
@@ -779,7 +779,7 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
             revenueRes, totalOrders, expensesRes, salaryExpensesRes, marketingExpensesRes, newClientsCount,
             ordersInPeriod, lifespanResults
         ] = await Promise.all([
-            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsCount,
+            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsPromise,
             ordersInPeriodPromise, lifespanResultsPromise
         ]);
         

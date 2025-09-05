@@ -27,12 +27,16 @@ export function FinancialMetrics({ date, selectedSources }: FinancialMetricsProp
 
     useEffect(() => {
         async function fetchData() {
-            if (!date?.from || !date?.to || selectedSources.length === 0) return;
+            if (!date?.from || !date?.to || selectedSources.length === 0) {
+                setIsLoading(false);
+                setMetrics(null);
+                return;
+            };
             setIsLoading(true);
             try {
                 const query = new URLSearchParams({
-                    from: date.from.toISOString(),
-                    to: date.to.toISOString(),
+                    from: format(date.from, 'yyyy-MM-dd'),
+                    to: format(date.to, 'yyyy-MM-dd'),
                     sources: selectedSources.join(','),
                 });
                 const res = await fetch(`/api/analytics/financial-metrics?${query.toString()}`);
@@ -136,7 +140,7 @@ export function FinancialMetrics({ date, selectedSources }: FinancialMetricsProp
         }
         
         if (!metrics) {
-            return <p className="text-muted-foreground">Could not load financial data for the selected period.</p>
+            return <p className="text-muted-foreground">Could not load financial data. Please select a valid date range and at least one income source.</p>
         }
 
         return (
