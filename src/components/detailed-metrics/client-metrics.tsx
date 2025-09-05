@@ -13,7 +13,12 @@ import type { ClientMetricData } from "@/lib/services/analyticsService";
 
 const ClientMetricsChart = lazy(() => import("@/components/detailed-metrics/client-metrics-chart"));
 
-export function ClientMetrics({ date }: { date: DateRange | undefined }) {
+interface ClientMetricsProps {
+    date: DateRange | undefined;
+    selectedSources: string[];
+}
+
+export function ClientMetrics({ date, selectedSources }: ClientMetricsProps) {
   const [showChart, setShowChart] = useState(false);
   const [activeMetrics, setActiveMetrics] = useState({
     totalClients: true,
@@ -39,12 +44,16 @@ export function ClientMetrics({ date }: { date: DateRange | undefined }) {
 
   useEffect(() => {
     async function fetchData() {
-        if (!date?.from || !date?.to) return;
+        if (!date?.from || !date?.to || selectedSources.length === 0) {
+            setIsLoading(false);
+            return;
+        }
         setIsLoading(true);
         try {
             const query = new URLSearchParams({
                 from: date.from.toISOString(),
-                to: date.to.toISOString()
+                to: date.to.toISOString(),
+                sources: selectedSources.join(','),
             });
             const res = await fetch(`/api/analytics/client-metrics?${query.toString()}`);
             if (!res.ok) throw new Error('Failed to fetch client metrics');
@@ -58,7 +67,7 @@ export function ClientMetrics({ date }: { date: DateRange | undefined }) {
         }
     }
     fetchData();
-  }, [date]);
+  }, [date, selectedSources]);
   
   if (isLoading) {
     return <Skeleton className="h-64 w-full" />
@@ -74,7 +83,7 @@ export function ClientMetrics({ date }: { date: DateRange | undefined }) {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <p>Could not load client metrics. Please select a valid date range.</p>
+                <p>Could not load client metrics. Please select a valid date range and income source(s).</p>
             </CardContent>
         </Card>
     );

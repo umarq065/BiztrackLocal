@@ -472,7 +472,9 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
         const clientsAtStartPromise = clientsCol.countDocuments({ clientSince: { $lt: startStr } });
         const vipClientsPromise = clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr} });
         
-        const [revenueRes, expensesRes, ordersInPeriod, topSourceRes, newClients, clientsAtStart, vipClients] = await Promise.all([
+        const [
+            revenueRes, expensesRes, ordersInPeriod, topSourceRes, newClients, clientsAtStart, vipClients
+        ] = await Promise.all([
             revenuePromise, expensesPromise, ordersInPeriodPromise, sourcesPromise, newClientsPromise, clientsAtStartPromise, vipClientsPromise
         ]);
 
@@ -510,9 +512,11 @@ export async function getGrowthMetrics(from: string, to: string): Promise<Growth
 }
 
 
-export async function getClientMetrics(from: string, to: string): Promise<ClientMetricData> {
+export async function getClientMetrics(from: string, to: string, sources?: string[]): Promise<ClientMetricData> {
     const fromDate = parseISO(from);
     const toDate = parseISO(to);
+    
+    const sourceFilter = sources ? { source: { $in: sources } } : {};
     
     const calcPeriodMetrics = async (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
@@ -529,15 +533,16 @@ export async function getClientMetrics(from: string, to: string): Promise<Client
             csatResults,
             lifespanResults,
         ] = await Promise.all([
-            ordersCol.find({ date: { $gte: startStr, $lte: endStr } }).toArray(),
-            clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } }),
-            clientsCol.find({ clientSince: { $lt: startStr } }).project({ username: 1 }).toArray(),
-            ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled' }),
+            ordersCol.find({ date: { $gte: startStr, $lte: endStr }, ...sourceFilter }).toArray(),
+            clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr }, ...sourceFilter }),
+            clientsCol.find({ clientSince: { $lt: startStr }, ...sourceFilter }).project({ username: 1 }).toArray(),
+            ordersCol.countDocuments({ date: { $gte: startStr, $lte: endStr }, status: 'Cancelled', ...sourceFilter }),
             ordersCol.aggregate([
-                { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null } } },
+                { $match: { date: { $gte: startStr, $lte: endStr }, rating: { $ne: null }, ...sourceFilter } },
                 { $group: { _id: null, positiveRatings: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } }, totalRatings: { $sum: 1 }, avgRating: { $avg: '$rating' } } }
             ]).toArray(),
             clientsCol.aggregate([
+                 { $match: sourceFilter },
                 { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
                 { $addFields: { clientOrders: { $filter: { input: "$clientOrders", as: "order", cond: { $ne: ["$$order.status", "Cancelled"] } } } } },
                 { $match: { 'clientOrders.1': { $exists: true } } },
@@ -740,12 +745,13 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const salaryExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Salary' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
         const marketingExpensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr } });
+        const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr }, ...sourceFilter });
         
         // Client Metrics for CLTV
         const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, ...sourceFilter }).toArray();
-        const clientsAtStartPromise = clientsCol.find({ clientSince: { $lt: startStr } }).project({ username: 1 }).toArray();
+        const clientsAtStartPromise = clientsCol.find({ clientSince: { $lt: startStr }, ...sourceFilter }).project({ username: 1 }).toArray();
         const lifespanResultsPromise = clientsCol.aggregate([
+            { $match: sourceFilter },
             { $lookup: { from: 'orders', localField: 'username', foreignField: 'clientUsername', as: 'clientOrders' } },
             { $addFields: { clientOrders: { $filter: { input: "$clientOrders", as: "order", cond: { $ne: ["$$order.status", "Cancelled"] } } } } },
             { $match: { 'clientOrders.1': { $exists: true } } },
@@ -758,7 +764,7 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
             revenueRes, totalOrders, expensesRes, salaryExpensesRes, marketingExpensesRes, newClientsCount,
             ordersInPeriod, clientsAtStart, lifespanResults
         ] = await Promise.all([
-            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsPromise,
+            revenuePromise, totalOrdersPromise, expensesPromise, salaryExpensesPromise, marketingExpensesPromise, newClientsCount,
             ordersInPeriodPromise, clientsAtStartPromise, lifespanResultsPromise
         ]);
         
