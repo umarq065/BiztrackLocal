@@ -8,7 +8,6 @@ import type { DateRange } from "react-day-picker";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import { ClientMetrics } from "@/components/detailed-metrics/client-metrics";
 import { GrowthMetrics } from "@/components/detailed-metrics/growth-metrics";
-import { SalesMetrics } from "@/components/detailed-metrics/sales-metrics";
 import { MarketingMetrics } from "@/components/detailed-metrics/marketing-metrics";
 import { ProjectMetrics } from "@/components/detailed-metrics/project-metrics";
 import { OrderMetrics } from "@/components/detailed-metrics/order-metrics";
@@ -122,7 +121,6 @@ export default function DetailedMetricsPage() {
                 <OrderMetrics date={date} selectedSources={selectedSources} />
                 <ClientMetrics date={date} selectedSources={selectedSources} />
                 <GrowthMetrics date={date} selectedSources={selectedSources} previousPeriodLabel={previousPeriodLabel} />
-                <SalesMetrics date={date} />
                 <MarketingMetrics date={date} />
                 <ProjectMetrics date={date} />
             </div>

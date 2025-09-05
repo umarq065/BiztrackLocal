@@ -140,14 +140,6 @@ export interface FinancialMetricData {
     cltv: FinancialMetric;
 }
 
-export interface ConversionMetricData {
-    leadConversionRate: {
-        value: number;
-        change: number;
-    }
-}
-
-
 export interface ClientMetricData {
     totalClients: { value: number; change: number };
     newClients: { value: number; change: number };
@@ -975,57 +967,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     }
 
     return data;
-}
-
-export async function getConversionMetrics(from: string, to: string, sources?: string[]): Promise<ConversionMetricData> {
-    const fromDate = parseISO(from);
-    const toDate = parseISO(to);
-    
-    const durationInDays = differenceInDays(toDate, fromDate);
-    if (durationInDays < 0) throw new Error("Invalid date range for conversion metrics.");
-
-    const prevToDate = subDays(fromDate, 1);
-    const prevFromDate = subDays(prevToDate, durationInDays);
-
-    const getMetricsForPeriod = async (start: Date, end: Date) => {
-        const startStr = format(start, 'yyyy-MM-dd');
-        const endStr = format(end, 'yyyy-MM-dd');
-
-        const orderSourceFilter = sources ? { source: { $in: sources } } : {};
-        const incomeSourceFilter = sources ? { name: { $in: sources } } : {};
-        
-        const ordersCol = await getOrdersCollection();
-        const incomesCol = await getIncomesCollection();
-
-        const totalOrdersPromise = ordersCol.countDocuments({
-            date: { $gte: startStr, $lte: endStr },
-            status: 'Completed',
-            ...orderSourceFilter
-        });
-        
-        const messagesResult = await incomesCol.aggregate([
-            { $match: incomeSourceFilter },
-            { $unwind: "$dataPoints" },
-            { $match: { "dataPoints.date": { $gte: startStr, $lte: endStr } } },
-            { $group: { _id: null, totalMessages: { $sum: "$dataPoints.messages" } } }
-        ]).toArray();
-        
-        const totalMessages = messagesResult[0]?.totalMessages || 0;
-        const totalOrders = await totalOrdersPromise;
-        const leadConversionRate = totalMessages > 0 ? (totalOrders / totalMessages) * 100 : 0;
-
-        return { leadConversionRate };
-    };
-
-    const [currentMetrics, prevMetrics] = await Promise.all([
-        getMetricsForPeriod(fromDate, toDate),
-        getMetricsForPeriod(prevFromDate, prevToDate)
-    ]);
-    
-    return {
-        leadConversionRate: {
-            value: currentMetrics.leadConversionRate,
-            change: currentMetrics.leadConversionRate - prevMetrics.leadConversionRate,
-        }
-    };
 }
