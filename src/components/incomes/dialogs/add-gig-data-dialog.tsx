@@ -47,7 +47,7 @@ interface AddGigDataDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     updatingGigInfo: { source: IncomeSource; gig: Gig };
-    onGigDataAdded: (updatedSource: IncomeSource) => void;
+    onGigDataAdded: () => void;
 }
 
 export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDataAdded }: AddGigDataDialogProps) {
@@ -63,43 +63,31 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
         },
     });
 
-    const selectedDate = form.watch("date");
-
-    useEffect(() => {
-        if (updatingGigInfo && selectedDate) {
-            const dateString = format(selectedDate, "yyyy-MM-dd");
-            const existingData = updatingGigInfo.gig.analytics?.find(a => a.date === dateString);
-            
-            form.setValue("impressions", existingData?.impressions || 0);
-            form.setValue("clicks", existingData?.clicks || 0);
-        }
-    }, [selectedDate, updatingGigInfo, form]);
-
     async function onSubmit(values: AddGigDataFormValues) {
         if (!updatingGigInfo) return;
         setIsSubmitting(true);
         const { source, gig } = updatingGigInfo;
 
         try {
-            const response = await fetch(`/api/incomes/${source.id}/gigs/${gig.id}/analytics`, {
+            const payload = {
+                ...values,
+                sourceId: source.id,
+            };
+            const response = await fetch(`/api/gigs/${gig.id}/performance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(values),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
-                throw new Error('Failed to add analytics data');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add performance data');
             }
             
-            const { gig: updatedGig } = await response.json();
-            const updatedSource = {
-                ...source,
-                gigs: source.gigs.map(g => g.id === updatedGig.id ? updatedGig : g),
-            };
-            onGigDataAdded(updatedSource);
+            onGigDataAdded();
             
             toast({
-                title: "Analytics Data Saved",
+                title: "Performance Data Saved",
                 description: `Performance data for ${format(values.date, "PPP")} has been saved.`,
             });
             onOpenChange(false);
@@ -108,7 +96,7 @@ export function AddGigDataDialog({ open, onOpenChange, updatingGigInfo, onGigDat
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: "Could not save performance data. Please try again.",
+                description: (error as Error).message || "Could not save performance data. Please try again.",
             });
         } finally {
             setIsSubmitting(false);

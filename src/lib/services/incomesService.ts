@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Service for managing income source data in MongoDB.
  */
@@ -22,13 +23,6 @@ const editGigFormSchema = z.object({
     date: z.date({ required_error: "A date for the gig is required." }),
 });
 type EditGigFormValues = z.infer<typeof editGigFormSchema>;
-
-const addGigDataFormSchema = z.object({
-    date: z.date({ required_error: "A date is required." }),
-    impressions: z.coerce.number().int().min(0),
-    clicks: z.coerce.number().int().min(0),
-});
-type AddGigDataFormValues = z.infer<typeof addGigDataFormSchema>;
 
 
 async function getIncomesCollection() {
@@ -80,7 +74,6 @@ export async function addIncomeSource(sourceData: z.infer<typeof formSchema>): P
       id: randomBytes(8).toString('hex'), // Unique ID for the gig
       name: gig.name,
       date: format(new Date(gig.date), 'yyyy-MM-dd'),
-      analytics: [],
     })),
   };
 
@@ -165,7 +158,6 @@ export async function addGigToSource(sourceId: string, gigData: AddGigFormValues
         id: randomBytes(8).toString('hex'),
         name: gigData.name,
         date: format(gigData.date, "yyyy-MM-dd"),
-        analytics: [],
     };
 
     const result = await incomesCollection.updateOne(
@@ -279,38 +271,4 @@ export async function deleteIncomeSource(sourceId: string): Promise<boolean> {
     const result = await incomesCollection.deleteOne({ _id: new ObjectId(sourceId) });
 
     return result.deletedCount > 0;
-}
-
-/**
- * Adds or updates an analytics data point for a specific gig on a specific date.
- * @param sourceId The ID of the income source.
- * @param gigId The ID of the gig to update.
- * @param analyticsData The new analytics data point.
- * @returns The updated gig object.
- */
-export async function addAnalyticsToGig(sourceId: string, gigId: string, analyticsData: AddGigDataFormValues): Promise<Gig | null> {
-    const incomesCollection = await getIncomesCollection();
-    const dateString = format(analyticsData.date, "yyyy-MM-dd");
-
-    // First, try to update an existing entry for this date
-    const updateResult = await incomesCollection.updateOne(
-        { _id: new ObjectId(sourceId), "gigs.id": gigId, "gigs.analytics.date": dateString },
-        { $set: { 
-            "gigs.$[gig].analytics.$[analytic].impressions": analyticsData.impressions,
-            "gigs.$[gig].analytics.$[analytic].clicks": analyticsData.clicks,
-        } },
-        { arrayFilters: [{ "gig.id": gigId }, { "analytic.date": dateString }] }
-    );
-
-    // If no document was updated, it means no entry for this date exists, so we add it
-    if (updateResult.matchedCount === 0) {
-        const newAnalyticPoint = { ...analyticsData, date: dateString };
-        await incomesCollection.updateOne(
-            { _id: new ObjectId(sourceId), "gigs.id": gigId },
-            { $push: { "gigs.$.analytics": newAnalyticPoint } }
-        );
-    }
-
-    const updatedSource = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
-    return updatedSource?.gigs.find(g => g.id === gigId) || null;
 }

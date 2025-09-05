@@ -12,6 +12,7 @@ import type { Order } from '@/lib/data/orders-data';
 import type { SingleYearData } from '@/lib/data/yearly-stats-data';
 import type { BusinessNote } from '../data/business-notes-data';
 import { getMonthlyTargets } from './monthlyTargetsService';
+import { type GigPerformance } from '../data/gig-performance-data';
 
 // Helper function to get database collections
 async function getIncomesCollection() {
@@ -47,6 +48,11 @@ async function getBusinessNotesCollection() {
 async function getMessagesCollection() {
     const client = await clientPromise;
     return client.db("biztrack-pro").collection('messages');
+}
+
+async function getGigPerformancesCollection() {
+    const client = await clientPromise;
+    return client.db("biztrack-pro").collection<GigPerformance>('gigPerformances');
 }
 
 
@@ -90,7 +96,7 @@ export interface GigAnalyticsData {
 export interface SourceAnalyticsData {
     sourceId: string;
     sourceName: string;
-    gigs: { id: string; name: string; date: string; messages?: number }[];
+    gigs: { id: string; name: string; date: string }[];
     timeSeries: TimeSeriesDataPoint[];
     totals: Omit<Totals, 'conversionRate'> & {ctr: number};
     previousTotals: Omit<Totals, 'conversionRate'> & {ctr: number};
@@ -188,6 +194,7 @@ async function processAnalytics(
     const incomesCollection = await getIncomesCollection();
     const ordersCollection = await getOrdersCollection();
     const messagesCollection = await getMessagesCollection();
+    const gigPerformancesCollection = await getGigPerformancesCollection();
 
     const { from, to } = dateRange;
     const duration = to.getTime() - from.getTime();
@@ -203,6 +210,8 @@ async function processAnalytics(
         ...(filter.gigId && { "gigs.id": filter.gigId })
     });
     if (!source) return null;
+
+    const sourceId = source._id.toString();
 
     const gigNames = filter.gigId 
         ? [source.gigs.find(g => g.id === filter.gigId)?.name] 
@@ -232,27 +241,29 @@ async function processAnalytics(
     const ordersMap = new Map(currentOrders.map(o => [o._id, o]));
     const prevOrdersMap = new Map(previousOrders.map(o => [o._id, o]));
 
-    // Aggregate analytics data from the source document
-    const aggregateSourceData = (dates: string[]) => {
-        const dataMap = new Map<string, { impressions: number; clicks: number; messages: number }>();
-        dates.forEach(date => dataMap.set(date, { impressions: 0, clicks: 0, messages: 0 }));
-
-        source.gigs.forEach(gig => {
-            if (filter.gigId && gig.id !== filter.gigId) return;
-            (gig.analytics || []).forEach(analytic => {
-                if (dataMap.has(analytic.date)) {
-                    const existing = dataMap.get(analytic.date)!;
-                    existing.impressions += analytic.impressions;
-                    existing.clicks += analytic.clicks;
-                }
-            });
-        });
-        return dataMap;
+    const getPerformanceForPeriod = async (start: Date, end: Date) => {
+        return gigPerformancesCollection.aggregate([
+            { $match: { 
+                sourceId: sourceId,
+                ...(filter.gigId && { gigId: filter.gigId }),
+                date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
+            }},
+            { $group: {
+                _id: "$date",
+                impressions: { $sum: '$impressions' },
+                clicks: { $sum: '$clicks' }
+            }}
+        ]).toArray();
     };
 
-    const currentSourceMap = aggregateSourceData(dateArray);
-    const prevSourceMap = aggregateSourceData(prevDateArray);
+    const [currentPerf, previousPerf] = await Promise.all([
+        getPerformanceForPeriod(from, to),
+        getPerformanceForPeriod(prevFrom, prevTo)
+    ]);
 
+    const performanceMap = new Map(currentPerf.map(p => [p._id, p]));
+    const prevPerformanceMap = new Map(previousPerf.map(p => [p._id, p]));
+    
     const getMessagesForPeriod = async (start: Date, end: Date) => {
         return messagesCollection.aggregate([
              { $match: { 
@@ -271,35 +282,34 @@ async function processAnalytics(
         getMessagesForPeriod(prevFrom, prevTo)
     ]);
 
-    currentMessages.forEach(msg => {
-        if(currentSourceMap.has(msg._id)) currentSourceMap.get(msg._id)!.messages = msg.messages;
-    });
-     previousMessages.forEach(msg => {
-        if(prevSourceMap.has(msg._id)) prevSourceMap.get(msg._id)!.messages = msg.messages;
-    });
-
+    const messagesMap = new Map(currentMessages.map(m => [m._id, m]));
+    const prevMessagesMap = new Map(previousMessages.map(m => [m._id, m]));
+    
     // Combine all data into a time series
     const timeSeries = dateArray.map((date, i) => {
         const prevDate = prevDateArray[i];
-        const currentData = currentSourceMap.get(date) || { impressions: 0, clicks: 0, messages: 0 };
-        const prevData = prevSourceMap.get(prevDate) || { impressions: 0, clicks: 0, messages: 0 };
+        
+        const perfData = performanceMap.get(date) || { impressions: 0, clicks: 0 };
+        const prevPerfData = prevPerformanceMap.get(prevDate) || { impressions: 0, clicks: 0 };
         const orderData = ordersMap.get(date) || { orders: 0, revenue: 0 };
         const prevOrderData = prevOrdersMap.get(prevDate) || { orders: 0, revenue: 0 };
+        const messageData = messagesMap.get(date) || { messages: 0 };
+        const prevMessageData = prevMessagesMap.get(prevDate) || { messages: 0 };
 
         return {
             date,
-            impressions: currentData.impressions,
-            clicks: currentData.clicks,
+            impressions: perfData.impressions,
+            clicks: perfData.clicks,
             orders: orderData.orders,
             revenue: orderData.revenue,
-            messages: currentData.messages,
-            ctr: currentData.impressions > 0 ? (currentData.clicks / currentData.impressions) * 100 : 0,
-            prevImpressions: prevData.impressions,
-            prevClicks: prevData.clicks,
+            messages: messageData.messages,
+            ctr: perfData.impressions > 0 ? (perfData.clicks / perfData.impressions) * 100 : 0,
+            prevImpressions: prevPerfData.impressions,
+            prevClicks: prevPerfData.clicks,
             prevOrders: prevOrderData.orders,
             prevRevenue: prevOrderData.revenue,
-            prevMessages: prevData.messages,
-            prevCtr: prevData.impressions > 0 ? (prevData.clicks / prevData.impressions) * 100 : 0,
+            prevMessages: prevMessageData.messages,
+            prevCtr: prevPerfData.impressions > 0 ? (prevPerfData.clicks / prevPerfData.impressions) * 100 : 0,
         };
     });
 
@@ -344,8 +354,8 @@ async function processAnalytics(
 // Function to get the full date range of data for a source
 async function getFullDateRange(sourceName: string, sourceId: string) {
     const ordersCollection = await getOrdersCollection();
-    const incomesCollection = await getIncomesCollection();
     const messagesCollection = await getMessagesCollection();
+    const gigPerformancesCollection = await getGigPerformancesCollection();
 
     const orderDateRangePromise = ordersCollection.aggregate([
         { $match: { source: sourceName } },
@@ -356,19 +366,25 @@ async function getFullDateRange(sourceName: string, sourceId: string) {
         { $match: { sourceId: sourceId } },
         { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
     ]).toArray();
+    
+     const performanceDateRangePromise = gigPerformancesCollection.aggregate([
+        { $match: { sourceId: sourceId } },
+        { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
+    ]).toArray();
 
-    const sourcePromise = incomesCollection.findOne({ name: sourceName });
-
-    const [orderDateRange, messageDateRange, source] = await Promise.all([orderDateRangePromise, messageDateRangePromise, sourcePromise]);
-
-    let analyticsDates = source?.gigs.flatMap(g => g.analytics?.map(a => a.date) || []) || [];
+    const [orderDateRange, messageDateRange, performanceDateRange] = await Promise.all([
+        orderDateRangePromise,
+        messageDateRangePromise,
+        performanceDateRangePromise
+    ]);
     
     const allDates = [
         orderDateRange[0]?.minDate,
         orderDateRange[0]?.maxDate,
         messageDateRange[0]?.minDate,
         messageDateRange[0]?.maxDate,
-        ...analyticsDates
+        performanceDateRange[0]?.minDate,
+        performanceDateRange[0]?.maxDate,
     ].filter(Boolean);
 
     if (allDates.length === 0) return null;
@@ -419,7 +435,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
              return {
                 sourceId,
                 sourceName: sourceDoc.name,
-                gigs: sourceDoc.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: g.messages })),
+                gigs: sourceDoc.gigs.map(g => ({ id: g.id, name: g.name, date: g.date })),
                 timeSeries: [],
                 totals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0, ctr: 0 },
                 previousTotals: { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0, ctr: 0 }
@@ -436,7 +452,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
     return {
         sourceId,
         sourceName: source.name,
-        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: g.messages })),
+        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date })),
         timeSeries,
         totals: { ...totals, ctr: totals.ctr },
         previousTotals: { ...previousTotals, ctr: previousTotals.ctr }
