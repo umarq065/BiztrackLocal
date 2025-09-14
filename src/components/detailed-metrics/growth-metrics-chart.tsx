@@ -107,14 +107,11 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                 case 'yearly': key = getYear(itemDate).toString(); break;
             }
             
-            const existing = dataMap.get(key) || { date: key, count: 0, notes: [] };
+            const existing = dataMap.get(key) || { date: key, count: 0, note: item.note };
             Object.keys(chartConfig).forEach(metricKey => {
                 const itemValue = item[metricKey as keyof GrowthMetricTimeSeries] || 0;
                 existing[metricKey] = (existing[metricKey] || 0) + (typeof itemValue === 'number' ? itemValue : 0);
             });
-            if(item.note) {
-                existing.notes.push(item.note);
-            }
             existing.count++;
             dataMap.set(key, existing);
         });
@@ -239,3 +236,5 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
         </Card>
     );
 }
+
+    

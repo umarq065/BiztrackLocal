@@ -111,7 +111,7 @@ export interface GrowthMetricTimeSeries {
     aovGrowth: number;
     highValueClientGrowth: number;
     sourceGrowth: number;
-    note?: Pick<BusinessNote, 'title' | 'content'>;
+    note?: { title: string; content: string; };
 }
 export interface GrowthMetricData {
   revenueGrowth: { value: number; previousValue: number };
@@ -295,6 +295,7 @@ async function processAnalytics(
 
     const [currentMessages, previousMessages] = await Promise.all([
         getMessagesForPeriod(from, to),
+        getMessagesForPeriod(prevFrom, to),
         getMessagesForPeriod(prevFrom, prevTo)
     ]);
 
@@ -508,17 +509,15 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 
     const sourceFilter = sources ? { source: { $in: sources } } : {};
     
-    // Time Series Calculations (daily)
-    const timeSeriesDays = eachDayOfInterval({ start: P2_from, end: P2_to });
-
+    // Fetch all data needed for the entire range at once
     const [notesForPeriod, allOrders, allExpenses] = await Promise.all([
         businessNotesCol.find({ date: { $gte: P2_from, $lte: P2_to } }).project({ _id: 0, date: 1, title: 1, content: 1 }).toArray(),
         ordersCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
         expensesCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') } }).toArray()
     ]);
-
-    const notesMap = new Map(notesForPeriod.map(note => [format(note.date as Date, 'yyyy-MM-dd'), { title: note.title, content: note.content }]));
     
+    const notesMap = new Map(notesForPeriod.map(note => [format(note.date as Date, 'yyyy-MM-dd'), { title: note.title as string, content: note.content as string }]));
+
     const calculateMetricsForDate = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
         const dayOrders = allOrders.filter(o => o.date === dateStr);
@@ -532,7 +531,7 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
     };
 
     const timeSeries: GrowthMetricTimeSeries[] = await Promise.all(
-        timeSeriesDays.map(async (day) => {
+        eachDayOfInterval({ start: P2_from, end: P2_to }).map(async (day) => {
             const prevDay = sub(day, { days: 1 });
 
             const currentDayMetrics = calculateMetricsForDate(day);
@@ -1160,3 +1159,5 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
+    
