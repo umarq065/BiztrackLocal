@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -33,9 +32,9 @@ interface GrowthMetricsChartProps {
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const note = payload[0].payload.note;
+    const notes = payload[0].payload.notes;
     return (
-      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
         <p className="font-medium">{label}</p>
         {payload.map((pld: any) => (
           pld.value ? (
@@ -48,16 +47,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             </div>
           ) : null
         ))}
-        {note && (
+        {notes && notes.length > 0 && (
           <>
             <Separator className="my-2" />
-            <div className="flex items-start gap-2 text-muted-foreground">
-              <BookText className="size-4 shrink-0 mt-0.5" />
-               <div className="flex flex-col">
-                    <p className="font-semibold text-foreground">{note.title}</p>
-                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+            {notes.map((note: any, index: number) => (
+                <div key={index} className="flex items-start gap-2 text-muted-foreground mt-2">
+                    <BookText className="size-4 shrink-0 mt-0.5 text-primary" />
+                    <div className="flex flex-col">
+                        <p className="font-semibold text-foreground">{format(parseISO(note.date), 'MMM d, yyyy')}: {note.title}</p>
+                        <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                    </div>
                 </div>
-            </div>
+            ))}
           </>
         )}
       </div>
@@ -68,7 +69,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const CustomDot = (props: any) => {
   const { cx, cy, payload } = props;
-  if (payload.note) {
+  if (payload.notes && payload.notes.length > 0) {
     return (
       <Dot
         cx={cx}
@@ -107,11 +108,14 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                 case 'yearly': key = getYear(itemDate).toString(); break;
             }
             
-            const existing = dataMap.get(key) || { date: key, count: 0, note: item.note };
+            const existing = dataMap.get(key) || { date: key, count: 0, notes: [] };
             Object.keys(chartConfig).forEach(metricKey => {
                 const itemValue = item[metricKey as keyof GrowthMetricTimeSeries] || 0;
                 existing[metricKey] = (existing[metricKey] || 0) + (typeof itemValue === 'number' ? itemValue : 0);
             });
+            if (item.note) {
+                 existing.notes.push({ ...item.note, date: item.date });
+            }
             existing.count++;
             dataMap.set(key, existing);
         });
@@ -130,11 +134,8 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
         const result = Array.from(dataMap.values());
         
         return result.sort((a, b) => {
-            if (chartView === 'quarterly') {
-                 const [aY, aQ] = a.date.split('-Q');
-                 const [bY, bQ] = b.date.split('-Q');
-                 if (aY !== bY) return aY.localeCompare(bY);
-                 return aQ.localeCompare(bQ);
+            if (chartView === 'quarterly' || chartView === 'yearly') {
+                return a.date.localeCompare(b.date);
             }
             return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
