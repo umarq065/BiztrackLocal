@@ -208,7 +208,7 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                             <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${value}%`} />
                             <Tooltip cursor={false} content={<CustomTooltip />} />
                             {Object.keys(activeMetrics).filter(k => activeMetrics[k as keyof typeof activeMetrics]).map(key => (
-                                <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={<CustomDot />} />
+                                <Line key={key} dataKey={key} stroke={`var(--color-${key})`} strokeWidth={2} dot={<CustomDot />} />
                             ))}
                         </LineChart>
                     ) : (
