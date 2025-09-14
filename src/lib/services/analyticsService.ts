@@ -43,7 +43,7 @@ async function getCompetitorsCollection() {
 
 async function getBusinessNotesCollection() {
     const client = await clientPromise;
-    return client.db("biztrack-pro").collection<Omit<BusinessNote, 'id' | 'date'>>('businessNotes');
+    return client.db("biztrack-pro").collection<Omit<BusinessNote, 'id'>>('businessNotes');
 }
 
 async function getMessagesCollection() {
@@ -111,6 +111,7 @@ export interface GrowthMetricTimeSeries {
     aovGrowth: number;
     highValueClientGrowth: number;
     sourceGrowth: number;
+    note?: Pick<BusinessNote, 'title' | 'content'>;
 }
 export interface GrowthMetricData {
   revenueGrowth: { value: number; previousValue: number };
@@ -190,19 +191,14 @@ export interface OrderCountAnalytics {
     periodBeforePreviousOrders: PeriodOrderStats;
 }
 
-export interface ClientMetric {
-    value: number;
-    change: number;
-}
-
 export interface ClientMetricData {
-    totalClients: ClientMetric;
-    newClients: ClientMetric;
-    repeatClients: ClientMetric;
-    repeatPurchaseRate: ClientMetric;
-    retentionRate: ClientMetric;
-    avgLifespan: ClientMetric;
-    medianLifespan: ClientMetric;
+    totalClients: { value: number; change: number };
+    newClients: { value: number; change: number };
+    repeatClients: { value: number; change: number };
+    repeatPurchaseRate: { value: number; change: number };
+    retentionRate: { value: number; change: number };
+    avgLifespan: { value: number; change: number };
+    medianLifespan: { value: number; change: number };
 }
 
 
@@ -503,6 +499,7 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
     const clientsCol = await getClientsCollection();
+    const businessNotesCol = await getBusinessNotesCollection();
     
     const calculateGrowth = (currentVal: number, prevVal: number) => {
         if (prevVal === 0) return currentVal > 0 ? 100 : 0;
@@ -511,42 +508,47 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 
     const sourceFilter = sources ? { source: { $in: sources } } : {};
     
-    const calcDateMetrics = async (date: Date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
-
-        const revenueRes = await ordersCol.aggregate([ { $match: { date: dateStr, status: 'Completed', ...sourceFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const expensesRes = await expensesCol.aggregate([ { $match: { date: dateStr } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const ordersInDay = await ordersCol.find({ date: dateStr, status: 'Completed', ...sourceFilter }).toArray();
-        
-        const revenue = revenueRes[0]?.total || 0;
-        return {
-            revenue: revenue,
-            netProfit: revenue - (expensesRes[0]?.total || 0),
-            aov: ordersInDay.length > 0 ? revenue / ordersInDay.length : 0,
-            newClients: await clientsCol.countDocuments({ clientSince: dateStr, ...sourceFilter }),
-            clientsAtStart: await clientsCol.countDocuments({ clientSince: { $lt: dateStr }, ...sourceFilter }),
-        };
-    };
-
     // Time Series Calculations (daily)
     const timeSeriesDays = eachDayOfInterval({ start: P2_from, end: P2_to });
+
+    const [notesForPeriod, allOrders, allExpenses] = await Promise.all([
+        businessNotesCol.find({ date: { $gte: P2_from, $lte: P2_to } }).project({ _id: 0, date: 1, title: 1, content: 1 }).toArray(),
+        ordersCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
+        expensesCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') } }).toArray()
+    ]);
+
+    const notesMap = new Map(notesForPeriod.map(note => [format(note.date as Date, 'yyyy-MM-dd'), { title: note.title, content: note.content }]));
+    
+    const calculateMetricsForDate = (date: Date) => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayOrders = allOrders.filter(o => o.date === dateStr);
+        const dayExpenses = allExpenses.filter(e => e.date === dateStr);
+        
+        const revenue = dayOrders.reduce((sum, o) => sum + o.amount, 0);
+        const expenses = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const aov = dayOrders.length > 0 ? revenue / dayOrders.length : 0;
+        
+        return { revenue, netProfit: revenue - expenses, aov };
+    };
+
     const timeSeries: GrowthMetricTimeSeries[] = await Promise.all(
         timeSeriesDays.map(async (day) => {
             const prevDay = sub(day, { days: 1 });
 
-            const [currentDayMetrics, prevDayMetrics] = await Promise.all([
-                calcDateMetrics(day),
-                calcDateMetrics(prevDay)
-            ]);
+            const currentDayMetrics = calculateMetricsForDate(day);
+            const prevDayMetrics = calculateMetricsForDate(prevDay);
+            
+            const newClientsCount = await clientsCol.countDocuments({ clientSince: format(day, 'yyyy-MM-dd'), ...sourceFilter });
 
             return {
                 date: format(day, 'yyyy-MM-dd'),
                 revenueGrowth: calculateGrowth(currentDayMetrics.revenue, prevDayMetrics.revenue),
                 profitGrowth: calculateGrowth(currentDayMetrics.netProfit, prevDayMetrics.netProfit),
                 aovGrowth: calculateGrowth(currentDayMetrics.aov, prevDayMetrics.aov),
-                clientGrowth: calculateGrowth(currentDayMetrics.newClients, prevDayMetrics.newClients),
+                clientGrowth: newClientsCount, // absolute number for daily, not rate
                 highValueClientGrowth: 0, // Placeholder
                 sourceGrowth: 0, // Placeholder
+                note: notesMap.get(format(day, 'yyyy-MM-dd')),
             };
         })
     );
@@ -604,7 +606,6 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         timeSeries,
     };
 }
-
 
 export async function getClientMetrics(from: string, to: string, sources?: string[]): Promise<ClientMetricData> {
     const fromDate = parseISO(from);

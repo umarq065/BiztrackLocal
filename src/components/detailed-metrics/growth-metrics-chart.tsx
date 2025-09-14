@@ -53,7 +53,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <Separator className="my-2" />
             <div className="flex items-start gap-2 text-muted-foreground">
               <BookText className="size-4 shrink-0 mt-0.5" />
-              <p className="font-medium">{note}</p>
+               <div className="flex flex-col">
+                    <p className="font-semibold text-foreground">{note.title}</p>
+                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                </div>
             </div>
           </>
         )}
@@ -104,11 +107,14 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                 case 'yearly': key = getYear(itemDate).toString(); break;
             }
             
-            const existing = dataMap.get(key) || { date: key, count: 0 };
+            const existing = dataMap.get(key) || { date: key, count: 0, notes: [] };
             Object.keys(chartConfig).forEach(metricKey => {
                 const itemValue = item[metricKey as keyof GrowthMetricTimeSeries] || 0;
                 existing[metricKey] = (existing[metricKey] || 0) + (typeof itemValue === 'number' ? itemValue : 0);
             });
+            if(item.note) {
+                existing.notes.push(item.note);
+            }
             existing.count++;
             dataMap.set(key, existing);
         });
@@ -128,8 +134,8 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
         
         return result.sort((a, b) => {
             if (chartView === 'quarterly') {
-                 const [aQ, aY] = a.date.split(' ');
-                 const [bQ, bY] = b.date.split(' ');
+                 const [aY, aQ] = a.date.split('-Q');
+                 const [bY, bQ] = b.date.split('-Q');
                  if (aY !== bY) return aY.localeCompare(bY);
                  return aQ.localeCompare(bQ);
             }
