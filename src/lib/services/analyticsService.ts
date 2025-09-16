@@ -490,12 +490,13 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 
     const P2_to = toDate;
     const P2_from = fromDate;
+
+    // Correctly calculate the start of the previous period by subtracting the number of months.
+    const P1_to = sub(P2_from, { days: 1 });
+    const P1_from = sub(P1_to, {months: monthsDiff});
     
-    const P1_to = subDays(P2_from, 1);
-    const P1_from = sub(P1_to, { months: monthsDiff });
-    
-    const P0_to = subDays(P1_from, 1);
-    const P0_from = sub(P0_to, { months: monthsDiff });
+    const P0_to = sub(P1_from, { days: 1 });
+    const P0_from = sub(P0_to, {months: monthsDiff});
     
     const overallStart = P0_from;
     const overallEnd = P2_to;
@@ -544,6 +545,7 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
             totalOrders,
             netProfit: revenue - dayExpenses.reduce((sum, e) => sum + e.amount, 0),
             newClients: newClientsCount,
+            aov: totalOrders > 0 ? revenue / totalOrders : 0,
             notes: notesMap.get(dateStr) || [],
         };
     });
@@ -1151,6 +1153,8 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
+
 
 
 
