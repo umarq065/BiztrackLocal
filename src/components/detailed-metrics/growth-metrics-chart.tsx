@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import type { GrowthMetricTimeSeries } from '@/lib/services/analyticsService';
-import { format, parseISO, startOfWeek, startOfMonth, getQuarter, getYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachQuarterOfInterval, eachYearOfInterval, endOfWeek, isSameMonth, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
+import { format, parseISO, startOfWeek, startOfMonth, getQuarter, getYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachQuarterOfInterval, eachYearOfInterval, endOfWeek, isSameMonth, endOfMonth, endOfQuarter, endOfYear, subDays, sub } from "date-fns";
 
 const chartConfig = {
     revenueGrowth: { label: "Revenue Growth", color: "hsl(var(--chart-1))" },
@@ -198,7 +197,7 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
             };
         });
         
-        return finalResult;
+        return finalResult.filter(item => parseISO(item.date) >= firstDataPointDate);
     }, [data, chartView]);
 
     const tickFormatter = (value: string) => {
@@ -306,4 +305,5 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
 }
 
     
+
 
