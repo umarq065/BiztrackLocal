@@ -475,7 +475,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
     return {
         sourceId,
         sourceName: source.name,
-        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: messageMap.get(g.id) }),
+        gigs: source.gigs.map(g => ({ id: g.id, name: g.name, date: g.date, messages: messageMap.get(g.id) })),
         timeSeries,
         totals: { ...totals, ctr: totals.ctr },
         previousTotals: { ...previousTotals, ctr: previousTotals.ctr }
@@ -486,18 +486,17 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
     const toDate = parseISO(to);
     const fromDate = parseISO(from);
     
+    const monthsDiff = differenceInMonths(toDate, fromDate);
+
     const P2_to = toDate;
     const P2_from = fromDate;
     
-    const monthsDuration = differenceInMonths(P2_to, P2_from);
-    
     const P1_to = subDays(P2_from, 1);
-    const P1_from = sub(P1_to, { months: monthsDuration + 1});
+    const P1_from = sub(P1_to, { months: monthsDiff });
     
     const P0_to = subDays(P1_from, 1);
-    const P0_from = sub(P0_to, { months: monthsDuration + 1});
-
-
+    const P0_from = sub(P0_to, { months: monthsDiff });
+    
     const overallStart = P0_from;
     const overallEnd = P2_to;
     
@@ -1152,6 +1151,8 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
+
 
 
 
