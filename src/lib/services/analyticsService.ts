@@ -105,12 +105,10 @@ export interface SourceAnalyticsData {
 
 export interface GrowthMetricTimeSeries {
     date: string;
-    revenueGrowth: number;
-    profitGrowth: number;
-    clientGrowth: number;
-    aovGrowth: number;
-    highValueClientGrowth: number;
-    sourceGrowth: number;
+    revenue: number;
+    netProfit: number;
+    aov: number;
+    newClients: number;
     note?: { title: string; content: string; };
 }
 export interface GrowthMetricData {
@@ -509,78 +507,65 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 
     const sourceFilter = sources ? { source: { $in: sources } } : {};
     
-    // Fetch all data needed for the entire range at once
-    const [notesForPeriod, allOrders, allExpenses] = await Promise.all([
+    const [notesForPeriod, allOrders, allExpenses, allClients] = await Promise.all([
         businessNotesCol.find({ date: { $gte: P2_from, $lte: P2_to } }).project({ _id: 0, date: 1, title: 1, content: 1 }).toArray(),
-        ordersCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
-        expensesCol.find({ date: { $gte: format(subDays(P2_from, 1), 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') } }).toArray()
+        ordersCol.find({ date: { $gte: format(P0_from, 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
+        expensesCol.find({ date: { $gte: format(P0_from, 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') } }).toArray(),
+        clientsCol.find({ clientSince: { $gte: format(P0_from, 'yyyy-MM-dd'), $lte: format(P2_to, 'yyyy-MM-dd') }, ...sourceFilter }).toArray(),
     ]);
     
     const notesMap = new Map(notesForPeriod.map(note => [format(note.date as Date, 'yyyy-MM-dd'), { title: note.title as string, content: note.content as string }]));
 
-    const calculateMetricsForDate = (date: Date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
+    const timeSeries = eachDayOfInterval({ start: P2_from, end: P2_to }).map((day) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        
         const dayOrders = allOrders.filter(o => o.date === dateStr);
         const dayExpenses = allExpenses.filter(e => e.date === dateStr);
-        
+        const newClientsCount = allClients.filter(c => c.clientSince === dateStr).length;
+
         const revenue = dayOrders.reduce((sum, o) => sum + o.amount, 0);
         const expenses = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
         const aov = dayOrders.length > 0 ? revenue / dayOrders.length : 0;
         
-        return { revenue, netProfit: revenue - expenses, aov };
-    };
+        return {
+            date: dateStr,
+            revenue,
+            netProfit: revenue - expenses,
+            aov,
+            newClients: newClientsCount,
+            note: notesMap.get(dateStr),
+        };
+    });
 
-    const timeSeries: GrowthMetricTimeSeries[] = await Promise.all(
-        eachDayOfInterval({ start: P2_from, end: P2_to }).map(async (day) => {
-            const prevDay = sub(day, { days: 1 });
-
-            const currentDayMetrics = calculateMetricsForDate(day);
-            const prevDayMetrics = calculateMetricsForDate(prevDay);
-            
-            const newClientsCount = await clientsCol.countDocuments({ clientSince: format(day, 'yyyy-MM-dd'), ...sourceFilter });
-
-            return {
-                date: format(day, 'yyyy-MM-dd'),
-                revenueGrowth: calculateGrowth(currentDayMetrics.revenue, prevDayMetrics.revenue),
-                profitGrowth: calculateGrowth(currentDayMetrics.netProfit, prevDayMetrics.netProfit),
-                aovGrowth: calculateGrowth(currentDayMetrics.aov, prevDayMetrics.aov),
-                clientGrowth: newClientsCount, // absolute number for daily, not rate
-                highValueClientGrowth: 0, // Placeholder
-                sourceGrowth: 0, // Placeholder
-                note: notesMap.get(format(day, 'yyyy-MM-dd')),
-            };
-        })
-    );
-
-
-    // Overall Period Calculations
     const calcPeriodMetrics = async (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
-        const revenuePromise = ordersCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr }, status: 'Completed', ...sourceFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const expensesPromise = expensesCol.aggregate([ { $match: { date: { $gte: startStr, $lte: endStr } } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray();
-        const ordersInPeriodPromise = ordersCol.find({ date: { $gte: startStr, $lte: endStr }, status: 'Completed', ...sourceFilter }).toArray();
-        const sourcesPromise = ordersCol.aggregate([{$match: {date: {$gte: startStr, $lte: endStr}, status: 'Completed', ...sourceFilter}}, {$group: {_id: "$source", revenue: {$sum: "$amount"}}}, {$sort: {revenue: -1}}, {$limit: 1}]).toArray();
-        
-        const newClientsPromise = clientsCol.countDocuments({ clientSince: { $gte: startStr, $lte: endStr }, ...sourceFilter });
-        const clientsAtStartPromise = clientsCol.countDocuments({ clientSince: { $lt: startStr }, ...sourceFilter });
-        const vipClientsPromise = clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr}, ...sourceFilter });
-        
-        const [
-            revenueRes, expensesRes, ordersInPeriod, topSourceRes, newClients, clientsAtStart, vipClients
-        ] = await Promise.all([
-            revenuePromise, expensesPromise, ordersInPeriodPromise, sourcesPromise, newClientsPromise, clientsAtStartPromise, vipClientsPromise
-        ]);
+        const periodOrders = allOrders.filter(o => o.date >= startStr && o.date <= endStr);
+        const periodExpenses = allExpenses.filter(e => e.date >= startStr && e.date <= endStr);
+        const periodNewClients = allClients.filter(c => c.clientSince >= startStr && c.clientSince <= endStr).length;
 
-        const revenue = revenueRes[0]?.total || 0;
+        const revenue = periodOrders.reduce((sum, o) => sum + o.amount, 0);
+        const expenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const aov = periodOrders.length > 0 ? revenue / periodOrders.length : 0;
+        
+        const sourcesInPeriod = periodOrders.reduce((acc, order) => {
+            acc[order.source] = (acc[order.source] || 0) + order.amount;
+            return acc;
+        }, {} as Record<string, number>);
+        
+        const topSource = Object.entries(sourcesInPeriod).sort((a, b) => b[1] - a[1])[0];
+
+        const vipClients = await clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr}, ...sourceFilter });
+        const clientsAtStart = await clientsCol.countDocuments({ clientSince: { $lt: startStr }, ...sourceFilter });
+
         return { 
             revenue, 
-            netProfit: revenue - (expensesRes[0]?.total || 0), 
-            newClients, 
-            aov: ordersInPeriod.length > 0 ? revenue / ordersInPeriod.length : 0, 
+            netProfit: revenue - expenses, 
+            newClients: periodNewClients, 
+            aov, 
             vipClients, 
-            topSource: topSourceRes[0] ? {source: topSourceRes[0]._id, revenue: topSourceRes[0].revenue} : {source: 'N/A', revenue: 0},
+            topSource: topSource ? {source: topSource[0], revenue: topSource[1]} : {source: 'N/A', revenue: 0},
             clientsAtStart
         };
     };
@@ -591,8 +576,8 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         calcPeriodMetrics(P0_from, P0_to)
     ]);
     
-    const P2_topSourcePrevPeriodRevenue = P2_metrics.topSource.source !== 'N/A' 
-        ? (await ordersCol.aggregate([ { $match: { source: P2_metrics.topSource.source, date: { $gte: format(P1_from, 'yyyy-MM-dd'), $lte: format(P1_to, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } } ]).toArray())[0]?.total || 0
+    const P1_topSourceRevenue = P1_metrics.topSource.source !== 'N/A' 
+        ? allOrders.filter(o => o.source === P1_metrics.topSource.source && o.date >= format(P1_from, 'yyyy-MM-dd') && o.date <= format(P1_to, 'yyyy-MM-dd')).reduce((sum, o) => sum + o.amount, 0)
         : 0;
 
     return {
@@ -600,7 +585,7 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         profitGrowth: { value: calculateGrowth(P2_metrics.netProfit, P1_metrics.netProfit), previousValue: calculateGrowth(P1_metrics.netProfit, P0_metrics.netProfit) },
         aovGrowth: { value: calculateGrowth(P2_metrics.aov, P1_metrics.aov), previousValue: calculateGrowth(P1_metrics.aov, P0_metrics.aov) },
         vipClientGrowth: { value: calculateGrowth(P2_metrics.vipClients, P1_metrics.vipClients), previousValue: calculateGrowth(P1_metrics.vipClients, P0_metrics.vipClients) },
-        topSourceGrowth: { value: calculateGrowth(P2_metrics.topSource.revenue, P2_topSourcePrevPeriodRevenue), previousValue: 0, source: P2_metrics.topSource.source }, // Change for top source growth is complex and deferred
+        topSourceGrowth: { value: calculateGrowth(P2_metrics.topSource.revenue, P1_topSourceRevenue), previousValue: 0, source: P2_metrics.topSource.source }, // Simplified prev value
         clientGrowth: { value: P1_metrics.clientsAtStart > 0 ? (P2_metrics.newClients / P1_metrics.clientsAtStart) * 100 : P2_metrics.newClients > 0 ? 100 : 0, previousValue: P0_metrics.clientsAtStart > 0 ? (P1_metrics.newClients / P0_metrics.clientsAtStart) * 100 : P1_metrics.newClients > 0 ? 100 : 0 },
         timeSeries,
     };
@@ -801,7 +786,6 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
     const durationDays = differenceInDays(toDate, fromDate);
     if (durationDays < 0) throw new Error("Invalid date range for financial metrics.");
 
-    // Define all 3 periods
     const p2End = toDate;
     const p2Start = fromDate;
     const p1End = subDays(p2Start, 1);
@@ -818,13 +802,11 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
     const expensesCol = await getExpensesCollection();
     const clientsCol = await getClientsCollection();
 
-    // Fetch all data for the entire range at once
-    const ordersPromise = ordersCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray();
-    const expensesPromise = expensesCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray();
-    const newClientsPromise = clientsCol.find({ clientSince: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, ...sourceFilter }).toArray();
-    const allClientsPromise = clientsCol.find({ ...sourceFilter }).toArray();
-
-    const [allOrders, allExpenses, allNewClients, allClients] = await Promise.all([ordersPromise, expensesPromise, newClientsPromise, allClientsPromise]);
+    const [allOrders, allExpenses, allNewClients] = await Promise.all([
+        ordersCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
+        expensesCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
+        clientsCol.find({ clientSince: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, ...sourceFilter }).toArray(),
+    ]);
     
     const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
@@ -846,7 +828,6 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         const cac = periodNewClients.length > 0 ? marketingExpenses / periodNewClients.length : 0;
         const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-        // CLTV Simplified Calculation (more complex calculation is too slow)
         const periodClientUsernames = new Set(periodOrders.map(o => o.clientUsername));
         const totalPeriodClients = periodClientUsernames.size;
         const clientOrderCounts = periodOrders.reduce((acc, order) => { acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1; return acc; }, {} as Record<string, number>);

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -94,7 +95,34 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
         if (!data || data.length === 0) return [];
         
         const dataMap = new Map<string, any>();
+        const intervalDates: Date[] = [];
         
+        if (data.length > 0) {
+            const firstDate = parseISO(data[0].date);
+            const lastDate = parseISO(data[data.length - 1].date);
+            const interval = { start: firstDate, end: lastDate };
+            
+            switch (chartView) {
+                case 'daily': intervalDates.push(...eachDayOfInterval(interval)); break;
+                case 'weekly': intervalDates.push(...eachWeekOfInterval(interval, { weekStartsOn: 1 })); break;
+                case 'monthly': intervalDates.push(...eachMonthOfInterval(interval)); break;
+                case 'quarterly': intervalDates.push(...eachQuarterOfInterval(interval)); break;
+                case 'yearly': intervalDates.push(...eachYearOfInterval(interval)); break;
+            }
+        }
+
+        intervalDates.forEach(intervalDate => {
+            let key = '';
+            switch(chartView) {
+                case 'daily': key = format(intervalDate, 'yyyy-MM-dd'); break;
+                case 'weekly': key = format(intervalDate, 'yyyy-MM-dd'); break;
+                case 'monthly': key = format(intervalDate, 'yyyy-MM-dd'); break;
+                case 'quarterly': key = `${getYear(intervalDate)}-Q${getQuarter(intervalDate)}`; break;
+                case 'yearly': key = getYear(intervalDate).toString(); break;
+            }
+            dataMap.set(key, { date: key, revenue: 0, netProfit: 0, aov: 0, newClients: 0, orderCount: 0, notes: [] });
+        });
+
         data.forEach(item => {
             const itemDate = parseISO(item.date);
             if (isNaN(itemDate.getTime())) return;
@@ -108,47 +136,36 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                 case 'yearly': key = getYear(itemDate).toString(); break;
             }
             
-            const existing = dataMap.get(key) || { date: key, count: 0, notes: [] };
-            Object.keys(chartConfig).forEach(metricKey => {
-                const itemValue = item[metricKey as keyof GrowthMetricTimeSeries] || 0;
-                existing[metricKey] = (existing[metricKey] || 0) + (typeof itemValue === 'number' ? itemValue : 0);
-            });
-            if (item.note) {
-                 existing.notes.push({ ...item.note, date: item.date });
+            const existing = dataMap.get(key);
+            if (existing) {
+                existing.revenue += item.revenue;
+                existing.netProfit += item.netProfit;
+                existing.aov += item.aov; // sum daily AOV to be averaged later
+                existing.newClients += item.newClients;
+                if (item.aov > 0) existing.orderCount++; // Count days with orders for AOV calculation
+                if (item.note) {
+                     existing.notes.push({ ...item.note, date: item.date });
+                }
             }
-            existing.count++;
-            dataMap.set(key, existing);
-        });
-        
-        // Average the growth rates and ensure notes are unique
-        dataMap.forEach((value, key) => {
-             if (value.count > 1) {
-                Object.keys(chartConfig).forEach(metricKey => {
-                    if (value[metricKey]) {
-                        value[metricKey] /= value.count;
-                    }
-                });
-             }
-             if (value.notes.length > 1) {
-                const uniqueNotes = new Map();
-                value.notes.forEach((note: any) => {
-                    const noteKey = `${note.title}-${note.content}`;
-                    if (!uniqueNotes.has(noteKey)) {
-                        uniqueNotes.set(noteKey, note);
-                    }
-                });
-                value.notes = Array.from(uniqueNotes.values());
-             }
         });
 
         const result = Array.from(dataMap.values());
         
-        return result.sort((a, b) => {
-            if (chartView === 'quarterly' || chartView === 'yearly') {
-                return a.date.localeCompare(b.date);
-            }
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
+        result.forEach((item, index) => {
+            const prevItem = index > 0 ? result[index - 1] : null;
+
+            item.revenueGrowth = prevItem && prevItem.revenue > 0 ? ((item.revenue - prevItem.revenue) / prevItem.revenue) * 100 : 0;
+            item.profitGrowth = prevItem && prevItem.netProfit > 0 ? ((item.netProfit - prevItem.netProfit) / prevItem.netProfit) * 100 : 0;
+            
+            const avgAOV = item.orderCount > 0 ? item.aov / item.orderCount : 0;
+            const prevAvgAOV = prevItem && prevItem.orderCount > 0 ? prevItem.aov / prevItem.orderCount : 0;
+            item.aovGrowth = prevAvgAOV > 0 ? ((avgAOV - prevAvgAOV) / prevAvgAOV) * 100 : 0;
+            
+            // Client growth is aggregated count, not a rate here
+            item.clientGrowth = item.newClients;
         });
+
+        return result;
 
     }, [data, chartView]);
 
