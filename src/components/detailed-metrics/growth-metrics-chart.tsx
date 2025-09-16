@@ -115,14 +115,15 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
         }
 
         const result = intervalDates.map(intervalDate => {
+            let key = '';
             let endOfPeriod: Date;
             switch(chartView) {
-                case 'daily': endOfPeriod = intervalDate; break;
-                case 'weekly': endOfPeriod = endOfWeek(intervalDate, { weekStartsOn: 1 }); break;
-                case 'monthly': endOfPeriod = endOfMonth(intervalDate); break;
-                case 'quarterly': endOfPeriod = endOfQuarter(intervalDate); break;
-                case 'yearly': endOfPeriod = endOfYear(intervalDate); break;
-                default: endOfPeriod = intervalDate; break;
+                case 'daily': key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = intervalDate; break;
+                case 'weekly': key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = endOfWeek(intervalDate, { weekStartsOn: 1 }); break;
+                case 'monthly': key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = endOfMonth(intervalDate); break;
+                case 'quarterly': key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = endOfQuarter(intervalDate); break;
+                case 'yearly': key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = endOfYear(intervalDate); break;
+                default: key = format(intervalDate, 'yyyy-MM-dd'); endOfPeriod = intervalDate; break;
             }
             
             const daysInPeriod = eachDayOfInterval({start: intervalDate, end: endOfPeriod});
@@ -137,27 +138,46 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                 return acc;
             }, { revenue: 0, netProfit: 0, newClients: 0, totalOrders: 0, notes: [] as any[] });
             
-            return { date: format(intervalDate, 'yyyy-MM-dd'), ...totals };
+            return { date: key, ...totals };
         });
-
+        
         const finalResult = result.map((item, index) => {
-            if (index === 0) { // Can't calculate growth for the first item
-                return { ...item, revenueGrowth: 0, profitGrowth: 0, aovGrowth: 0, clientGrowth: item.newClients };
-            }
-
-            const prevItem = result[index-1];
+             let prevItem: typeof item | null = null;
+             if (index > 0) {
+                 prevItem = result[index-1];
+             } else {
+                 const prevDate = sub(parseISO(item.date), {
+                     days: chartView === 'daily' ? 1 : 0,
+                     weeks: chartView === 'weekly' ? 1 : 0,
+                     months: chartView === 'monthly' ? 1 : 0,
+                     quarters: chartView === 'quarterly' ? 1 : 0,
+                     years: chartView === 'yearly' ? 1 : 0
+                 });
+                 const prevDateKey = format(prevDate, 'yyyy-MM-dd');
+                 const prevItemData = dataByDate[prevDateKey];
+                 if(prevItemData) {
+                    prevItem = {
+                        date: prevDateKey,
+                        revenue: prevItemData.totalRevenue,
+                        netProfit: prevItemData.netProfit,
+                        newClients: prevItemData.newClients,
+                        totalOrders: prevItemData.totalOrders,
+                        notes: prevItemData.notes
+                    };
+                 }
+             }
 
             const calculateGrowth = (current: number, prev: number) => {
                 if (prev === 0) return current > 0 ? 100 : 0;
                 return ((current - prev) / prev) * 100;
             };
 
-            const revenueGrowth = calculateGrowth(item.revenue, prevItem.revenue);
-            const profitGrowth = calculateGrowth(item.netProfit, prevItem.netProfit);
+            const revenueGrowth = prevItem ? calculateGrowth(item.revenue, prevItem.revenue) : 0;
+            const profitGrowth = prevItem ? calculateGrowth(item.netProfit, prevItem.netProfit) : 0;
             
             const currentAOV = item.totalOrders > 0 ? item.revenue / item.totalOrders : 0;
-            const prevAOV = prevItem.totalOrders > 0 ? prevItem.revenue / prevItem.totalOrders : 0;
-            const aovGrowth = calculateGrowth(currentAOV, prevAOV);
+            const prevAOV = prevItem && prevItem.totalOrders > 0 ? prevItem.revenue / prevItem.totalOrders : 0;
+            const aovGrowth = prevItem ? calculateGrowth(currentAOV, prevAOV) : 0;
 
             return {
                 ...item,
@@ -255,7 +275,7 @@ export default function GrowthMetricsChart({ data, activeMetrics, onMetricToggle
                             <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `${value}%`} />
                             <Tooltip cursor={false} content={<CustomTooltip />} />
                             {Object.keys(activeMetrics).filter(k => activeMetrics[k as keyof typeof activeMetrics]).map(key => (
-                                <Line key={key} dataKey={key} stroke={`var(--color-${key})`} strokeWidth={2} dot={<CustomDot />} />
+                                <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={<CustomDot />} />
                             ))}
                         </LineChart>
                     ) : (

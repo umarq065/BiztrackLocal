@@ -485,17 +485,17 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
 export async function getGrowthMetrics(from: string, to: string, sources?: string[]): Promise<GrowthMetricData> {
     const toDate = parseISO(to);
     const fromDate = parseISO(from);
-
+    
     const P2_to = toDate;
     const P2_from = fromDate;
     
-    const durationInDays = differenceInDays(P2_to, P2_from);
-    if (durationInDays < 0) throw new Error("Invalid date range");
-    
     const P1_to = subDays(P2_from, 1);
-    const P1_from = subDays(P1_to, durationInDays);
+    const duration = differenceInDays(P2_to, P2_from);
+    const P1_from = subDays(P1_to, duration);
+
     const P0_to = subDays(P1_from, 1);
-    const P0_from = subDays(P0_to, durationInDays);
+    const durationP1 = differenceInDays(P1_to, P1_from);
+    const P0_from = subDays(P0_to, durationP1);
 
     const overallStart = P0_from;
     const overallEnd = P2_to;
@@ -537,7 +537,6 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 
         const revenue = dayOrders.reduce((sum, o) => sum + o.amount, 0);
         const totalOrders = dayOrders.length;
-        const aov = totalOrders > 0 ? revenue / totalOrders : 0;
         
         return {
             date: dateStr,
@@ -545,7 +544,6 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
             totalOrders,
             netProfit: revenue - dayExpenses.reduce((sum, e) => sum + e.amount, 0),
             newClients: newClientsCount,
-            aov,
             notes: notesMap.get(dateStr) || [],
         };
     });
@@ -1153,3 +1151,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     return data;
 }
+
