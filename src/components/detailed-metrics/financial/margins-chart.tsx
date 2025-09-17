@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Dot } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import type { FinancialMetricTimeSeries } from '@/lib/services/analyticsService';
@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { BarChart2, LineChartIcon } from 'lucide-react';
+import { BarChart2, BookText, LineChartIcon } from 'lucide-react';
 import { format, parseISO, startOfWeek, startOfMonth, getQuarter, getYear } from "date-fns";
+import { Separator } from '@/components/ui/separator';
 
 const chartConfig = {
     profitMargin: { label: "Profit Margin (%)", color: "hsl(var(--chart-1))" },
@@ -19,6 +20,65 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 type ChartView = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const notes = payload[0].payload.note;
+    return (
+      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
+        <p className="font-medium">{label}</p>
+        {payload.map((pld: any) => (
+          pld.value ? (
+            <div key={pld.dataKey} className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="mr-2 h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: pld.color || pld.stroke || pld.fill }} />
+                <span>{chartConfig[pld.dataKey as keyof typeof chartConfig]?.label}:</span>
+              </div>
+              <span className="ml-4 font-mono font-medium">
+                {`${Number(pld.value).toFixed(2)}%`}
+              </span>
+            </div>
+          ) : null
+        ))}
+         {notes && notes.length > 0 && (
+          <>
+            <Separator className="my-2" />
+            {notes.map((note: any, index: number) => (
+              <div key={index} className="flex flex-col items-start gap-1 text-muted-foreground mt-1">
+                  <div className="flex items-center gap-2">
+                    <BookText className="size-4 shrink-0 text-primary" />
+                    <span className="font-semibold text-foreground">{format(parseISO(note.date), "MMM d, yyyy")}</span>
+                  </div>
+                  <div className="pl-6">
+                    <p className="font-semibold text-foreground">{note.title}</p>
+                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                  </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomDotWithNote = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (payload.note && payload.note.length > 0) {
+    return (
+      <Dot
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill="hsl(var(--primary))"
+        stroke="hsl(var(--background))"
+        strokeWidth={2}
+      />
+    );
+  }
+  return null;
+};
 
 export default function MarginsChart({ timeSeries }: { timeSeries: FinancialMetricTimeSeries[] }) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
@@ -48,10 +108,13 @@ export default function MarginsChart({ timeSeries }: { timeSeries: FinancialMetr
                 case 'yearly': key = getYear(itemDate).toString(); break;
             }
 
-            const existing = dataMap.get(key) || { date: key, count: 0, profitMargin: 0, grossMargin: 0 };
+            const existing = dataMap.get(key) || { date: key, count: 0, profitMargin: 0, grossMargin: 0, note: [] };
             existing.count++;
             existing.profitMargin += item.profitMargin;
             existing.grossMargin += item.grossMargin;
+            if (item.note) {
+                existing.note.push(...item.note);
+            }
             dataMap.set(key, existing);
         });
 
@@ -128,10 +191,10 @@ export default function MarginsChart({ timeSeries }: { timeSeries: FinancialMetr
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={tickFormatter} />
                         <YAxis tickFormatter={(value) => `${value.toFixed(0)}%`} />
-                        <Tooltip content={<ChartTooltipContent formatter={(value) => `${(value as number).toFixed(2)}%`}/>} />
+                        <Tooltip content={<CustomTooltipWithNotes />} />
                         <Legend />
                          {Object.keys(activeMetrics).filter(k => activeMetrics[k as keyof typeof activeMetrics]).map(key => (
-                           <ChartComponent key={key} dataKey={key} fill={`var(--color-${key})`} stroke={`var(--color-${key})`} radius={chartType === 'bar' ? 4 : undefined} dot={chartType === 'line' ? false : undefined} />
+                           <ChartComponent key={key} dataKey={key} fill={`var(--color-${key})`} stroke={`var(--color-${key})`} radius={chartType === 'bar' ? 4 : undefined} dot={chartType === 'line' ? <CustomDotWithNote /> : undefined} />
                         ))}
                     </Chart>
                 </ChartContainer>
