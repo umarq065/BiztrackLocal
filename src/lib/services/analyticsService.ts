@@ -704,14 +704,12 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
     
     const sourceFilter = sources ? { source: { $in: sources } } : {};
     
-    const allClients = await getClientsCollection().find(sourceFilter).project({username: 1, clientSince: 1}).toArray();
-    const allClientUsernames = new Set(allClients.map(c => c.username));
-
     const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
         const ordersCol = await getOrdersCollection();
+        const clientsCol = await getClientsCollection();
        
         const ordersInPeriod = await ordersCol.find({
             date: { $gte: startStr, $lte: endStr },
@@ -726,21 +724,19 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
         }
         
         const clientUsernamesInPeriod = new Set(completedOrders.map(o => o.clientUsername));
-        const periodStartDate = start;
-
+        
+        const clientsInPeriod = await clientsCol.find({ username: { $in: Array.from(clientUsernamesInPeriod) } }).project({ username: 1, clientSince: 1 }).toArray();
+        const clientSinceMap = new Map(clientsInPeriod.map(c => [c.username, parseISO(c.clientSince as string)]));
+        
         let newBuyerOrders = 0;
         let repeatBuyerOrders = 0;
 
-        for (const username of clientUsernamesInPeriod) {
-            const client = allClients.find(c => c.username === username);
-            const clientSinceDate = client ? parseISO(client.clientSince as string) : new Date(); // Assume new if not found
-            
-            const clientOrdersInPeriod = completedOrders.filter(o => o.clientUsername === username);
-            
-            if (clientSinceDate >= periodStartDate) {
-                newBuyerOrders += clientOrdersInPeriod.length;
+        for (const order of completedOrders) {
+            const clientSinceDate = clientSinceMap.get(order.clientUsername);
+            if (clientSinceDate && clientSinceDate >= start) {
+                newBuyerOrders++;
             } else {
-                repeatBuyerOrders += clientOrdersInPeriod.length;
+                repeatBuyerOrders++;
             }
         }
         
@@ -1196,4 +1192,5 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     
 
     
+
 
