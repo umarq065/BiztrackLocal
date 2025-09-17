@@ -122,6 +122,7 @@ export interface FinancialMetricTimeSeries {
     cac: number;
     cltv: number;
     aov: number;
+    note?: Pick<BusinessNote, 'title' | 'content' | 'date'>[];
 }
 
 export interface FinancialMetric {
@@ -779,12 +780,23 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
     const clientsCol = await getClientsCollection();
+    const businessNotesCol = await getBusinessNotesCollection();
 
-    const [allOrders, allExpenses, allNewClients] = await Promise.all([
+    const [allOrders, allExpenses, allNewClients, allNotes] = await Promise.all([
         ordersCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
         expensesCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
         clientsCol.find({ clientSince: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, ...sourceFilter }).toArray(),
+        businessNotesCol.find({ date: { $gte: p2Start, $lte: p2End } }).project({ title: 1, content: 1, date: 1 }).toArray(),
     ]);
+
+    const notesByDate: Record<string, { title: string; content: string; date: Date; }[]> = {};
+    allNotes.forEach(note => {
+        const dateKey = format(note.date, 'yyyy-MM-dd');
+        if (!notesByDate[dateKey]) {
+            notesByDate[dateKey] = [];
+        }
+        notesByDate[dateKey].push({ title: note.title, content: note.content, date: note.date });
+    });
     
     const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
@@ -819,9 +831,11 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
 
     const timeSeries = eachDayOfInterval({ start: p2Start, end: p2End }).map(date => {
         const dailyMetrics = calculateMetricsForPeriod(date, date);
+        const dateKey = format(date, 'yyyy-MM-dd');
         return {
-            date: format(date, 'yyyy-MM-dd'),
+            date: dateKey,
             ...dailyMetrics,
+            note: notesByDate[dateKey] || [],
         };
     });
 
@@ -963,7 +977,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
     const [allPerformances, allMessages, allNotes] = await Promise.all([
         gigPerformancesCol.find({ gigId: { $in: allGigIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
         messagesCol.find({ sourceId: { $in: sourceIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
-        businessNotesCol.find({ date: { $gte: overallStart, $lte: overallEnd } }).project({ title: 1, content: 1, date: 1 }).toArray(),
+        businessNotesCol.find({ date: { $gte: p2_from, $lte: p2_to } }).project({ title: 1, content: 1, date: 1 }).toArray(),
     ]);
 
     const notesByDate: Record<string, { title: string; content: string; date: Date; }[]> = {};
