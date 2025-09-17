@@ -54,10 +54,10 @@ const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
           <>
             <Separator className="my-2" />
             {notes.map((note: any, index: number) => (
-              <div key={index} className="flex flex-col items-start gap-2 text-muted-foreground mt-1">
+              <div key={index} className="flex flex-col items-start gap-1 text-muted-foreground mt-1">
                   <div className="flex items-center gap-2">
                     <BookText className="size-4 shrink-0 text-primary" />
-                    <span className="font-semibold text-foreground">{format(new Date(note.date), "MMM d, yyyy")}</span>
+                    <span className="font-semibold text-foreground">{format(parseISO(note.date), "MMM d, yyyy")}</span>
                   </div>
                   <div className="pl-6">
                     <p className="font-semibold text-foreground">{note.title}</p>
