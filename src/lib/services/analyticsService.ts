@@ -149,11 +149,19 @@ export interface PerformanceMetric {
   previousValue: number;
   previousPeriodChange: number;
 }
+export interface PerformanceMetricTimeSeries {
+    date: string;
+    impressions: number;
+    clicks: number;
+    messages: number;
+    ctr: number;
+}
 export interface PerformanceMetricData {
   impressions: PerformanceMetric;
   clicks: PerformanceMetric;
   messages: PerformanceMetric;
   ctr: PerformanceMetric;
+  timeSeries: PerformanceMetricTimeSeries[];
 }
 
 export interface MarketingMetric {
@@ -937,47 +945,54 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
     const p1_from = subDays(p1_to, durationDays);
     const p0_to = subDays(p1_from, 1);
     const p0_from = subDays(p0_to, durationDays);
+    
+    const overallStart = p0_from;
+    const overallEnd = p2_to;
 
-    const calculateMetricsForPeriod = async (start: Date, end: Date) => {
+    const incomesCol = await getIncomesCollection();
+    const sourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1, gigs: 1 }).toArray();
+    const sourceIds = sourceDocs.map(s => s._id.toString());
+    const allGigIds = sourceDocs.flatMap(s => s.gigs.map(g => g.id));
+
+    const gigPerformancesCol = await getGigPerformancesCollection();
+    const messagesCol = await getMessagesCollection();
+    
+    const [allPerformances, allMessages] = await Promise.all([
+        gigPerformancesCol.find({ gigId: { $in: allGigIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
+        messagesCol.find({ sourceId: { $in: sourceIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray()
+    ]);
+    
+    const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
         
-        const incomesCol = await getIncomesCollection();
-        const sourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1, gigs: 1 }).toArray();
-        const sourceIds = sourceDocs.map(s => s._id.toString());
-        const allGigIds = sourceDocs.flatMap(s => s.gigs.map(g => g.id));
-        
-        const gigPerformancesCol = await getGigPerformancesCollection();
-        const messagesCol = await getMessagesCollection();
-        
-        const perfPromise = gigPerformancesCol.aggregate([
-            { $match: { gigId: { $in: allGigIds }, date: { $gte: startStr, $lte: endStr } } },
-            { $group: { _id: null, impressions: { $sum: '$impressions' }, clicks: { $sum: '$clicks' } } }
-        ]).toArray();
-        
-        const messagesPromise = messagesCol.aggregate([
-            { $match: { sourceId: { $in: sourceIds }, date: { $gte: startStr, $lte: endStr } } },
-            { $group: { _id: null, messages: { $sum: '$messages' } } }
-        ]).toArray();
-        
-        const [perfRes, messagesRes] = await Promise.all([perfPromise, messagesPromise]);
-        
-        const impressions = perfRes[0]?.impressions || 0;
-        const clicks = perfRes[0]?.clicks || 0;
-        const messages = messagesRes[0]?.messages || 0;
+        const periodPerformances = allPerformances.filter(p => p.date >= startStr && p.date <= endStr);
+        const periodMessages = allMessages.filter(m => m.date >= startStr && m.date <= endStr);
+
+        const impressions = periodPerformances.reduce((sum, p) => sum + p.impressions, 0);
+        const clicks = periodPerformances.reduce((sum, p) => sum + p.clicks, 0);
+        const messages = periodMessages.reduce((sum, m) => sum + m.messages, 0);
         const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
         
         return { impressions, clicks, messages, ctr };
     };
 
-    const [metricsP2, metricsP1, metricsP0] = await Promise.all([
+    const timeSeries = eachDayOfInterval({ start: p2_from, end: p2_to }).map(date => {
+        const dailyMetrics = calculateMetricsForPeriod(date, date);
+        return {
+            date: format(date, 'yyyy-MM-dd'),
+            ...dailyMetrics,
+        };
+    });
+
+    const [metricsP2, metricsP1, metricsP0] = [
         calculateMetricsForPeriod(p2_from, p2_to),
         calculateMetricsForPeriod(p1_from, p1_to),
         calculateMetricsForPeriod(p0_from, p0_to),
-    ]);
+    ];
     
     const calculateChangePercentage = (current: number, previous: number) => {
-        if (previous === 0) return current > 0 ? 100 : 0;
+        if (previous === 0) return current !== 0 ? 100 : 0;
         return ((current - previous) / previous) * 100;
     };
 
@@ -1006,6 +1021,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
             previousPeriodChange: metricsP1.ctr - metricsP0.ctr,
             previousValue: metricsP1.ctr,
         },
+        timeSeries,
     };
 }
 

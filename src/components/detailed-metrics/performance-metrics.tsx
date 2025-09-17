@@ -1,16 +1,19 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, EyeOff, BarChart, Eye, MousePointerClick, MessageSquare, Percent } from "lucide-react";
+import { ArrowUp, ArrowDown, EyeOff, BarChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { format, subDays, differenceInDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { Skeleton } from "../ui/skeleton";
-import type { PerformanceMetricData } from "@/lib/services/analyticsService";
+import type { PerformanceMetricData, PerformanceMetricTimeSeries } from "@/lib/services/analyticsService";
 import { useToast } from "@/hooks/use-toast";
+
+const PerformanceMetricsChart = lazy(() => import("@/components/detailed-metrics/performance-metrics-chart"));
+
 
 const formatValue = (value: number, type: 'number' | 'currency' | 'percentage') => {
     switch (type) {
@@ -30,6 +33,17 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
   const [isLoading, setIsLoading] = useState(true);
   const [metrics, setMetrics] = useState<PerformanceMetricData | null>(null);
   const { toast } = useToast();
+  
+  const [activeMetrics, setActiveMetrics] = useState({
+    impressions: true,
+    clicks: true,
+    messages: false,
+    ctr: false,
+  });
+
+  const handleMetricToggle = (metric: keyof typeof activeMetrics) => {
+    setActiveMetrics((prev) => ({ ...prev, [metric]: !prev[metric] }));
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -82,6 +96,7 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
       type: 'number' | 'percentage' = 'number',
       invertColor = false
   ) => {
+      if (!data) return null;
       const { value, change, previousValue, previousPeriodChange } = data;
       
       const changeType = change >= 0 ? "increase" : "decrease";
@@ -93,8 +108,8 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
       const displayValue = formatValue(value, type);
       const displayPreviousValue = formatValue(previousValue, type);
 
-      const displayChange = type === 'percentage' ? `${change.toFixed(1)}%` : `${Math.abs(change).toFixed(1)}%`;
-      const displayPrevChange = type === 'percentage' ? `${previousPeriodChange.toFixed(1)}%` : `${Math.abs(previousPeriodChange).toFixed(1)}%`;
+      const displayChange = type === 'percentage' ? `${change.toFixed(1)} pp` : `${Math.abs(change).toFixed(1)}%`;
+      const displayPrevChange = type === 'percentage' ? `${previousPeriodChange.toFixed(1)}` : `${Math.abs(previousPeriodChange).toFixed(1)}%`;
 
       return (
           <div key={name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
@@ -158,7 +173,7 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
                   <BarChart className="h-6 w-6 text-primary" />
                   Performance Metrics
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)} disabled>
+              <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)}>
                   {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />} {showChart ? "Hide Graph" : "Show Graph"}
               </Button>
           </CardHeader>
@@ -167,7 +182,13 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
           </CardContent>
            {showChart && (
             <CardContent>
-                <p className="text-muted-foreground">Chart for performance metrics will be available soon.</p>
+                <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+                    {metrics?.timeSeries ? (
+                        <PerformanceMetricsChart data={metrics.timeSeries} activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} />
+                    ) : (
+                        <p className="text-muted-foreground text-center py-8">No time series data available for the selected period.</p>
+                    )}
+                </Suspense>
             </CardContent>
           )}
       </Card>
