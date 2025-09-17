@@ -156,7 +156,7 @@ export interface PerformanceMetricTimeSeries {
     clicks: number;
     messages: number;
     ctr: number;
-    note?: Pick<BusinessNote, 'title' | 'content' | 'date'>;
+    note?: Pick<BusinessNote, 'title' | 'content' | 'date'>[];
 }
 export interface PerformanceMetricData {
   impressions: PerformanceMetric;
@@ -184,10 +184,20 @@ interface PeriodOrderStats {
     cancelled: number;
     avgRating: number;
 }
+export interface OrderCountTimeSeriesPoint {
+    date: string;
+    total: number;
+    new: number;
+    repeat: number;
+    cancelled: number;
+    avgRating: number;
+    note?: Pick<BusinessNote, 'title' | 'content' | 'date'>[];
+}
 export interface OrderCountAnalytics {
     currentPeriodOrders: PeriodOrderStats;
     previousPeriodOrders: PeriodOrderStats;
     periodBeforePreviousOrders: PeriodOrderStats;
+    timeSeries: OrderCountTimeSeriesPoint[];
 }
 
 export interface ClientMetricData {
@@ -693,14 +703,16 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
     const p0_from = subDays(p0_to, durationInDays);
     
     const sourceFilter = sources ? { source: { $in: sources } } : {};
+    
+    const allClients = await getClientsCollection().find(sourceFilter).project({username: 1, clientSince: 1}).toArray();
+    const allClientUsernames = new Set(allClients.map(c => c.username));
 
     const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
         const ordersCol = await getOrdersCollection();
-        const clientsCol = await getClientsCollection();
-
+       
         const ordersInPeriod = await ordersCol.find({
             date: { $gte: startStr, $lte: endStr },
             ...sourceFilter
@@ -713,30 +725,25 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
             return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0, cancelled: cancelledOrdersCount, avgRating: 0 };
         }
         
-        const clientUsernamesInPeriod = [...new Set(completedOrders.map(o => o.clientUsername))];
+        const clientUsernamesInPeriod = new Set(completedOrders.map(o => o.clientUsername));
+        const periodStartDate = start;
 
-        const clientsFromDB = await clientsCol.find(
-            { username: { $in: clientUsernamesInPeriod }, ...sourceFilter },
-            { projection: { username: 1, clientSince: 1 } }
-        ).toArray();
-        
-        const periodStartDate = parseISO(startStr);
+        let newBuyerOrders = 0;
+        let repeatBuyerOrders = 0;
 
-        const newBuyerUsernames = new Set<string>();
-        const repeatBuyerUsernames = new Set<string>();
-        
-        for (const client of clientsFromDB) {
-            const clientSinceDate = parseISO(client.clientSince as string);
+        for (const username of clientUsernamesInPeriod) {
+            const client = allClients.find(c => c.username === username);
+            const clientSinceDate = client ? parseISO(client.clientSince as string) : new Date(); // Assume new if not found
+            
+            const clientOrdersInPeriod = completedOrders.filter(o => o.clientUsername === username);
+            
             if (clientSinceDate >= periodStartDate) {
-                newBuyerUsernames.add(client.username);
+                newBuyerOrders += clientOrdersInPeriod.length;
             } else {
-                repeatBuyerUsernames.add(client.username);
+                repeatBuyerOrders += clientOrdersInPeriod.length;
             }
         }
         
-        const newBuyerOrders = completedOrders.filter(o => newBuyerUsernames.has(o.clientUsername)).length;
-        const repeatBuyerOrders = completedOrders.filter(o => repeatBuyerUsernames.has(o.clientUsername)).length;
-
         const ratedOrders = completedOrders.filter(o => o.rating != null);
         const avgRating = ratedOrders.length > 0
             ? ratedOrders.reduce((sum, o) => sum + (o.rating ?? 0), 0) / ratedOrders.length
@@ -744,6 +751,33 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
         
         return { total: completedOrders.length, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders, cancelled: cancelledOrdersCount, avgRating };
     };
+
+    const businessNotesCol = await getBusinessNotesCollection();
+    const notesForPeriod = await businessNotesCol.find({
+        date: { $gte: p2_from, $lte: p2_to }
+    }).project({ title: 1, content: 1, date: 1 }).toArray();
+
+    const notesByDate: Record<string, { title: string; content: string; date: Date; }[]> = {};
+    notesForPeriod.forEach(note => {
+        const dateKey = format(note.date, 'yyyy-MM-dd');
+        if (!notesByDate[dateKey]) notesByDate[dateKey] = [];
+        notesByDate[dateKey].push({ title: note.title, content: note.content, date: note.date });
+    });
+
+    const timeSeries = await Promise.all(eachDayOfInterval({ start: p2_from, end: p2_to }).map(async (day) => {
+        const stats = await getPeriodStats(day, day);
+        const dateKey = format(day, 'yyyy-MM-dd');
+        return {
+            date: dateKey,
+            total: stats.total,
+            new: stats.fromNewBuyers,
+            repeat: stats.fromRepeatBuyers,
+            cancelled: stats.cancelled,
+            avgRating: stats.avgRating,
+            note: notesByDate[dateKey] || [],
+        };
+    }));
+
 
     const [currentPeriodOrders, previousPeriodOrders, periodBeforePreviousOrders] = await Promise.all([
         getPeriodStats(p2_from, p2_to),
@@ -754,7 +788,8 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
     return {
         currentPeriodOrders,
         previousPeriodOrders,
-        periodBeforePreviousOrders
+        periodBeforePreviousOrders,
+        timeSeries
     };
 }
 
@@ -1010,7 +1045,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
         return {
             date: dateKey,
             ...dailyMetrics,
-            note: notesByDate[dateKey]?.[0] // For simplicity, take the first note of the day
+            note: notesByDate[dateKey] || [],
         };
     });
 
@@ -1161,3 +1196,4 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     
 
     
+

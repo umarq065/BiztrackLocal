@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, lazy, Suspense, useEffect, useMemo } from "react";
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OrderCountAnalytics } from "@/lib/services/analyticsService";
+
+const OrderMetricsChart = lazy(() => import("@/components/detailed-metrics/order-metrics-chart"));
 
 const calculateGrowth = (current: number, previous: number) => {
     if (previous === 0) {
@@ -115,7 +118,7 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
         
         const displayValue = isRating ? `${metricData.value.toFixed(2)} / 5.0` : metricData.value.toLocaleString();
         const displayChange = isRating ? metricData.growth.toFixed(2) : `${Math.abs(metricData.growth).toFixed(1)}%`;
-        const displayPrevChange = isRating ? metricData.prevPeriodGrowth.toFixed(2) : `${metricData.prevPeriodGrowth.toFixed(1)}`;
+        const displayPrevChange = isRating ? metricData.prevPeriodGrowth.toFixed(2) : `${Math.abs(metricData.prevPeriodGrowth).toFixed(1)}`;
         const displayPrevValue = isRating ? metricData.prevValue.toFixed(2) : metricData.prevValue.toLocaleString();
 
         return (
@@ -188,7 +191,7 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
           <ShoppingCart className="h-6 w-6 text-primary" />
           <span>Order Metrics</span>
         </CardTitle>
-        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)} disabled>
+        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)}>
             {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />}
             {showChart ? "Hide Graph" : "Show Graph"}
         </Button>
@@ -198,11 +201,16 @@ export function OrderMetrics({ date, selectedSources }: OrderMetricsProps) {
       </CardContent>
       {showChart && (
         <CardContent>
-             <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                {/* <OrderMetricsChart activeMetrics={activeMetrics} onMetricToggle={handleMetricToggle} /> */}
+             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                {analyticsData?.timeSeries ? (
+                    <OrderMetricsChart timeSeries={analyticsData.timeSeries} />
+                ) : (
+                    <p className="text-muted-foreground text-center py-8">No time series data available for the selected period.</p>
+                )}
             </Suspense>
         </CardContent>
       )}
     </Card>
   );
 }
+
