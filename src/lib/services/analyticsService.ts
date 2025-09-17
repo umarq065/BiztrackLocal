@@ -155,6 +155,7 @@ export interface PerformanceMetricTimeSeries {
     clicks: number;
     messages: number;
     ctr: number;
+    note?: Pick<BusinessNote, 'title' | 'content'>;
 }
 export interface PerformanceMetricData {
   impressions: PerformanceMetric;
@@ -956,11 +957,23 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
 
     const gigPerformancesCol = await getGigPerformancesCollection();
     const messagesCol = await getMessagesCollection();
+    const businessNotesCol = await getBusinessNotesCollection();
+
     
-    const [allPerformances, allMessages] = await Promise.all([
+    const [allPerformances, allMessages, allNotes] = await Promise.all([
         gigPerformancesCol.find({ gigId: { $in: allGigIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
-        messagesCol.find({ sourceId: { $in: sourceIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray()
+        messagesCol.find({ sourceId: { $in: sourceIds }, date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
+        businessNotesCol.find({ date: { $gte: overallStart, $lte: overallEnd } }).project({ title: 1, content: 1, date: 1 }).toArray(),
     ]);
+
+    const notesByDate: Record<string, { title: string; content: string }[]> = {};
+    allNotes.forEach(note => {
+        const dateKey = format(note.date, 'yyyy-MM-dd');
+        if (!notesByDate[dateKey]) {
+            notesByDate[dateKey] = [];
+        }
+        notesByDate[dateKey].push({ title: note.title, content: note.content });
+    });
     
     const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
@@ -979,9 +992,11 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
 
     const timeSeries = eachDayOfInterval({ start: p2_from, end: p2_to }).map(date => {
         const dailyMetrics = calculateMetricsForPeriod(date, date);
+        const dateKey = format(date, 'yyyy-MM-dd');
         return {
-            date: format(date, 'yyyy-MM-dd'),
+            date: dateKey,
             ...dailyMetrics,
+            note: notesByDate[dateKey]?.[0] // For simplicity, take the first note of the day
         };
     });
 

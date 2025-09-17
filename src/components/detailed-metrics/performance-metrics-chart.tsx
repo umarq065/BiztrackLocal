@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Dot } from 'recharts';
-import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -29,10 +30,11 @@ interface PerformanceMetricsChartProps {
     onChartViewChange: (view: ChartView) => void;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const note = payload[0].payload.note;
     return (
-      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
         <p className="font-medium">{label}</p>
         {payload.map((pld: any) => (
           pld.value ? (
@@ -47,7 +49,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             </div>
           ) : null
         ))}
+         {note && (
+          <>
+            <Separator className="my-2" />
+            <div className="flex items-start gap-2 text-muted-foreground">
+              <BookText className="size-4 shrink-0 mt-0.5 text-primary" />
+              <div className="flex flex-col">
+                <p className="font-semibold text-foreground">{note.title}</p>
+                <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
+    );
+  }
+  return null;
+};
+
+const CustomDotWithNote = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (payload.note) {
+    return (
+      <Dot
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill="hsl(var(--primary))"
+        stroke="hsl(var(--background))"
+        strokeWidth={2}
+      />
     );
   }
   return null;
@@ -77,16 +108,20 @@ export default function PerformanceMetricsChart({ data, activeMetrics, onMetricT
                 default: key = item.date; break;
             }
 
-            const existing = dataMap.get(key) || { date: key, impressions: 0, clicks: 0, messages: 0 };
+            const existing = dataMap.get(key) || { date: key, impressions: 0, clicks: 0, messages: 0, notes: [] };
             existing.impressions += item.impressions;
             existing.clicks += item.clicks;
             existing.messages += item.messages;
+            if (item.note) {
+                existing.notes.push(item.note);
+            }
             dataMap.set(key, existing);
         });
 
         const result = Array.from(dataMap.values()).map(item => ({
             ...item,
             ctr: item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0,
+            note: item.notes.length > 0 ? item.notes[0] : undefined, // simplify for dot display
         }));
         
         return result.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -184,10 +219,10 @@ export default function PerformanceMetricsChart({ data, activeMetrics, onMetricT
                         />
                         <Tooltip
                             cursor={false}
-                            content={<CustomTooltip />}
+                            content={<CustomTooltipWithNotes />}
                         />
                         {Object.keys(activeMetrics).filter(k => activeMetrics[k as keyof typeof activeMetrics]).map(key => (
-                           <Line key={key} yAxisId={yAxisIds[key as keyof typeof yAxisIds]} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={false} />
+                           <Line key={key} yAxisId={yAxisIds[key as keyof typeof yAxisIds]} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2} dot={<CustomDotWithNote />} />
                         ))}
                     </LineChart>
                 </ChartContainer>
