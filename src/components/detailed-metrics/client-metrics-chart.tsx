@@ -2,7 +2,7 @@
 "use client";
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Dot } from 'recharts';
-import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -138,10 +138,10 @@ export default function ClientMetricsChart({ activeMetrics, onMetricToggle }: Cl
                             cursor={false}
                             content={<CustomTooltip />}
                         />
-                        {activeMetrics.totalClients && <Line yAxisId="left" dataKey="totalClients" type="monotone" stroke="var(--color-totalClients)" strokeWidth={2} dot={<CustomDot />} />}
-                        {activeMetrics.newClients && <Line yAxisId="left" dataKey="newClients" type="monotone" stroke="var(--color-newClients)" strokeWidth={2} dot={<CustomDot />} />}
-                        {activeMetrics.retentionRate && <Line yAxisId="right" dataKey="retentionRate" type="monotone" stroke="var(--color-retentionRate)" strokeWidth={2} dot={<CustomDot />} />}
-                        {activeMetrics.csat && <Line yAxisId="right" dataKey="csat" type="monotone" stroke="var(--color-csat)" strokeWidth={2} dot={<CustomDot />} />}
+                        {activeMetrics.totalClients && <Line yAxisId="left" dataKey="totalClients" type="step" stroke="var(--color-totalClients)" strokeWidth={2} dot={<CustomDot />} />}
+                        {activeMetrics.newClients && <Line yAxisId="left" dataKey="newClients" type="step" stroke="var(--color-newClients)" strokeWidth={2} dot={<CustomDot />} />}
+                        {activeMetrics.retentionRate && <Line yAxisId="right" dataKey="retentionRate" type="step" stroke="var(--color-retentionRate)" strokeWidth={2} dot={<CustomDot />} />}
+                        {activeMetrics.csat && <Line yAxisId="right" dataKey="csat" type="step" stroke="var(--color-csat)" strokeWidth={2} dot={<CustomDot />} />}
                     </LineChart>
                 </ChartContainer>
             </CardContent>
