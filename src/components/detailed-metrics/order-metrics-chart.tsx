@@ -235,7 +235,7 @@ export default function OrderMetricsChart({ timeSeries }: { timeSeries: OrderCou
                             <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={tickFormatter} />
                             <YAxis domain={[0, 5]} tickFormatter={(val) => val.toFixed(1)} />
                             <Tooltip content={(props) => CustomTooltipWithNotes(props, ratingChartConfig)} />
-                            <Line dataKey="avgRating" type="monotone" stroke="var(--color-avgRating)" strokeWidth={2} dot={<CustomDotWithNote />} />
+                            <Line dataKey="avgRating" stroke="var(--color-avgRating)" strokeWidth={2} dot={<CustomDotWithNote />} />
                         </LineChart>
                     </ChartContainer>
                 </CardContent>
