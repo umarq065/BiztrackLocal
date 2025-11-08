@@ -110,7 +110,7 @@ export function PerformanceMetrics({ date, selectedSources }: PerformanceMetrics
       const displayValue = formatValue(value, type);
       const displayPreviousValue = formatValue(previousValue, type);
 
-      const displayChange = type === 'percentage' ? `${change.toFixed(1)} pp` : `${Math.abs(change).toFixed(1)}%`;
+      const displayChange = type === 'percentage' ? `${change.toFixed(1)}%` : `${Math.abs(change).toFixed(1)}%`;
       const displayPrevChange = type === 'percentage' ? `${previousPeriodChange.toFixed(1)}` : `${Math.abs(previousPeriodChange).toFixed(1)}%`;
 
       return (
