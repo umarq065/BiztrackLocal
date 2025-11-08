@@ -28,12 +28,17 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: { curre
     const [chartView, setChartView] = useState<ChartView>('monthly');
 
     const aggregatedData = useMemo(() => {
+        if (!timeSeries || !timeSeries.currentRevenue || !timeSeries.previousRevenue) {
+            return [];
+        }
+
         const aggregate = (data: RevenueDataPoint[], view: ChartView) => {
             const map = new Map<string, number>();
             data.forEach(item => {
                 const itemDate = parseISO(item.date);
                 let key = '';
                 switch (view) {
+                    case 'daily': key = item.date; break;
                     case 'weekly': key = format(startOfWeek(itemDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
                     case 'monthly': key = format(startOfMonth(itemDate), 'yyyy-MM-dd'); break;
                     case 'quarterly': key = `${getYear(itemDate)}-Q${getQuarter(itemDate)}`; break;
@@ -47,25 +52,33 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: { curre
 
         const currentAggregated = aggregate(timeSeries.currentRevenue, chartView);
         const previousAggregated = aggregate(timeSeries.previousRevenue, chartView);
+        
+        // Match keys between periods. We assume periods are of the same length and structure.
+        const currentKeys = Array.from(currentAggregated.keys()).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+        const previousKeys = Array.from(previousAggregated.keys()).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
 
-        const allKeys = new Set([...currentAggregated.keys(), ...previousAggregated.keys()]);
-        const sortedKeys = Array.from(allKeys).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
-
-        return sortedKeys.map(key => ({
-            date: key,
-            growthRate: calculateGrowth(currentAggregated.get(key), previousAggregated.get(key)),
-        }));
+        return currentKeys.map((key, index) => {
+            const currentVal = currentAggregated.get(key) || 0;
+            const prevKey = previousKeys[index]; // Get corresponding key from previous period
+            const prevVal = prevKey ? (previousAggregated.get(prevKey) || 0) : 0;
+            
+            return {
+                date: key,
+                growthRate: calculateGrowth(currentVal, prevVal),
+            };
+        });
 
     }, [timeSeries, chartView]);
 
     const tickFormatter = (value: string) => {
         try {
             switch (chartView) {
+                case 'daily': return format(parseISO(value), "MMM d");
                 case 'weekly': return `W/C ${format(parseISO(value), "MMM d")}`;
                 case 'monthly': return format(parseISO(value), "MMM yyyy");
-                case 'quarterly':
+                case 'quarterly': return value;
                 case 'yearly': return value;
-                default: return format(parseISO(value), "MMM d");
+                default: return value;
             }
         } catch (e) {
             return value;
