@@ -103,6 +103,11 @@ export interface SourceAnalyticsData {
     previousTotals: Omit<Totals, 'conversionRate'> & {ctr: number};
 }
 
+export interface RevenueDataPoint {
+    date: string;
+    revenue: number;
+}
+
 export interface GrowthMetricData {
   revenueGrowth: { value: number; previousValue: number };
   profitGrowth: { value: number; previousValue: number };
@@ -110,6 +115,10 @@ export interface GrowthMetricData {
   aovGrowth: { value: number; previousValue: number };
   vipClientGrowth: { value: number; previousValue: number };
   topSourceGrowth: { value: number; previousValue: number; source: string };
+  timeSeries?: {
+      currentRevenue: RevenueDataPoint[];
+      previousRevenue: RevenueDataPoint[];
+  }
 }
 
 export interface FinancialMetricTimeSeries {
@@ -496,16 +505,16 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
     const toDate = parseISO(to);
     const fromDate = parseISO(from);
 
-    const monthsDiff = differenceInMonths(toDate, fromDate) || 1;
-
     const P2_to = toDate;
     const P2_from = fromDate;
     
+    const durationInDays = differenceInDays(P2_to, P2_from);
+
     const P1_to = sub(P2_from, { days: 1 });
-    const P1_from = sub(P1_to, {months: monthsDiff});
+    const P1_from = sub(P1_to, {days: durationInDays});
 
     const P0_to = sub(P1_from, { days: 1 });
-    const P0_from = sub(P0_to, {months: monthsDiff});
+    const P0_from = sub(P0_to, {days: durationInDays});
     
     const overallStart = P0_from;
     const overallEnd = P2_to;
@@ -570,6 +579,16 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         ? allOrders.filter(o => o.source === P1_metrics.topSource.source && o.date >= format(P1_from, 'yyyy-MM-dd') && o.date <= format(P1_to, 'yyyy-MM-dd')).reduce((sum, o) => sum + o.amount, 0)
         : 0;
 
+    const generateRevenueTimeSeries = (start: Date, end: Date): RevenueDataPoint[] => {
+        return eachDayOfInterval({ start, end }).map(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const revenue = allOrders
+                .filter(o => o.date === dayStr)
+                .reduce((sum, o) => sum + o.amount, 0);
+            return { date: dayStr, revenue };
+        });
+    };
+
     return {
         revenueGrowth: { value: calculateGrowth(P2_metrics.revenue, P1_metrics.revenue), previousValue: calculateGrowth(P1_metrics.revenue, P0_metrics.revenue) },
         profitGrowth: { value: calculateGrowth(P2_metrics.netProfit, P1_metrics.netProfit), previousValue: calculateGrowth(P1_metrics.netProfit, P0_metrics.netProfit) },
@@ -577,6 +596,10 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         vipClientGrowth: { value: calculateGrowth(P2_metrics.vipClients, P1_metrics.vipClients), previousValue: calculateGrowth(P1_metrics.vipClients, P0_metrics.vipClients) },
         topSourceGrowth: { value: calculateGrowth(P2_metrics.topSource.revenue, P1_topSourceRevenue), previousValue: 0, source: P2_metrics.topSource.source }, // Simplified prev value
         clientGrowth: { value: P1_metrics.clientsAtStart > 0 ? (P2_metrics.newClients / P1_metrics.clientsAtStart) * 100 : P2_metrics.newClients > 0 ? 100 : 0, previousValue: P0_metrics.clientsAtStart > 0 ? (P1_metrics.newClients / P0_metrics.clientsAtStart) * 100 : P1_metrics.newClients > 0 ? 100 : 0 },
+        timeSeries: {
+            currentRevenue: generateRevenueTimeSeries(P2_from, P2_to),
+            previousRevenue: generateRevenueTimeSeries(P1_from, P1_to),
+        }
     };
 }
 
@@ -1192,5 +1215,6 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
     
 
     
+
 
 

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type GrowthMetricData } from "@/lib/services/analyticsService";
 
+const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
 
 interface GrowthMetricsProps {
     date: DateRange | undefined;
@@ -21,6 +22,7 @@ interface GrowthMetricsProps {
 export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: GrowthMetricsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [growthMetricsData, setGrowthMetricsData] = useState<GrowthMetricData | null>(null);
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -82,6 +84,10 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
           <BarChart className="h-6 w-6 text-primary" />
           <span>Growth Metrics</span>
         </CardTitle>
+        <Button variant="outline" size="sm" onClick={() => setShowChart(!showChart)}>
+            {showChart ? <EyeOff className="mr-2 h-4 w-4" /> : <BarChart className="mr-2 h-4 w-4" />}
+            {showChart ? "Hide Graph" : "Show Graph"}
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -123,6 +129,13 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
           })}
         </div>
       </CardContent>
+       {showChart && growthMetricsData.timeSeries && (
+        <CardContent>
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <GrowthMetricsChart timeSeries={growthMetricsData.timeSeries} />
+            </Suspense>
+        </CardContent>
+       )}
     </Card>
   );
 }
