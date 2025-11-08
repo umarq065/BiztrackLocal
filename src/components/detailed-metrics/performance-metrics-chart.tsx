@@ -54,16 +54,18 @@ const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
           <>
             <Separator className="my-2" />
             {notes.map((note: any, index: number) => (
-              <div key={index} className="flex flex-col items-start gap-1 text-muted-foreground mt-1">
-                  <div className="flex items-center gap-2">
-                    <BookText className="size-4 shrink-0 text-primary" />
-                    <span className="font-semibold text-foreground">{format(parseISO(note.date), "MMM d, yyyy")}</span>
-                  </div>
-                  <div className="pl-6">
-                    <p className="font-semibold text-foreground">{note.title}</p>
-                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
-                  </div>
-              </div>
+              note && note.date && (
+                <div key={index} className="flex flex-col items-start gap-1 text-muted-foreground mt-1">
+                    <div className="flex items-center gap-2">
+                      <BookText className="size-4 shrink-0 text-primary" />
+                      <span className="font-semibold text-foreground">{format(parseISO(note.date), "MMM d, yyyy")}</span>
+                    </div>
+                    <div className="pl-6">
+                      <p className="font-semibold text-foreground">{note.title}</p>
+                      <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                    </div>
+                </div>
+              )
             ))}
           </>
         )}
@@ -119,7 +121,7 @@ export default function PerformanceMetricsChart({ data, activeMetrics, onMetricT
             existing.clicks += item.clicks;
             existing.messages += item.messages;
             if (item.note) {
-                existing.note.push(item.note);
+                existing.note.push(...item.note);
             }
             dataMap.set(key, existing);
         });
