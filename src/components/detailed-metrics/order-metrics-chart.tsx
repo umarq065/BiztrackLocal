@@ -215,7 +215,6 @@ export default function OrderMetricsChart({ timeSeries }: { timeSeries: OrderCou
                                     yAxisId={key === 'cancelled' ? 'right' : 'left'}
                                     fill={orderChartConfig[key as keyof typeof orderChartConfig].color} 
                                     stroke={orderChartConfig[key as keyof typeof orderChartConfig].color}
-                                    type="monotone"
                                     dot={chartType === 'line' ? <CustomDotWithNote /> : undefined}
                                 />
                             ))}
