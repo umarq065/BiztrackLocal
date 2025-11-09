@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -56,8 +55,7 @@ const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
             const { payload: itemPayload } = pld;
             const revenue = itemPayload?.value as number | undefined;
             const prevRevenue = itemPayload?.previousValue as number | undefined;
-            const details = `(Current: $${revenue?.toFixed(0)}, Prev: $${prevRevenue?.toFixed(0)})`;
-
+            
             return (
                 <div key={pld.dataKey} className="flex items-center justify-between">
                     <div className="flex items-center">
