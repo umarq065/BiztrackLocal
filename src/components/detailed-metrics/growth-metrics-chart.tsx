@@ -30,7 +30,7 @@ const calculateGrowth = (current?: number, previous?: number) => {
 
 const CustomDotWithNote = (props: any) => {
   const { cx, cy, payload } = props;
-  if (payload.note && payload.note.length > 0) {
+  if (payload.notes && payload.notes.length > 0) {
     return (
       <Dot
         cx={cx}
@@ -47,7 +47,7 @@ const CustomDotWithNote = (props: any) => {
 
 const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const notes = payload[0].payload.note;
+    const notes = payload[0].payload.notes;
     return (
       <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
         <p className="font-medium">{label}</p>
@@ -90,7 +90,7 @@ const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
 
 
 export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: string; value: number, note?: any[]}[] }) {
-    const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+    const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const [chartView, setChartView] = useState<ChartView>('monthly');
 
     const aggregatedData = useMemo(() => {
@@ -121,7 +121,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 map.set(key, existing);
             });
             return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
+                        .map(([date, data]) => ({ date, value: data.value, notes: data.notes }))
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         };
 
@@ -134,7 +134,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 value: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
-                note: item.note,
+                notes: item.notes,
             };
         });
 
@@ -203,7 +203,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                             dataKey="growthRate" 
                             fill="var(--color-growthRate)" 
                             stroke="var(--color-growthRate)" 
-                            radius={chartType === 'bar' ? 4 : undefined} 
+                            radius={chartType === 'bar' ? 4 : undefined}
                             dot={chartType === 'line' ? <CustomDotWithNote /> : undefined}
                         />
                     </Chart>
