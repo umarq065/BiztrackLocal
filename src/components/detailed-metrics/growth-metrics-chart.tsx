@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/compone
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon, BookText } from 'lucide-react';
-import { format, startOfWeek, startOfMonth, getQuarter, getYear, parseISO } from "date-fns";
+import { format, startOfWeek, startOfMonth, getQuarter, getYear, parseISO, eachDayOfInterval, endOfWeek, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
 import { type RevenueDataPoint } from '@/lib/services/analyticsService';
 import { Separator } from '../ui/separator';
 
@@ -98,48 +98,83 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
             return [];
         }
 
-        const aggregate = (data: {date: string; value: number, note?: any[]}[], view: ChartView) => {
-            const map = new Map<string, { value: number; notes: any[] }>();
-            data.forEach(item => {
-                const itemDate = new Date(item.date.replace(/-/g, '/'));
-                let key = '';
-                switch (view) {
-                    case 'daily': key = item.date; break;
-                    case 'weekly': key = format(startOfWeek(itemDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
-                    case 'monthly': key = format(startOfMonth(itemDate), 'yyyy-MM-dd'); break;
-                    case 'quarterly': key = `${getYear(itemDate)}-Q${getQuarter(itemDate)}`; break;
-                    case 'yearly': key = getYear(itemDate).toString(); break;
-                    default: key = item.date; break;
-                }
-                
-                const existing = map.get(key) || { value: 0, notes: [] };
-                existing.value += item.value;
+        const dataByDate = new Map(timeSeries.map(item => [item.date, item]));
+        const dates = Array.from(dataByDate.keys()).map(d => parseISO(`${d}T00:00:00`));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        
+        let intervalDates: Date[] = [];
+        let getIntervalKey: (date: Date) => string;
+        let getIntervalRange: (date: Date) => { start: Date, end: Date };
+
+        switch (chartView) {
+            case 'daily':
+                intervalDates = eachDayOfInterval({ start: minDate, end: maxDate });
+                getIntervalKey = (date) => format(date, 'yyyy-MM-dd');
+                getIntervalRange = (date) => ({start: date, end: date});
+                break;
+            case 'weekly':
+                intervalDates = eachDayOfInterval({ start: startOfWeek(minDate, { weekStartsOn: 1 }), end: endOfWeek(maxDate, { weekStartsOn: 1 }) });
+                getIntervalKey = (date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                getIntervalRange = (date) => ({start: startOfWeek(date, { weekStartsOn: 1 }), end: endOfWeek(date, { weekStartsOn: 1 })});
+                break;
+            case 'monthly':
+                intervalDates = eachDayOfInterval({ start: startOfMonth(minDate), end: endOfMonth(maxDate) });
+                getIntervalKey = (date) => format(startOfMonth(date), 'yyyy-MM-dd');
+                getIntervalRange = (date) => ({start: startOfMonth(date), end: endOfMonth(date)});
+                break;
+            case 'quarterly':
+                 intervalDates = eachDayOfInterval({ start: startOfQuarter(minDate), end: endOfQuarter(maxDate) });
+                 getIntervalKey = (date) => `${getYear(date)}-Q${getQuarter(date)}`;
+                 getIntervalRange = (date) => ({start: startOfQuarter(date), end: endOfQuarter(date)});
+                break;
+            case 'yearly':
+                intervalDates = eachDayOfInterval({ start: startOfYear(minDate), end: endOfYear(maxDate) });
+                getIntervalKey = (date) => getYear(date).toString();
+                getIntervalRange = (date) => ({start: startOfYear(date), end: endOfYear(date)});
+                break;
+        }
+
+        const aggregatedMap = new Map<string, { value: number; notes: any[] }>();
+
+        intervalDates.forEach(date => {
+            const key = getIntervalKey(date);
+            if (!aggregatedMap.has(key)) {
+                aggregatedMap.set(key, { value: 0, notes: [] });
+            }
+        });
+
+        timeSeries.forEach(item => {
+            const itemDate = parseISO(`${item.date}T00:00:00`);
+            const key = getIntervalKey(itemDate);
+            const entry = aggregatedMap.get(key);
+            if (entry) {
+                entry.value += item.value;
                 if (item.note) {
-                    // Prevent duplicate notes in aggregation
                     item.note.forEach(n => {
-                        if (!existing.notes.some(en => en.title === n.title && en.date === n.date)) {
-                            existing.notes.push(n);
+                        if (!entry.notes.some(existingNote => existingNote.title === n.title && existingNote.content === n.content)) {
+                            entry.notes.push(n);
                         }
                     });
                 }
+            }
+        });
 
-                map.set(key, existing);
+        const sortedAggregatedData = Array.from(aggregatedMap.entries())
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => {
+                if (chartView === 'quarterly' || chartView === 'yearly') return a.date.localeCompare(b.date);
+                return new Date(a.date).getTime() - new Date(b.date).getTime()
             });
-            return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        };
 
-        const currentAggregated = aggregate(timeSeries, chartView);
-        
-        return currentAggregated.map((item, index) => {
-            const previousItem = index > 0 ? currentAggregated[index - 1] : { value: undefined };
+        return sortedAggregatedData.map((item, index) => {
+            const previousItem = index > 0 ? sortedAggregatedData[index - 1] : { value: undefined };
             return {
                 date: item.date,
                 value: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
-                note: item.note,
+                note: item.notes,
             };
         });
 

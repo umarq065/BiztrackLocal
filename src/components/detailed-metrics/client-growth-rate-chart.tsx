@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/compone
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon, BookText } from 'lucide-react';
-import { format, startOfWeek, startOfMonth, getQuarter, getYear, parseISO } from "date-fns";
+import { format, startOfWeek, startOfMonth, getQuarter, getYear, parseISO, eachDayOfInterval, endOfWeek, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
 import { type ClientDataPoint } from '@/lib/services/analyticsService';
 import { Separator } from '../ui/separator';
 
@@ -97,52 +97,81 @@ export default function ClientGrowthRateChart({ timeSeries }: { timeSeries: Clie
         if (!timeSeries || timeSeries.length === 0) {
             return [];
         }
+        
+        const dataByDate = new Map(timeSeries.map(item => [item.date, item]));
+        const dates = Array.from(dataByDate.keys()).map(d => parseISO(`${d}T00:00:00`));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        
+        let intervalDates: Date[] = [];
+        let getIntervalKey: (date: Date) => string;
 
-        const aggregate = (data: ClientDataPoint[], view: ChartView) => {
-            const map = new Map<string, { newClients: number; clientsAtStart: number; note: any[] }>();
-            
-            data.forEach((item, index) => {
-                const itemDate = new Date(item.date.replace(/-/g, '/'));
-                let key = '';
-                switch (view) {
-                    case 'daily': key = item.date; break;
-                    case 'weekly': key = format(startOfWeek(itemDate, { weekStartsOn: 1 }), 'yyyy-MM-dd'); break;
-                    case 'monthly': key = format(startOfMonth(itemDate), 'yyyy-MM-dd'); break;
-                    case 'quarterly': key = `${getYear(itemDate)}-Q${getQuarter(itemDate)}`; break;
-                    case 'yearly': key = getYear(itemDate).toString(); break;
-                    default: key = item.date; break;
+        switch (chartView) {
+            case 'daily':
+                intervalDates = eachDayOfInterval({ start: minDate, end: maxDate });
+                getIntervalKey = (date) => format(date, 'yyyy-MM-dd');
+                break;
+            case 'weekly':
+                intervalDates = eachDayOfInterval({ start: startOfWeek(minDate, { weekStartsOn: 1 }), end: endOfWeek(maxDate, { weekStartsOn: 1 }) });
+                getIntervalKey = (date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                break;
+            case 'monthly':
+                intervalDates = eachDayOfInterval({ start: startOfMonth(minDate), end: endOfMonth(maxDate) });
+                getIntervalKey = (date) => format(startOfMonth(date), 'yyyy-MM-dd');
+                break;
+            case 'quarterly':
+                 intervalDates = eachDayOfInterval({ start: startOfQuarter(minDate), end: endOfQuarter(maxDate) });
+                 getIntervalKey = (date) => `${getYear(date)}-Q${getQuarter(date)}`;
+                break;
+            case 'yearly':
+                intervalDates = eachDayOfInterval({ start: startOfYear(minDate), end: endOfYear(maxDate) });
+                getIntervalKey = (date) => getYear(date).toString();
+                break;
+        }
+
+        const aggregatedMap = new Map<string, { newClients: number; clientsAtStart?: number; notes: any[] }>();
+
+        intervalDates.forEach(date => {
+            const key = getIntervalKey(date);
+            if (!aggregatedMap.has(key)) {
+                aggregatedMap.set(key, { newClients: 0, notes: [] });
+            }
+        });
+
+        // This is a bit tricky. We need the first `clientsAtStart` for the aggregated period.
+        timeSeries.forEach(item => {
+            const itemDate = parseISO(`${item.date}T00:00:00`);
+            const key = getIntervalKey(itemDate);
+            const entry = aggregatedMap.get(key);
+            if (entry) {
+                entry.newClients += item.newClients;
+                if (entry.clientsAtStart === undefined) {
+                    entry.clientsAtStart = item.clientsAtStart;
                 }
-                
-                const existing = map.get(key);
-                if (!existing) {
-                    map.set(key, { newClients: item.newClients, clientsAtStart: item.clientsAtStart, note: item.note || [] });
-                } else {
-                    existing.newClients += item.newClients;
-                    if (item.note) {
-                         // Prevent duplicate notes in aggregation
-                        item.note.forEach(n => {
-                            if (!existing.note.some(en => en.title === n.title && en.date === n.date)) {
-                                existing.note.push(n);
-                            }
-                        });
-                    }
+                if (item.note) {
+                    item.note.forEach(n => {
+                        if (!entry.notes.some(existingNote => existingNote.title === n.title && existingNote.content === n.content)) {
+                            entry.notes.push(n);
+                        }
+                    });
                 }
+            }
+        });
+
+        const sortedAggregatedData = Array.from(aggregatedMap.entries())
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => {
+                if (chartView === 'quarterly' || chartView === 'yearly') return a.date.localeCompare(b.date);
+                return new Date(a.date).getTime() - new Date(b.date).getTime()
             });
 
-            return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, ...data }))
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        };
-
-        const currentAggregated = aggregate(timeSeries, chartView);
-        
-        return currentAggregated.map((item) => {
+        return sortedAggregatedData.map((item) => {
             return {
                 date: item.date,
                 newClients: item.newClients,
                 clientsAtStart: item.clientsAtStart,
                 growthRate: calculateGrowth(item.newClients, item.clientsAtStart),
-                note: item.note,
+                note: item.notes,
             };
         });
 
