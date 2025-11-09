@@ -139,12 +139,12 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
         <CardContent className="space-y-6">
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <GrowthMetricsChart
-                    timeSeries={currentPeriodTimeSeries ? currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.revenue })) : []}
+                    timeSeries={currentPeriodTimeSeries ? currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.revenue, note: d.note })) : []}
                 />
             </Suspense>
              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <NetProfitGrowthChart
-                     timeSeries={currentPeriodTimeSeries ? currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.netProfit })) : []}
+                     timeSeries={currentPeriodTimeSeries ? currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.netProfit, note: d.note })) : []}
                 />
             </Suspense>
         </CardContent>

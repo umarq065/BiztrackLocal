@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -120,7 +121,7 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                 map.set(key, existing);
             });
             return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
+                        .map(([date, data]) => ({ date, value: data.value, notes: data.notes }))
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         };
 
@@ -133,7 +134,7 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                 value: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
-                note: item.note,
+                note: item.notes,
             };
         });
 
