@@ -1,7 +1,7 @@
 
-
 import { z } from 'zod';
 import { format, parseISO } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 import { type DailySummary, summaryFormSchema } from '@/lib/data/daily-summary-data';
@@ -25,7 +25,7 @@ export async function getDailySummaries(): Promise<DailySummary[]> {
     return summaries.map(s => ({
         ...s,
         id: s._id.toString(),
-        date: parseISO(s.date),
+        date: parseISO(s.date as unknown as string),
     } as unknown as DailySummary));
 }
 
@@ -73,7 +73,7 @@ export async function updateDailySummary(id: string, summaryData: { content: str
     return {
         _id: result._id,
         id: result._id.toString(),
-        date: parseISO(result.date),
+        date: parseISO(result.date as unknown as string),
         content: result.content,
     };
 }

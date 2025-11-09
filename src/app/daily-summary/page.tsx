@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect, lazy, Suspense, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, addMonths, subMonths } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { ChevronLeft, ChevronRight, Loader2, Database } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -61,6 +62,7 @@ const DailySummaryPageComponent = () => {
   const [editingSummary, setEditingSummary] = useState<DailySummary | null>(null);
   const [deletingSummary, setDeletingSummary] = useState<DailySummary | null>(null);
   const [visibleSummariesCount, setVisibleSummariesCount] = useState(10);
+  const [timezone, setTimezone] = useState('UTC');
   const { toast } = useToast();
   
   const form = useForm<SummaryFormValues>({
@@ -68,24 +70,33 @@ const DailySummaryPageComponent = () => {
     defaultValues: { content: "" }
   });
 
-  const fetchSummaries = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-          const res = await fetch('/api/daily-summaries');
-          if (!res.ok) throw new Error('Failed to fetch summaries from the server.');
-          const data = await res.json();
-          setSummaries(data.map((s: DailySummary & {date: string}) => ({...s, date: new Date(s.date.replace(/-/g, '/'))})));
-      } catch (e) {
-          console.error(e);
-          setError('Could not connect to the database or fetch data. Please try again.');
-      } finally {
-          setIsLoading(false);
-      }
-  };
-
   useEffect(() => {
-    fetchSummaries();
+    const fetchInitialData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const [summariesRes, settingsRes] = await Promise.all([
+                fetch('/api/daily-summaries'),
+                fetch('/api/settings')
+            ]);
+            
+            if (!summariesRes.ok) throw new Error('Failed to fetch summaries.');
+            if (!settingsRes.ok) throw new Error('Failed to fetch settings.');
+            
+            const summariesData = await summariesRes.json();
+            const settingsData = await settingsRes.json();
+
+            setTimezone(settingsData.timezone || 'UTC');
+            setSummaries(summariesData.map((s: DailySummary & {date: string}) => ({...s, date: new Date(s.date.replace(/-/g, '/'))})));
+            
+        } catch (e) {
+            console.error(e);
+            setError('Could not connect to the database or fetch data. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchInitialData();
   }, []);
 
   const handleDateClick = (date: Date) => {
@@ -117,9 +128,13 @@ const DailySummaryPageComponent = () => {
             // CREATE
             const dateForPayload = selectedDate;
             if (!dateForPayload) throw new Error("No date selected for new summary.");
+            
+            // Use the fetched timezone
+            const zonedDate = toZonedTime(dateForPayload, timezone);
+
             const payload = {
                 ...values,
-                date: format(dateForPayload, 'yyyy-MM-dd')
+                date: format(zonedDate, 'yyyy-MM-dd')
             };
             response = await fetch('/api/daily-summaries', {
                 method: 'POST',
@@ -240,6 +255,7 @@ const DailySummaryPageComponent = () => {
                   summaries={summaries}
                   onDateClick={handleDateClick}
                   onSummaryClick={handleSummaryClick}
+                  timezone={timezone}
               />
             )}
           </Suspense>

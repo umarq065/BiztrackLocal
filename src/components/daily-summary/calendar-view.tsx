@@ -12,6 +12,7 @@ import {
     format,
     isSameDay,
 } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import type { DailySummary } from '@/lib/data/daily-summary-data';
 
@@ -20,11 +21,12 @@ interface CalendarViewProps {
     summaries: DailySummary[];
     onDateClick: (date: Date) => void;
     onSummaryClick: (summary: DailySummary) => void;
+    timezone: string;
 }
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-export default function CalendarView({ currentDate, summaries, onDateClick, onSummaryClick }: CalendarViewProps) {
+export default function CalendarView({ currentDate, summaries, onDateClick, onSummaryClick, timezone }: CalendarViewProps) {
     const daysInMonth = useMemo(() => {
         const start = startOfWeek(startOfMonth(currentDate));
         const end = endOfWeek(endOfMonth(currentDate));
@@ -34,15 +36,16 @@ export default function CalendarView({ currentDate, summaries, onDateClick, onSu
     const summariesByDate = useMemo(() => {
         const map = new Map<string, DailySummary[]>();
         summaries.forEach(summary => {
-            const dateKey = format(summary.date, 'yyyy-MM-dd');
+            const zonedDate = toZonedTime(summary.date, timezone);
+            const dateKey = format(zonedDate, 'yyyy-MM-dd');
             if (!map.has(dateKey)) {
                 map.set(dateKey, []);
             }
             map.get(dateKey)!.push(summary);
         });
         return map;
-    }, [summaries]);
-
+    }, [summaries, timezone]);
+    
     const [isClient, setIsClient] = useState(false);
     useEffect(() => {
         setIsClient(true);
