@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -61,7 +62,7 @@ export function EditGigDialog({ open, onOpenChange, editingGigInfo, onGigUpdated
         if (editingGigInfo) {
             form.reset({
                 name: editingGigInfo.gig.name,
-                date: new Date(editingGigInfo.gig.date.replace(/-/g, '/')),
+                date: new Date(editingGigInfo.gig.date),
             });
         }
     }, [editingGigInfo, form]);

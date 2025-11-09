@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, lazy, Suspense, memo } from "react";
@@ -129,12 +130,9 @@ const DailySummaryPageComponent = () => {
             const dateForPayload = selectedDate;
             if (!dateForPayload) throw new Error("No date selected for new summary.");
             
-            // Use the fetched timezone
-            const zonedDate = toZonedTime(dateForPayload, timezone);
-
             const payload = {
                 ...values,
-                date: format(zonedDate, 'yyyy-MM-dd')
+                date: format(dateForPayload, 'yyyy-MM-dd')
             };
             response = await fetch('/api/daily-summaries', {
                 method: 'POST',

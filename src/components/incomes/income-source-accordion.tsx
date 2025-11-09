@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from "react";
@@ -184,7 +185,7 @@ export function IncomeSourceAccordion({
                             </NProgressLink>
                         </TableCell>
                         <TableCell>
-                            {format(new Date(gig.date.replace(/-/g, '/')), "PPP")}
+                            {format(new Date(gig.date), "PPP")}
                         </TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">

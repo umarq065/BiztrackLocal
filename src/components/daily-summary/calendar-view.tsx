@@ -12,7 +12,6 @@ import {
     format,
     isSameDay,
 } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
 import { cn } from '@/lib/utils';
 import type { DailySummary } from '@/lib/data/daily-summary-data';
 
@@ -36,15 +35,14 @@ export default function CalendarView({ currentDate, summaries, onDateClick, onSu
     const summariesByDate = useMemo(() => {
         const map = new Map<string, DailySummary[]>();
         summaries.forEach(summary => {
-            const zonedDate = toZonedTime(summary.date, timezone);
-            const dateKey = format(zonedDate, 'yyyy-MM-dd');
+            const dateKey = format(summary.date, 'yyyy-MM-dd');
             if (!map.has(dateKey)) {
                 map.set(dateKey, []);
             }
             map.get(dateKey)!.push(summary);
         });
         return map;
-    }, [summaries, timezone]);
+    }, [summaries]);
     
     const [isClient, setIsClient] = useState(false);
     useEffect(() => {
