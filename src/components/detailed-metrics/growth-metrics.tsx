@@ -9,7 +9,7 @@ import { BarChart, ArrowUp, ArrowDown, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type GrowthMetricData } from "@/lib/services/analyticsService";
+import { type GrowthMetricData, type RevenueDataPoint } from "@/lib/services/analyticsService";
 
 const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
 const NetProfitGrowthChart = lazy(() => import("@/components/detailed-metrics/net-profit-growth-chart"));
@@ -143,7 +143,7 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
             </Suspense>
              <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
                 <NetProfitGrowthChart
-                    timeSeries={growthMetricsData.timeSeries.currentPeriod.map(d => ({ date: d.date, netProfit: d.netProfit }))}
+                     timeSeries={growthMetricsData.timeSeries.currentPeriod.map(d => ({ date: d.date, netProfit: d.netProfit }))}
                 />
             </Suspense>
         </CardContent>
