@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -102,7 +101,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
         const aggregate = (data: {date: string; value: number, note?: any[]}[], view: ChartView) => {
             const map = new Map<string, { value: number; notes: any[] }>();
             data.forEach(item => {
-                const itemDate = parseISO(item.date);
+                const itemDate = new Date(item.date.replace(/-/g, '/'));
                 let key = '';
                 switch (view) {
                     case 'daily': key = item.date; break;
@@ -218,4 +217,3 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
         </Card>
     );
 }
-

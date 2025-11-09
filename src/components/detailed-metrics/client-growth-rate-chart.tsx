@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -103,7 +102,7 @@ export default function ClientGrowthRateChart({ timeSeries }: { timeSeries: Clie
             const map = new Map<string, { newClients: number; clientsAtStart: number; note: any[] }>();
             
             data.forEach((item, index) => {
-                const itemDate = parseISO(item.date);
+                const itemDate = new Date(item.date.replace(/-/g, '/'));
                 let key = '';
                 switch (view) {
                     case 'daily': key = item.date; break;
@@ -221,4 +220,3 @@ export default function ClientGrowthRateChart({ timeSeries }: { timeSeries: Clie
         </Card>
     );
 }
-
