@@ -31,7 +31,7 @@ const calculateGrowth = (current?: number, previous?: number) => {
 
 const CustomDotWithNote = (props: any) => {
   const { cx, cy, payload } = props;
-  if (payload.notes && payload.notes.length > 0) {
+  if (payload.note && payload.note.length > 0) {
     return (
       <Dot
         cx={cx}
@@ -48,7 +48,7 @@ const CustomDotWithNote = (props: any) => {
 
 const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const notes = payload[0].payload.notes;
+    const notes = payload[0].payload.note;
     return (
       <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
         <p className="font-medium">{label}</p>
@@ -116,13 +116,18 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 const existing = map.get(key) || { value: 0, notes: [] };
                 existing.value += item.value;
                 if (item.note) {
-                    existing.notes.push(...item.note);
+                    // Prevent duplicate notes in aggregation
+                    item.note.forEach(n => {
+                        if (!existing.notes.some(en => en.title === n.title && en.date === n.date)) {
+                            existing.notes.push(n);
+                        }
+                    });
                 }
 
                 map.set(key, existing);
             });
             return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, value: data.value, notes: data.notes }))
+                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         };
 
@@ -135,7 +140,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 value: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
-                notes: item.notes,
+                note: item.note,
             };
         });
 
@@ -213,3 +218,4 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
         </Card>
     );
 }
+

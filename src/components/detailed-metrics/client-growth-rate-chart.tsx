@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -119,7 +120,12 @@ export default function ClientGrowthRateChart({ timeSeries }: { timeSeries: Clie
                 } else {
                     existing.newClients += item.newClients;
                     if (item.note) {
-                        existing.note.push(...item.note);
+                         // Prevent duplicate notes in aggregation
+                        item.note.forEach(n => {
+                            if (!existing.note.some(en => en.title === n.title && en.date === n.date)) {
+                                existing.note.push(n);
+                            }
+                        });
                     }
                 }
             });
@@ -215,3 +221,4 @@ export default function ClientGrowthRateChart({ timeSeries }: { timeSeries: Clie
         </Card>
     );
 }
+

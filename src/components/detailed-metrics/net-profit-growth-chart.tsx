@@ -115,13 +115,18 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                 
                 const existing = map.get(key) || { value: 0, notes: [] };
                 existing.value += item.value;
-                 if (item.note) {
-                    existing.notes.push(...item.note);
+                if (item.note) {
+                    // Prevent duplicate notes in aggregation
+                    item.note.forEach(n => {
+                        if (!existing.notes.some(en => en.title === n.title && en.date === n.date)) {
+                            existing.notes.push(n);
+                        }
+                    });
                 }
                 map.set(key, existing);
             });
             return Array.from(map.entries())
-                        .map(([date, data]) => ({ date, value: data.value, notes: data.notes }))
+                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         };
 
@@ -134,7 +139,7 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                 value: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
-                note: item.notes,
+                note: item.note,
             };
         });
 
@@ -212,3 +217,4 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
         </Card>
     );
 }
+
