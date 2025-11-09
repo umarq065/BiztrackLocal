@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, lazy, Suspense, useEffect } from "react";
+import { useState, lazy, Suspense, useEffect, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, ArrowUp, ArrowDown, EyeOff } from "lucide-react";
@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type GrowthMetricData } from "@/lib/services/analyticsService";
 
 const GrowthMetricsChart = lazy(() => import("@/components/detailed-metrics/growth-metrics-chart"));
+const NetProfitGrowthChart = lazy(() => import("@/components/detailed-metrics/net-profit-growth-chart"));
+
 
 interface GrowthMetricsProps {
     date: DateRange | undefined;
@@ -48,34 +50,74 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
     fetchData();
   }, [date, selectedSources]);
   
-  if (isLoading) {
-    return <Skeleton className="h-64 w-full" />
-  }
+  const renderContent = () => {
+      if (isLoading) {
+          return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[180px] w-full" />)}
+              </div>
+          )
+      }
 
-  if (!growthMetricsData) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <BarChart className="h-6 w-6 text-primary" />
-                    <span>Growth Metrics</span>
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p>Could not load growth metrics. Please select a valid date range and at least one source.</p>
-            </CardContent>
-        </Card>
-    );
-  }
+      if (!growthMetricsData) {
+        return <p className="text-muted-foreground">Could not load growth metrics. Please select a valid date range and at least one source.</p>
+      }
 
-  const growthMetrics = [
-    { name: "Revenue Growth (%)", value: growthMetricsData.revenueGrowth.value, previousValue: growthMetricsData.revenueGrowth.previousValue, formula: "((This Period’s Revenue - Last Period’s Revenue) / Last Period’s Revenue) × 100" },
-    { name: "Net Profit Growth (%)", value: growthMetricsData.profitGrowth.value, previousValue: growthMetricsData.profitGrowth.previousValue, formula: "((This Period's Net Profit - Last Period's) / Last Period's) × 100" },
-    { name: "Client Growth Rate (%)", value: growthMetricsData.clientGrowth.value, previousValue: growthMetricsData.clientGrowth.previousValue, formula: "((New Clients) / Clients at Start of Period) × 100" },
-    { name: "Average Order Value (AOV) Growth (%)", value: growthMetricsData.aovGrowth.value, previousValue: growthMetricsData.aovGrowth.previousValue, formula: "Growth rate of AOV over a period" },
-    { name: "High-Value Client Growth Rate (%)", value: growthMetricsData.vipClientGrowth.value, previousValue: growthMetricsData.vipClientGrowth.previousValue, formula: "((VIPs at End - VIPs at Start) / VIPs at Start) * 100" },
-    { name: "Top Source Growth Rate (%)", value: growthMetricsData.topSourceGrowth.value, previousValue: growthMetricsData.topSourceGrowth.previousValue, formula: `Growth of '${growthMetricsData.topSourceGrowth.source}'` },
-];
+      const {
+        revenueGrowth,
+        profitGrowth,
+        clientGrowth,
+        aovGrowth,
+        vipClientGrowth,
+        topSourceGrowth
+      } = growthMetricsData;
+
+      const metrics = [
+        { name: "Revenue Growth (%)", data: revenueGrowth, formula: "((Current - Previous) / Previous) * 100" },
+        { name: "Net Profit Growth (%)", data: profitGrowth, formula: "((Current - Previous) / Previous) * 100" },
+        { name: "Client Growth Rate (%)", data: clientGrowth, formula: "((New Clients) / Start Clients) * 100" },
+        { name: "AOV Growth (%)", data: aovGrowth, formula: "Growth rate of Average Order Value" },
+        { name: "High-Value Client Growth (%)", data: vipClientGrowth, formula: "Growth rate of VIP clients" },
+        { name: `Top Source Growth: ${topSourceGrowth.source} (%)`, data: topSourceGrowth, formula: `Growth of top income source` },
+      ];
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {metrics.map((metric) => {
+            const isPositive = metric.data.value >= 0;
+            const prevIsPositive = metric.data.previousValue >= 0;
+            return (
+                <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
+                <div>
+                    <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
+                    <p className={cn(
+                      "text-2xl font-bold mt-1 flex items-center gap-1",
+                      isPositive ? "text-green-600" : "text-red-600"
+                    )}>
+                      {isPositive ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+                      {metric.data.value.toFixed(1)}%
+                    </p>
+                </div>
+                <div className="mt-2 pt-2 border-t space-y-1">
+                    <div className="flex items-center text-xs">
+                         <span className={cn(
+                            "flex items-center gap-1 font-semibold",
+                            prevIsPositive ? "text-green-600" : "text-red-600"
+                        )}>
+                            {prevIsPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                            {metric.data.previousValue.toFixed(1)}%
+                        </span>
+                        <span className="ml-1 text-muted-foreground">{previousPeriodLabel}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{metric.formula}</p>
+                </div>
+                </div>
+            )
+          })}
+        </div>
+      )
+  };
+
 
   return (
     <Card>
@@ -90,54 +132,22 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {growthMetrics.map((metric) => {
-            const isPositive = metric.value >= 0;
-            const changeIsPositive = metric.previousValue != null && metric.previousValue >= 0;
-
-            return (
-                <div key={metric.name} className="rounded-lg border bg-background/50 p-4 flex flex-col justify-between">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">{metric.name}</p>
-                    <p className={cn(
-                      "text-2xl font-bold mt-1 flex items-center gap-1",
-                      isPositive ? "text-green-600" : "text-red-600"
-                    )}>
-                      {isPositive ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
-                      {metric.value.toFixed(1)}%
-                    </p>
-                </div>
-                <div className="mt-2 pt-2 border-t space-y-1">
-                    {metric.previousValue != null && (
-                        <div className="flex items-center text-xs">
-                             <span
-                                className={cn(
-                                    "flex items-center gap-1 font-semibold",
-                                    changeIsPositive ? "text-green-600" : "text-red-600"
-                                )}
-                            >
-                                {changeIsPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                                {metric.previousValue.toFixed(1)}%
-                            </span>
-                            <span className="ml-1 text-muted-foreground">{previousPeriodLabel}</span>
-                        </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">{metric.formula}</p>
-                </div>
-                </div>
-            )
-          })}
-        </div>
+        {renderContent()}
       </CardContent>
-       {showChart && growthMetricsData.timeSeries && (
-        <CardContent>
+       {showChart && growthMetricsData?.timeSeries && (
+        <CardContent className="space-y-6">
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-                <GrowthMetricsChart timeSeries={growthMetricsData.timeSeries} />
+                <GrowthMetricsChart
+                    timeSeries={growthMetricsData.timeSeries.currentPeriod.map(d => ({ date: d.date, revenue: d.revenue }))}
+                />
+            </Suspense>
+             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                <NetProfitGrowthChart
+                    timeSeries={growthMetricsData.timeSeries.currentPeriod.map(d => ({ date: d.date, netProfit: d.netProfit }))}
+                />
             </Suspense>
         </CardContent>
        )}
     </Card>
   );
 }
-
-    
