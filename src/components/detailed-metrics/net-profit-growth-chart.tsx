@@ -3,7 +3,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine, Dot } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,13 +18,33 @@ const chartConfig = {
 type ChartView = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
 const calculateGrowth = (current?: number, previous?: number) => {
-    if (previous === undefined || previous === null || current === undefined || current === null) return 0;
-    if (previous === 0 && current === 0) return 0;
-    if (previous === 0) return current > 0 ? 100 : -100;
+    if (previous === undefined || previous === null) return 0;
+    if (previous === 0) {
+        if (current === undefined || current === null || current === 0) return 0;
+        return current > 0 ? 100 : -100;
+    }
+    if (current === undefined || current === null) return -100;
     return ((current - previous) / previous) * 100;
 };
 
-export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date: string; value: number}[] }) {
+const CustomDotWithNote = (props: any) => {
+  const { cx, cy, payload } = props;
+  if (payload.note && payload.note.length > 0) {
+    return (
+      <Dot
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill="hsl(var(--primary))"
+        stroke="hsl(var(--background))"
+        strokeWidth={2}
+      />
+    );
+  }
+  return null;
+};
+
+export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date: string; value: number, note?: any[]}[] }) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const [chartView, setChartView] = useState<ChartView>('monthly');
 
@@ -33,8 +53,8 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
             return [];
         }
 
-        const aggregate = (data: {date: string; value: number}[], view: ChartView) => {
-            const map = new Map<string, number>();
+        const aggregate = (data: {date: string; value: number, note?: any[]}[], view: ChartView) => {
+            const map = new Map<string, { value: number; notes: any[] }>();
             data.forEach(item => {
                 const itemDate = parseISO(item.date);
                 let key = '';
@@ -46,10 +66,15 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                     case 'yearly': key = getYear(itemDate).toString(); break;
                     default: key = item.date; break;
                 }
-                map.set(key, (map.get(key) || 0) + item.value);
+                const existing = map.get(key) || { value: 0, notes: [] };
+                existing.value += item.value;
+                if (item.note) {
+                    existing.notes.push(...item.note);
+                }
+                map.set(key, existing);
             });
             return Array.from(map.entries())
-                        .map(([date, value]) => ({ date, value }))
+                        .map(([date, data]) => ({ date, value: data.value, note: data.notes }))
                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         };
 
@@ -62,6 +87,7 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                 currentValue: item.value,
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
+                note: item.note,
             };
         });
 
@@ -143,7 +169,8 @@ export default function NetProfitGrowthChart({ timeSeries }: { timeSeries: {date
                             dataKey="growthRate" 
                             fill="var(--color-growthRate)" 
                             stroke="var(--color-growthRate)" 
-                            radius={chartType === 'bar' ? 4 : undefined} 
+                            radius={chartType === 'bar' ? 4 : undefined}
+                            dot={chartType === 'line' ? <CustomDotWithNote /> : undefined}
                         />
                     </Chart>
                 </ChartContainer>
