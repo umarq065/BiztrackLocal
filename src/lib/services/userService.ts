@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Service for managing user data for authentication.
  */
@@ -23,8 +24,13 @@ async function getUsersCollection() {
  */
 export async function seedInitialUser() {
     const collection = await getUsersCollection();
-    const username = 'umarqureshi3';
-    const password = 'Pakistan009$%';
+    const username = process.env.INITIAL_ADMIN_USERNAME;
+    const password = process.env.INITIAL_ADMIN_PASSWORD;
+
+    if (!username || !password) {
+        console.warn("Initial admin user credentials not found in .env file. Skipping seed.");
+        return;
+    }
 
     try {
         const userExists = await collection.findOne({ username });
