@@ -123,7 +123,6 @@ export default function LoginPage() {
                 name="username"
                 type="text"
                 placeholder="e.g., johndoe"
-                defaultValue="umarqureshi3"
                 required
               />
             </div>
@@ -133,7 +132,6 @@ export default function LoginPage() {
                 id="password" 
                 name="password"
                 type="password" 
-                defaultValue="Pakistan009$%"
                 required 
               />
             </div>

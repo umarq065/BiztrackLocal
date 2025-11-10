@@ -1,9 +1,16 @@
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { compare } from 'bcryptjs';
-import { findUserByUsername } from '@/lib/services/userService';
+import { findUserByUsername, seedInitialUser } from '@/lib/services/userService';
 import { ironOptions, type SessionData } from '@/lib/session';
 import { NextResponse } from 'next/server';
+
+// Ensure the initial user exists before any login attempt.
+// This is a simple way to seed the database for development.
+// In a production environment, you would have a more formal migration/seeding process.
+if (process.env.NODE_ENV === 'development') {
+    seedInitialUser();
+}
 
 export async function POST(request: Request) {
   try {

@@ -3,6 +3,7 @@
  */
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { hash } from 'bcryptjs';
 
 export interface User {
     _id: ObjectId;
@@ -14,6 +15,32 @@ async function getUsersCollection() {
   const client = await clientPromise;
   const db = client.db("biztrack-pro");
   return db.collection<Omit<User, '_id'>>('users');
+}
+
+/**
+ * Seeds the initial user if they don't exist.
+ * This is a one-time operation for development setup.
+ */
+export async function seedInitialUser() {
+    const collection = await getUsersCollection();
+    const username = 'umarqureshi3';
+    const password = 'Pakistan009$%';
+
+    try {
+        const userExists = await collection.findOne({ username });
+
+        if (!userExists) {
+            console.log(`Initial user "${username}" not found. Creating...`);
+            const passwordHash = await hash(password, 10);
+            await collection.insertOne({
+                username,
+                passwordHash,
+            });
+            console.log(`User "${username}" created successfully.`);
+        }
+    } catch (error) {
+        console.error("Error during initial user seeding:", error);
+    }
 }
 
 export async function findUserByUsername(username: string): Promise<User | null> {
