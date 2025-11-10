@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import NProgressLink from "./nprogress-link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -87,9 +88,16 @@ function AppLogo() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { toast } = useToast();
 
-  const handleSignOut = () => {
-    router.push("/");
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      toast({ title: "Logged Out", description: "You have been successfully signed out." });
+      router.push("/");
+    } catch (error) {
+      toast({ variant: "destructive", title: "Logout Failed", description: "Could not log out. Please try again." });
+    }
   };
   
   return (
