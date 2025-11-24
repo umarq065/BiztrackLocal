@@ -9,21 +9,21 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -40,9 +40,9 @@ import { SingleImportDialog } from "@/components/orders/single-import-dialog";
 
 // A more robust date parsing function to avoid performance issues.
 const parseDateString = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
-  return new Date(year, month - 1, day);
+    const [year, month, day] = dateString.split('-').map(Number);
+    // In JavaScript's Date, months are 0-indexed (0 for January, 11 for December)
+    return new Date(year, month - 1, day);
 };
 
 const INITIAL_LOAD_COUNT = 50;
@@ -59,10 +59,10 @@ export function OrdersDashboard() {
 
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [singleImportDialogOpen, setSingleImportDialogOpen] = useState(false);
-    
+
     const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
     const { toast } = useToast();
-    
+
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -77,7 +77,7 @@ export function OrdersDashboard() {
         completed: INITIAL_LOAD_COUNT,
         cancelled: INITIAL_LOAD_COUNT,
     });
-    
+
     const [selectedOrders, setSelectedOrders] = useState<Record<string, boolean>>({});
     const [deletingSelected, setDeletingSelected] = useState(false);
 
@@ -93,20 +93,20 @@ export function OrdersDashboard() {
         }
         return undefined;
     });
-    
+
     const fetchOrders = useCallback(async () => {
-       try {
+        try {
             const ordersRes = await fetch('/api/orders');
             if (!ordersRes.ok) throw new Error('Failed to fetch orders');
             const ordersData = await ordersRes.json();
             setOrders(ordersData);
         } catch (e) {
-             console.error(e);
-             toast({ variant: "destructive", title: "Error", description: "Failed to reload orders." });
+            console.error(e);
+            toast({ variant: "destructive", title: "Error", description: "Failed to reload orders." });
         }
     }, [toast]);
 
-     useEffect(() => {
+    useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
             try {
@@ -121,7 +121,7 @@ export function OrdersDashboard() {
 
                 const ordersData = await ordersRes.json();
                 const incomesData = await incomesRes.json();
-                
+
                 setOrders(ordersData);
                 setIncomeSources(incomesData);
 
@@ -149,21 +149,21 @@ export function OrdersDashboard() {
         },
         [searchParams]
     );
-    
+
     useEffect(() => {
-      setLocalSearch(searchQuery);
+        setLocalSearch(searchQuery);
     }, [searchQuery]);
 
     useEffect(() => {
-      const handler = setTimeout(() => {
-        if (localSearch !== searchQuery) {
-          router.push(`${pathname}?${createQueryString({ q: localSearch || null })}`);
-        }
-      }, 300);
+        const handler = setTimeout(() => {
+            if (localSearch !== searchQuery) {
+                router.push(`${pathname}?${createQueryString({ q: localSearch || null })}`);
+            }
+        }, 300);
 
-      return () => {
-        clearTimeout(handler);
-      };
+        return () => {
+            clearTimeout(handler);
+        };
     }, [localSearch, searchQuery, router, pathname, createQueryString]);
 
     const handleSetDate = (newDate: DateRange | undefined) => {
@@ -188,7 +188,7 @@ export function OrdersDashboard() {
         const [key, direction] = sortParam.split('_');
         return { key: key as keyof Order, direction: direction as 'ascending' | 'descending' };
     }, [sortParam]);
-    
+
     const requestSort = (key: keyof Order) => {
         let direction: 'ascending' | 'descending' = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -206,7 +206,7 @@ export function OrdersDashboard() {
     const handleOrderAdded = (newOrder: Order) => {
         setOrders(prev => [newOrder, ...prev]);
     };
-    
+
     const handleOrderImported = (newOrder: Order) => {
         setOrders(prev => [newOrder, ...prev]);
     };
@@ -241,7 +241,7 @@ export function OrdersDashboard() {
             setOrderToDelete(null);
         }
     };
-    
+
     const handleDeleteSelectedOrders = async () => {
         setIsSubmitting(true);
         const idsToDelete = Object.keys(selectedOrders).filter(id => selectedOrders[id]);
@@ -252,14 +252,14 @@ export function OrdersDashboard() {
                 body: JSON.stringify({ orderIds: idsToDelete }),
             });
             const result = await response.json();
-             if (!response.ok) {
+            if (!response.ok) {
                 throw new Error(result.error || 'Failed to delete selected orders');
             }
             setOrders(prev => prev.filter(o => !idsToDelete.includes(o.id)));
             setSelectedOrders({});
             toast({ title: 'Orders Deleted', description: result.message });
-        } catch(error) {
-             toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
         } finally {
             setIsSubmitting(false);
             setDeletingSelected(false);
@@ -273,7 +273,7 @@ export function OrdersDashboard() {
 
     const filteredOrders = useMemo(() => {
         let results = parsedOrders;
-        
+
         if (date?.from || date?.to) {
             results = results.filter(order => {
                 const orderDate = order.dateObj;
@@ -291,7 +291,7 @@ export function OrdersDashboard() {
                         return false;
                     }
                 }
-                
+
                 return true;
             });
         }
@@ -324,10 +324,10 @@ export function OrdersDashboard() {
                     aValue = a[key as keyof Order];
                     bValue = b[key as keyof Order];
                 }
-                
+
                 if (aValue === undefined || aValue === null) return 1;
                 if (bValue === undefined || bValue === null) return -1;
-                
+
                 if (aValue < bValue) {
                     return sortConfig.direction === 'ascending' ? -1 : 1;
                 }
@@ -339,7 +339,7 @@ export function OrdersDashboard() {
         }
         return sortableItems;
     }, [filteredOrders, sortConfig]);
-    
+
     const inProgressOrders = useMemo(() => sortedOrders.filter(o => o.status === 'In Progress'), [sortedOrders]);
     const completedOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Completed'), [sortedOrders]);
     const cancelledOrders = useMemo(() => sortedOrders.filter(o => o.status === 'Cancelled'), [sortedOrders]);
@@ -386,117 +386,117 @@ export function OrdersDashboard() {
                     {renderTabContent(completedOrders, "completed")}
                 </TabsContent>
                 <TabsContent value="cancelled" className="mt-4">
-                     {renderTabContent(cancelledOrders, "cancelled")}
+                    {renderTabContent(cancelledOrders, "cancelled")}
                 </TabsContent>
                 <TabsContent value="all" className="mt-4">
-                     {renderTabContent(sortedOrders, "all")}
+                    {renderTabContent(sortedOrders, "all")}
                 </TabsContent>
             </Tabs>
         )
     }
 
 
-  return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center">
-        <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})
-        </h1>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search orders..."
-                    className="pl-8 sm:w-[200px] md:w-[250px]"
-                    value={localSearch}
-                    onChange={(e) => setLocalSearch(e.target.value)}
-                />
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <h1 className="font-headline text-lg font-semibold md:text-2xl">
+                    Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})
+                </h1>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search orders..."
+                            className="pl-8 sm:w-[200px] md:w-[250px]"
+                            value={localSearch}
+                            onChange={(e) => setLocalSearch(e.target.value)}
+                        />
+                    </div>
+                    <DateFilter date={date} setDate={handleSetDate} absoluteDuration={true} />
+                    <Button variant="default" onClick={() => setSingleImportDialogOpen(true)}>
+                        <FileUp className="mr-2 h-4 w-4" />
+                        Import Single Order
+                    </Button>
+                    <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Import Orders
+                    </Button>
+                    <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
+                </div>
             </div>
-            <DateFilter date={date} setDate={handleSetDate} />
-             <Button variant="default" onClick={() => setSingleImportDialogOpen(true)}>
-                <FileUp className="mr-2 h-4 w-4" />
-                Import Single Order
-            </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import Orders
-            </Button>
-            <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
-        </div>
-      </div>
-       {numSelected > 0 && (
-          <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
-            <p className="text-sm font-medium">{numSelected} order{numSelected > 1 ? 's' : ''} selected</p>
-            <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected
-            </Button>
-          </div>
-        )}
-      <Card>
-        <CardContent className="p-0">
-            {renderContent()}
-        </CardContent>
-      </Card>
+            {numSelected > 0 && (
+                <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
+                    <p className="text-sm font-medium">{numSelected} order{numSelected > 1 ? 's' : ''} selected</p>
+                    <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Selected
+                    </Button>
+                </div>
+            )}
+            <Card>
+                <CardContent className="p-0">
+                    {renderContent()}
+                </CardContent>
+            </Card>
 
-      <OrderFormDialog
-        open={isFormDialogOpen}
-        onOpenChange={setIsFormDialogOpen}
-        editingOrder={editingOrder}
-        incomeSources={incomeSources}
-        onOrderAdded={handleOrderAdded}
-        onOrderUpdated={handleOrderUpdated}
-      />
-      
-      <ImportOrdersDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        incomeSources={incomeSources}
-        onImportSuccess={fetchOrders}
-      />
-      
-      <SingleImportDialog
-        open={singleImportDialogOpen}
-        onOpenChange={setSingleImportDialogOpen}
-        incomeSources={incomeSources}
-        onOrderImported={handleOrderImported}
-      />
-      
-      <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the order {orderToDelete?.id}.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteOrder} className={cn(buttonVariants({ variant: "destructive" }), { "opacity-50": isSubmitting })} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Delete
-            </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <OrderFormDialog
+                open={isFormDialogOpen}
+                onOpenChange={setIsFormDialogOpen}
+                editingOrder={editingOrder}
+                incomeSources={incomeSources}
+                onOrderAdded={handleOrderAdded}
+                onOrderUpdated={handleOrderUpdated}
+            />
 
-      <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Delete {numSelected} Orders?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This action is permanent and cannot be undone. Are you sure you want to delete the selected orders?
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelectedOrders} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
-            </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </main>
-  );
+            <ImportOrdersDialog
+                open={importDialogOpen}
+                onOpenChange={setImportDialogOpen}
+                incomeSources={incomeSources}
+                onImportSuccess={fetchOrders}
+            />
+
+            <SingleImportDialog
+                open={singleImportDialogOpen}
+                onOpenChange={setSingleImportDialogOpen}
+                incomeSources={incomeSources}
+                onOrderImported={handleOrderImported}
+            />
+
+            <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the order {orderToDelete?.id}.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteOrder} className={cn(buttonVariants({ variant: "destructive" }), { "opacity-50": isSubmitting })} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {numSelected} Orders?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is permanent and cannot be undone. Are you sure you want to delete the selected orders?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedOrders} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </main>
+    );
 }
