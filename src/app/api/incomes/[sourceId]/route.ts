@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 
 import { NextResponse } from 'next/server';
 import { getIncomeSources, deleteIncomeSource, updateIncomeSource } from '@/lib/services/incomesService';

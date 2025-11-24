@@ -3,6 +3,8 @@ import { getClients, addClient } from '@/lib/services/clientsService';
 import { clientFormSchema } from '@/lib/data/clients-data';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * @fileoverview API route for fetching and creating clients.
  * - GET: Retrieves a list of all clients from the database.

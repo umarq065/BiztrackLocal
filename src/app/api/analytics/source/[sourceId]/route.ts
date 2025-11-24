@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 
 import { NextResponse } from 'next/server';
 import { getSourceAnalytics } from '@/lib/services/analyticsService';

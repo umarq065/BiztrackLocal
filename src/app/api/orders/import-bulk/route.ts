@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { importBulkOrders } from '@/lib/services/ordersService';
@@ -25,3 +26,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message || 'Failed to import orders' }, { status: 500 });
   }
 }
+

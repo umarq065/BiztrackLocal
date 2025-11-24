@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { getSettings, updateSettings } from '@/lib/services/settingsService';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const settingsSchema = z.object({
   timezone: z.string().optional(),
   geminiApiKey: z.string().optional(),

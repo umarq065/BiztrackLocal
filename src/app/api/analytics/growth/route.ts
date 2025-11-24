@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getGrowthMetrics } from '@/lib/services/analyticsService';
@@ -31,3 +32,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch growth metrics' }, { status: 500 });
   }
 }
+

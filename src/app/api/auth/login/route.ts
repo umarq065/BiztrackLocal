@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 import { compare } from 'bcryptjs';
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const session = await getIronSession<SessionData>(cookies(), ironOptions);
+    const session = await getIronSession<SessionData>(await cookies(), ironOptions);
     session.username = user.username;
     session.isLoggedIn = true;
     await session.save();
@@ -36,3 +37,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'An internal server error occurred' }, { status: 500 });
   }
 }
+

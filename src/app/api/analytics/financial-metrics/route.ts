@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -34,3 +35,4 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch financial metrics', details: errorMessage }, { status: 500 });
   }
 }
+

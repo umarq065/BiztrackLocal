@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 
 import { NextResponse } from 'next/server';
 import { updateExpense, deleteExpense } from '@/lib/services/expensesService';

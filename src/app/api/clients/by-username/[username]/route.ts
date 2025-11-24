@@ -4,6 +4,8 @@ import { getClientByUsername, updateClient, deleteClient } from '@/lib/services/
 import { clientFormSchema } from '@/lib/data/clients-data';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * @fileoverview API route for fetching, updating and deleting a specific client by username.
  * - GET: Fetches a client's details by username.
@@ -28,15 +30,15 @@ export async function PUT(request: Request, { params }: { params: { username: st
   try {
     const client = await getClientByUsername(params.username);
     if (!client) {
-        return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
-    
+
     const json = await request.json();
     const parsedData = clientFormSchema.parse(json);
     const updatedClient = await updateClient(client.id, parsedData);
 
     if (!updatedClient) {
-        return NextResponse.json({ error: 'Client not found or update failed' }, { status: 404 });
+      return NextResponse.json({ error: 'Client not found or update failed' }, { status: 404 });
     }
 
     return NextResponse.json(updatedClient, { status: 200 });
@@ -51,9 +53,9 @@ export async function PUT(request: Request, { params }: { params: { username: st
 
 export async function DELETE(request: Request, { params }: { params: { username: string } }) {
   try {
-     const client = await getClientByUsername(params.username);
-     if (!client) {
-        return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    const client = await getClientByUsername(params.username);
+    if (!client) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
     const success = await deleteClient(client.id);

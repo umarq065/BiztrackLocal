@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getCompetitors, addCompetitor } from '@/lib/services/competitorsService';
@@ -32,3 +33,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create competitor' }, { status: 500 });
   }
 }
+

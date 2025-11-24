@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { deleteOrdersByIds } from '@/lib/services/ordersService';
@@ -25,3 +26,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to delete orders' }, { status: 500 });
   }
 }
+
