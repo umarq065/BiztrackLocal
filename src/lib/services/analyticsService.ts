@@ -1271,6 +1271,27 @@ export interface DashboardOverviewData {
     netProfit: FinancialMetric;
     pendingOrders: FinancialMetric;
     averageOrderValue: FinancialMetric;
+    monthlyTarget: number;
+    requiredDailyRevenue: number;
+    performance: number;
+    revenueByDay: RevenueByDay[];
+    previousRevenueByDay: RevenueByDay[];
+    keyMetrics: {
+        adr: number;
+        rdr: number;
+        target: number;
+    };
+    orderMetrics: {
+        total: number;
+        cancelled: number;
+        withReviews: number;
+        buyers: number;
+    };
+}
+
+export interface RevenueByDay {
+    date: string;
+    revenue: number;
 }
 
 export async function getDashboardOverview(from: string, to: string): Promise<DashboardOverviewData> {
@@ -1287,6 +1308,7 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
 
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
+    const monthlyTargets = await getMonthlyTargets();
 
     const [allOrders, allExpenses] = await Promise.all([
         ordersCol.find({
@@ -1306,13 +1328,25 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
 
         const completedOrders = periodOrders.filter(o => o.status === 'Completed');
         const pendingOrdersCount = periodOrders.filter(o => o.status === 'In Progress').length;
+        const cancelledOrdersCount = periodOrders.filter(o => o.status === 'Cancelled').length;
+        const ratedOrdersCount = periodOrders.filter(o => o.rating != null).length;
+        const uniqueBuyers = new Set(periodOrders.map(o => o.clientUsername)).size;
 
         const totalRevenue = completedOrders.reduce((sum, o) => sum + o.amount, 0);
         const totalExpenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
         const netProfit = totalRevenue - totalExpenses;
         const averageOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
 
-        return { totalRevenue, netProfit, pendingOrders: pendingOrdersCount, averageOrderValue };
+        return {
+            totalRevenue,
+            netProfit,
+            pendingOrders: pendingOrdersCount,
+            averageOrderValue,
+            totalOrders: completedOrders.length,
+            cancelledOrders: cancelledOrdersCount,
+            ratedOrders: ratedOrdersCount,
+            uniqueBuyers
+        };
     };
 
     const currentMetrics = calculateMetrics(p2Start, p2End);
@@ -1323,12 +1357,56 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
         return ((current - previous) / previous) * 100;
     };
 
+    // Calculate Monthly Target & Performance
+    const currentMonthKey = format(new Date(), 'yyyy-MM');
+    const monthlyTarget = monthlyTargets[currentMonthKey] || 0;
+
+    // Calculate Revenue By Day for the current period
+    const revenueByDay: RevenueByDay[] = eachDayOfInterval({ start: p2Start, end: p2End }).map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const dayRevenue = allOrders
+            .filter(o => o.date === dayStr && o.status === 'Completed')
+            .reduce((sum, o) => sum + o.amount, 0);
+        return { date: dayStr, revenue: dayRevenue };
+    });
+
+    // Calculate Revenue By Day for the previous period
+    const previousRevenueByDay: RevenueByDay[] = eachDayOfInterval({ start: p1Start, end: p1End }).map(day => {
+        const dayStr = format(day, 'yyyy-MM-dd');
+        const dayRevenue = allOrders
+            .filter(o => o.date === dayStr && o.status === 'Completed')
+            .reduce((sum, o) => sum + o.amount, 0);
+        return { date: dayStr, revenue: dayRevenue };
+    });
+
+    // Calculate Required Daily Revenue (RDR)
+    const today = new Date();
+    const lastDayOfMonth = endOfMonth(today);
+    const daysRemaining = Math.max(0, differenceInDays(lastDayOfMonth, today));
+
+    // Total revenue for the current month (not just the selected period, but actual month to date)
+    const startOfCurrentMonth = startOfMonth(today);
+    const monthOrders = await ordersCol.find({
+        date: { $gte: format(startOfCurrentMonth, 'yyyy-MM-dd'), $lte: format(today, 'yyyy-MM-dd') },
+        status: 'Completed'
+    }).toArray();
+    const monthRevenue = monthOrders.reduce((sum, o) => sum + o.amount, 0);
+
+    const remainingTarget = Math.max(0, monthlyTarget - monthRevenue);
+    const requiredDailyRevenue = daysRemaining > 0 ? remainingTarget / daysRemaining : 0;
+    const performance = monthlyTarget > 0 ? (monthRevenue / monthlyTarget) * 100 : 0;
+
+    // Average Daily Revenue (ADR) for the selected period
+    // Fix: Ensure we don't divide by zero if durationDays is 0 (single day selected)
+    const daysCount = durationDays + 1;
+    const adr = daysCount > 0 ? currentMetrics.totalRevenue / daysCount : 0;
+
     return {
         totalRevenue: {
             value: currentMetrics.totalRevenue,
             change: calculateChange(currentMetrics.totalRevenue, previousMetrics.totalRevenue),
             previousValue: previousMetrics.totalRevenue,
-            previousPeriodChange: 0 // Not needed for this view
+            previousPeriodChange: 0
         },
         netProfit: {
             value: currentMetrics.netProfit,
@@ -1347,6 +1425,22 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
             change: calculateChange(currentMetrics.averageOrderValue, previousMetrics.averageOrderValue),
             previousValue: previousMetrics.averageOrderValue,
             previousPeriodChange: 0
+        },
+        monthlyTarget,
+        requiredDailyRevenue,
+        performance,
+        revenueByDay,
+        previousRevenueByDay,
+        keyMetrics: {
+            adr,
+            rdr: requiredDailyRevenue,
+            target: monthlyTarget
+        },
+        orderMetrics: {
+            total: currentMetrics.totalOrders,
+            cancelled: currentMetrics.cancelledOrders,
+            withReviews: currentMetrics.ratedOrders,
+            buyers: currentMetrics.uniqueBuyers
         }
     };
 }

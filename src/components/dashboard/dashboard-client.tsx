@@ -84,6 +84,34 @@ export function DashboardClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [dashboardMetrics, setDashboardMetrics] = useState<{
+    monthlyTarget: number;
+    requiredDailyRevenue: number;
+    performance: number;
+    revenueByDay: any[];
+    previousRevenueByDay: any[];
+    keyMetrics?: {
+      adr: number;
+      rdr: number;
+      target: number;
+    };
+    orderMetrics?: {
+      total: number;
+      cancelled: number;
+      withReviews: number;
+      buyers: number;
+    };
+  }>({
+    monthlyTarget: 0,
+    requiredDailyRevenue: 0,
+    performance: 0,
+    revenueByDay: [],
+    previousRevenueByDay: [],
+  });
+
+  const [financialStats, setFinancialStats] = useState(financialCardsData);
+  const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>(initialMonthlyTargets);
+
   const [date, setDate] = useState<DateRange | undefined>(() => {
     const fromParam = searchParams.get('from');
     const toParam = searchParams.get('to');
@@ -105,8 +133,6 @@ export function DashboardClient({
   const [editingOrder, setEditingOrder] = useState<RecentOrder | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const [monthlyTargets, setMonthlyTargets] = useState<Record<string, number>>(initialMonthlyTargets);
-
   const { toast } = useToast();
 
   const form = useForm<OrderFormValues>({
@@ -115,6 +141,181 @@ export function DashboardClient({
 
   const orderStatus = form.watch("status");
   const selectedSource = form.watch("source");
+
+  const currentMonthKey = useMemo(() => {
+    const today = new Date();
+    return format(today, 'yyyy-MM');
+  }, []);
+
+  // Calculate Performance locally to ensure immediate updates when target changes
+  const performanceValue = useMemo(() => {
+    const target = monthlyTargets[currentMonthKey] || 0;
+    if (target === 0) return 0;
+
+    // Use the fetched total revenue for the month if available, otherwise fallback
+    const backendTarget = dashboardMetrics.monthlyTarget || 1; // avoid div by 0
+    const impliedMonthRevenue = (dashboardMetrics.performance / 100) * backendTarget;
+
+    return (impliedMonthRevenue / target) * 100;
+  }, [monthlyTargets, currentMonthKey, dashboardMetrics.performance, dashboardMetrics.monthlyTarget]);
+
+  const rdrStat = useMemo(() => {
+    // Use the backend provided RDR if available, otherwise fallback to local calculation
+    // But backend RDR is accurate based on month-to-date revenue.
+    // If we want to update it based on changed target locally:
+
+    const target = monthlyTargets[currentMonthKey] || 0;
+    // We need the revenue so far this month.
+    const backendTarget = dashboardMetrics.monthlyTarget || 0;
+    const impliedMonthRevenue = (dashboardMetrics.performance / 100) * backendTarget;
+
+    const remainingRevenue = Math.max(0, target - impliedMonthRevenue);
+    const requiredDaily = daysLeft > 0 ? remainingRevenue / daysLeft : 0;
+
+    return {
+      title: "Req. Daily Revenue (RDR)",
+      value: `$${requiredDaily.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      description: "To meet your monthly target",
+      icon: "Goal",
+    };
+  }, [monthlyTargets, currentMonthKey, daysLeft, dashboardMetrics.performance, dashboardMetrics.monthlyTarget]);
+
+  const keyMetrics = useMemo(() => {
+    return [
+      {
+        title: "Avg Daily Revenue (ADR)",
+        value: `$${dashboardMetrics.keyMetrics?.adr.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}`,
+        description: "Average revenue per day",
+        icon: "TrendingUp"
+      },
+      rdrStat,
+      {
+        title: `Target for ${format(new Date(), 'MMMM')}`,
+        value: `$${(monthlyTargets[currentMonthKey] || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        description: `Revenue goal for ${format(new Date(), 'MMMM yyyy')}`,
+        icon: "Target"
+      }
+    ] as Stat[];
+  }, [dashboardMetrics.keyMetrics, rdrStat, monthlyTargets, currentMonthKey]);
+
+  const otherMetrics = useMemo(() => [
+    {
+      title: "Total Orders (Completed)",
+      value: dashboardMetrics.orderMetrics?.total.toString() || "0",
+      description: "Orders completed in period",
+      icon: "ShoppingBag",
+      color: "hsl(var(--chart-1))"
+    },
+    {
+      title: "Cancelled Orders",
+      value: dashboardMetrics.orderMetrics?.cancelled.toString() || "0",
+      description: "Orders cancelled in period",
+      icon: "XCircle",
+      color: "hsl(var(--destructive))"
+    },
+    {
+      title: "% Orders with Reviews",
+      value: `${dashboardMetrics.orderMetrics?.total ? Math.round((dashboardMetrics.orderMetrics.withReviews / dashboardMetrics.orderMetrics.total) * 100) : 0}%`,
+      description: "Completion rate",
+      icon: "Star",
+      color: "hsl(var(--chart-2))"
+    },
+    {
+      title: "All-Time Total Buyers",
+      value: dashboardMetrics.orderMetrics?.buyers.toString() || "0",
+      description: "Unique clients",
+      icon: "Users",
+      color: "hsl(var(--chart-3))"
+    },
+  ], [dashboardMetrics.orderMetrics]);
+
+  const buyersMetric = useMemo(() => ({
+    title: "Buyers",
+    value: dashboardMetrics.orderMetrics?.buyers.toString() || "0",
+    description: "Total unique buyers",
+    icon: "Users",
+    change: "+0%", // Placeholder
+    changeType: "increase" as const
+  }), [dashboardMetrics.orderMetrics]);
+
+  useEffect(() => {
+    async function fetchOverview() {
+      if (!date?.from || !date?.to) return;
+      try {
+        const query = new URLSearchParams({
+          from: format(date.from, 'yyyy-MM-dd'),
+          to: format(date.to, 'yyyy-MM-dd'),
+        });
+        const res = await fetch(`/api/dashboard/overview?${query.toString()}`);
+        if (!res.ok) throw new Error('Failed to fetch overview');
+        const data = await res.json();
+
+        setDashboardMetrics({
+          monthlyTarget: data.monthlyTarget,
+          requiredDailyRevenue: data.requiredDailyRevenue,
+          performance: data.performance,
+          revenueByDay: data.revenueByDay,
+          previousRevenueByDay: data.previousRevenueByDay,
+          keyMetrics: data.keyMetrics,
+          orderMetrics: data.orderMetrics
+        });
+
+        setFinancialStats([
+          {
+            title: "Total Revenue",
+            value: `$${data.totalRevenue.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: `${data.totalRevenue.change >= 0 ? '+' : ''}${data.totalRevenue.change.toFixed(1)}%`,
+            changeType: data.totalRevenue.change >= 0 ? "increase" : "decrease",
+            dateRange: "vs. last period",
+            chartData: data.revenueByDay || [],
+            chartType: "bar",
+            gradient: "revenue"
+          },
+          {
+            title: "Net Profit",
+            value: `$${data.netProfit.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: `${data.netProfit.change >= 0 ? '+' : ''}${data.netProfit.change.toFixed(1)}%`,
+            changeType: data.netProfit.change >= 0 ? "increase" : "decrease",
+            dateRange: "vs. last period",
+            chartData: data.revenueByDay || [], // Ideally profit by day
+            chartType: "line",
+            gradient: "profit"
+          },
+          {
+            title: "Pending Orders",
+            value: data.pendingOrders.value.toString(),
+            change: `${data.pendingOrders.change >= 0 ? '+' : ''}${data.pendingOrders.change.toFixed(1)}%`,
+            changeType: data.pendingOrders.change >= 0 ? "increase" : "decrease",
+            dateRange: "vs. last period",
+            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 10 })),
+            chartType: "bar",
+            gradient: "expenses"
+          },
+          {
+            title: "Avg. Order Value",
+            value: `$${data.averageOrderValue.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: `${data.averageOrderValue.change >= 0 ? '+' : ''}${data.averageOrderValue.change.toFixed(1)}%`,
+            changeType: data.averageOrderValue.change >= 0 ? "increase" : "decrease",
+            dateRange: "vs. last period",
+            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 100 })),
+            chartType: "bar",
+            gradient: "aov"
+          }
+        ]);
+      } catch (error) {
+        console.error("Error fetching dashboard overview:", error);
+      }
+    }
+    fetchOverview();
+  }, [date]);
+
+  const totalRevenue = useMemo(() => revenueByDay.reduce((sum, day) => sum + day.revenue, 0), [revenueByDay]);
+
+  const availableGigs = useMemo(() => {
+    if (!selectedSource) return [];
+    const sourceData = initialIncomeSources.find(s => s.name === selectedSource);
+    return sourceData ? sourceData.gigs : [];
+  }, [selectedSource]);
 
   const createQueryString = (name: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -138,53 +339,25 @@ export function DashboardClient({
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  useEffect(() => {
-    // This useEffect is now just for setting up dates and initial stats.
-    const today = new Date();
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const remainingDays = lastDayOfMonth.getDate() - today.getDate();
-    setDaysLeft(remainingDays);
-  }, []);
+  const handleSetTarget = async (newTarget: number, month: string, year: number) => {
+    const monthIndex = new Date(Date.parse(month + " 1, 2021")).getMonth();
+    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
 
-  const currentMonthKey = useMemo(() => {
-    const today = new Date();
-    return format(today, 'yyyy-MM');
-  }, []);
+    const updatedTargets = { ...monthlyTargets, [monthKey]: newTarget };
+    setMonthlyTargets(updatedTargets);
 
-  const currentTarget = useMemo(() => {
-    return monthlyTargets[currentMonthKey] || 0;
-  }, [monthlyTargets, currentMonthKey]);
-
-  useEffect(() => {
-    const targetStatIndex = stats.findIndex((s) => s.title.startsWith("Target for"));
-    if (targetStatIndex !== -1) {
-      const today = new Date();
-      const monthKey = format(today, 'yyyy-MM');
-      const target = monthlyTargets[monthKey] || 0;
-      const monthName = format(today, 'MMMM');
-
-      setStats(currentStats => {
-        const newStats = [...currentStats];
-        newStats[targetStatIndex] = {
-          ...newStats[targetStatIndex],
-          title: `Target for ${monthName}`,
-          value: `$${target.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          description: `Revenue goal for ${monthName} ${today.getFullYear()}`
-        };
-        // Avoid re-setting state if it's the same to prevent loops
-        if (JSON.stringify(newStats) !== JSON.stringify(currentStats)) {
-          return newStats;
-        }
-        return currentStats;
+    try {
+      await fetch('/api/monthly-targets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month: monthIndex + 1, target: newTarget }),
       });
+      toast({ title: "Target Set", description: `Target for ${month} ${year} set to $${newTarget.toLocaleString()}.` });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save target to the database.' });
+      setMonthlyTargets(monthlyTargets);
     }
-  }, [monthlyTargets, stats]);
-
-  const availableGigs = useMemo(() => {
-    if (!selectedSource) return [];
-    const sourceData = initialIncomeSources.find(s => s.name === selectedSource);
-    return sourceData ? sourceData.gigs : [];
-  }, [selectedSource]);
+  };
 
   const handleEditOrder = (orderId: string) => {
     const orderToEdit = recentOrders.find(o => o.id === orderId);
@@ -245,143 +418,9 @@ export function DashboardClient({
     setEditingOrder(null);
   };
 
-  const handleSetTarget = async (newTarget: number, month: string, year: number) => {
-    const monthIndex = new Date(Date.parse(month + " 1, 2021")).getMonth();
-    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-
-    const updatedTargets = { ...monthlyTargets, [monthKey]: newTarget };
-    setMonthlyTargets(updatedTargets);
-
-    try {
-      await fetch('/api/monthly-targets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year, month: monthIndex + 1, target: newTarget }),
-      });
-      toast({ title: "Target Set", description: `Target for ${month} ${year} set to $${newTarget.toLocaleString()}.` });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save target to the database.' });
-      // Optionally revert state on failure
-      setMonthlyTargets(monthlyTargets);
-    }
-  };
-
-  const adrStat = stats.find((s) => s.title === "Avg Daily Revenue (ADR)");
-
-  const totalRevenue = useMemo(() => revenueByDay.reduce((sum, day) => sum + day.revenue, 0), [revenueByDay]);
-
-  const rdrStat = useMemo(() => {
-    const today = new Date();
-    const monthKey = format(today, 'yyyy-MM');
-    const target = monthlyTargets[monthKey] || 0;
-
-    const remainingRevenue = Math.max(0, target - totalRevenue);
-    const requiredDaily = daysLeft > 0 ? remainingRevenue / daysLeft : 0;
-
-    const existingRdrStat = stats.find(s => s.title === "Req. Daily Revenue (RDR)");
-
-    return {
-      ...existingRdrStat,
-      icon: "Goal",
-      title: "Req. Daily Revenue (RDR)",
-      value: `$${requiredDaily.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      description: "To meet your monthly target"
-    };
-  }, [monthlyTargets, totalRevenue, daysLeft, stats, currentMonthKey]);
-
-  const keyMetrics = useMemo(() => {
-    const targetStat = stats.find((s) => s.title.startsWith("Target for"));
-    return [adrStat, rdrStat, targetStat].filter(Boolean) as Stat[];
-  }, [adrStat, rdrStat, stats]);
-
-
-  const otherMetrics = useMemo(() => stats.filter((s) =>
-    [
-      "Total Orders (Completed)",
-      "Cancelled Orders",
-      "% Orders with Reviews",
-      "All-Time Total Buyers",
-    ].includes(s.title)
-  ).map((s, i) => ({
-    ...s,
-    color: s.title.includes("Cancelled") ? 'hsl(var(--destructive))' : `hsl(var(--chart-${(i % 5) + 1}))`
-  })), [stats]);
-
-  const buyersMetric = useMemo(() => stats.find(s => s.title === 'Buyers'), [stats]);
-
-  const performanceValue = useMemo(() => {
-    const target = monthlyTargets[currentMonthKey] || 0;
-    if (target === 0) return 0;
-    return (totalRevenue / target) * 100;
-  }, [totalRevenue, monthlyTargets, currentMonthKey]);
-
-
-  const [financialStats, setFinancialStats] = useState(financialCardsData);
-
-  useEffect(() => {
-    async function fetchOverview() {
-      if (!date?.from || !date?.to) return;
-      try {
-        const query = new URLSearchParams({
-          from: format(date.from, 'yyyy-MM-dd'),
-          to: format(date.to, 'yyyy-MM-dd'),
-        });
-        const res = await fetch(`/api/dashboard/overview?${query.toString()}`);
-        if (!res.ok) throw new Error('Failed to fetch overview');
-        const data = await res.json();
-
-        setFinancialStats([
-          {
-            title: "Total Revenue",
-            value: `$${data.totalRevenue.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            change: `${data.totalRevenue.change >= 0 ? '+' : ''}${data.totalRevenue.change.toFixed(1)}%`,
-            changeType: data.totalRevenue.change >= 0 ? "increase" : "decrease",
-            dateRange: "vs. last period",
-            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 100 })), // Placeholder sparkline
-            chartType: "bar",
-            gradient: "revenue"
-          },
-          {
-            title: "Net Profit",
-            value: `$${data.netProfit.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            change: `${data.netProfit.change >= 0 ? '+' : ''}${data.netProfit.change.toFixed(1)}%`,
-            changeType: data.netProfit.change >= 0 ? "increase" : "decrease",
-            dateRange: "vs. last period",
-            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 100 })),
-            chartType: "line",
-            gradient: "profit"
-          },
-          {
-            title: "Pending Orders",
-            value: data.pendingOrders.value.toString(),
-            change: `${data.pendingOrders.change >= 0 ? '+' : ''}${data.pendingOrders.change.toFixed(1)}%`,
-            changeType: data.pendingOrders.change >= 0 ? "increase" : "decrease",
-            dateRange: "vs. last period",
-            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 10 })),
-            chartType: "bar",
-            gradient: "expenses" // Using expenses gradient for contrast
-          },
-          {
-            title: "Avg. Order Value",
-            value: `$${data.averageOrderValue.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            change: `${data.averageOrderValue.change >= 0 ? '+' : ''}${data.averageOrderValue.change.toFixed(1)}%`,
-            changeType: data.averageOrderValue.change >= 0 ? "increase" : "decrease",
-            dateRange: "vs. last period",
-            chartData: Array.from({ length: 10 }, () => ({ value: Math.random() * 100 })),
-            chartType: "bar",
-            gradient: "aov"
-          }
-        ]);
-      } catch (error) {
-        console.error("Error fetching dashboard overview:", error);
-      }
-    }
-    fetchOverview();
-  }, [date]);
-
   return (
     <>
-      <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8">
+      <main className="flex flex-1 flex-col gap-8 p-6 md:gap-10 md:p-10 bg-background min-h-screen animate-in fade-in duration-500">
         <DashboardHeader
           date={date}
           setDate={handleSetDate}
@@ -391,7 +430,7 @@ export function DashboardClient({
         />
 
         <section>
-          <h2 className="text-xl font-semibold mb-4">Financial Overview</h2>
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Financial Overview</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {financialStats.map((card) => (
               <FinancialStatCard key={card.title} {...card} />
@@ -403,15 +442,15 @@ export function DashboardClient({
           <div className="lg:col-span-4">
             <Suspense fallback={<Skeleton className="h-[340px] w-full" />}>
               <RevenueChart
-                data={revenueByDay}
-                previousData={previousRevenueByDay}
-                requiredDailyRevenue={rdrStat.value ? parseFloat(rdrStat.value.replace(/[^0-9.-]+/g, "")) : 0}
+                data={dashboardMetrics.revenueByDay.length > 0 ? dashboardMetrics.revenueByDay : revenueByDay}
+                previousData={dashboardMetrics.previousRevenueByDay.length > 0 ? dashboardMetrics.previousRevenueByDay : previousRevenueByDay}
+                requiredDailyRevenue={dashboardMetrics.requiredDailyRevenue}
               />
             </Suspense>
           </div>
           <div className="lg:col-span-1">
             <Suspense fallback={<Skeleton className="h-full w-full rounded-lg" />}>
-              <PerformanceRadialChart performance={performanceValue} />
+              <PerformanceRadialChart performance={dashboardMetrics.performance} />
             </Suspense>
           </div>
         </div>

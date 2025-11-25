@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const note = payload[0].payload.note;
     return (
       <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-        <p className="font-medium">{new Date(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric"})}</p>
+        <p className="font-medium">{new Date(label).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
         {payload.map((pld: any) => (
           pld.value ? (
             <div key={pld.dataKey} className="flex items-center justify-between">
@@ -96,7 +96,7 @@ const CustomDot = (props: any) => {
 
 const RevenueChartComponent = ({ data, previousData, requiredDailyRevenue }: RevenueChartProps) => {
   const [showComparison, setShowComparison] = useState(true);
-  
+
   const combinedData = useMemo(() => {
     return data.map((current, index) => ({
       ...current,
@@ -104,23 +104,28 @@ const RevenueChartComponent = ({ data, previousData, requiredDailyRevenue }: Rev
       requiredDailyRevenue,
     }));
   }, [data, previousData, requiredDailyRevenue]);
-  
+
   return (
-    <Card>
+    <Card className="border-border bg-card backdrop-blur-md">
       <CardHeader>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <CardTitle>Revenue Overview</CardTitle>
-                <CardDescription>
-                  A summary of your revenue for the selected period.
-                </CardDescription>
+          <div>
+            <CardTitle className="text-card-foreground">Revenue Overview</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              A summary of your revenue for the selected period.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="compare-revenue"
+                checked={showComparison}
+                onCheckedChange={(checked) => setShowComparison(!!checked)}
+                className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              />
+              <Label htmlFor="compare-revenue" className="text-sm font-normal text-muted-foreground">Compare to Previous Period</Label>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-                <div className="flex items-center space-x-2">
-                    <Checkbox id="compare-revenue" checked={showComparison} onCheckedChange={(checked) => setShowComparison(!!checked)} />
-                    <Label htmlFor="compare-revenue" className="text-sm font-normal">Compare to Previous Period</Label>
-                </div>
-            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pl-2">
@@ -135,7 +140,7 @@ const RevenueChartComponent = ({ data, previousData, requiredDailyRevenue }: Rev
               bottom: 0,
             }}
           >
-            <CartesianGrid vertical={false} />
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="date"
               tickLine={false}
@@ -148,41 +153,49 @@ const RevenueChartComponent = ({ data, previousData, requiredDailyRevenue }: Rev
                   day: "numeric",
                 });
               }}
+              stroke="hsl(var(--muted-foreground))"
             />
             <YAxis
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => `$${value / 1000}k`}
+              tickFormatter={(value) => {
+                if (value >= 1000) return `$${value / 1000}k`;
+                return `$${value}`;
+              }}
+              stroke="hsl(var(--muted-foreground))"
             />
             <Tooltip
-              cursor={false}
+              cursor={{ stroke: 'hsl(var(--border))' }}
               content={<CustomTooltip />}
             />
             <Line
               dataKey="requiredDailyRevenue"
               type="monotone"
-              stroke="var(--color-requiredDailyRevenue)"
+              stroke="hsl(var(--chart-5))"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
+              name="Req. Daily Revenue"
             />
             {showComparison && (
-                 <Line
-                    dataKey="previousRevenue"
-                    type="natural"
-                    stroke="var(--color-previousRevenue)"
-                    strokeWidth={2}
-                    strokeDasharray="3 3"
-                    dot={false}
-                />
+              <Line
+                dataKey="previousRevenue"
+                type="natural"
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth={2}
+                strokeDasharray="3 3"
+                dot={false}
+                strokeOpacity={0.5}
+              />
             )}
             <Line
               dataKey="revenue"
               type="natural"
-              stroke="var(--color-revenue)"
-              strokeWidth={2}
+              stroke="hsl(var(--chart-1))"
+              strokeWidth={3}
               dot={<CustomDot />}
+              activeDot={{ r: 6, strokeWidth: 0, fill: 'hsl(var(--chart-1))' }}
             />
           </LineChart>
         </ChartContainer>

@@ -29,22 +29,29 @@ export function DashboardHeader({
     const targetYear = today.getFullYear();
 
     return (
-        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="font-headline text-lg font-semibold md:text-2xl">
-                Dashboard
-            </h1>
-            <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-                <div className="hidden items-center gap-2 rounded-md border border-destructive bg-card px-3 py-2 text-sm font-medium text-muted-foreground shadow-sm sm:flex">
-                    <CalendarDays className="h-4 w-4" />
-                    <span>{daysLeft} days left</span>
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
+            <div className="space-y-1">
+                <h1 className="font-headline text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white drop-shadow-sm md:text-4xl">
+                    Dashboard
+                </h1>
+                <p className="text-sm text-blue-200/60 font-medium">
+                    Overview of your business performance
+                </p>
+            </div>
+            <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
+                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-blue-100 backdrop-blur-md shadow-sm sm:flex ring-1 ring-white/5">
+                    <CalendarDays className="h-3.5 w-3.5 text-blue-400" />
+                    <span>{daysLeft} days left in {targetMonth}</span>
                 </div>
-                <DateFilter date={date} setDate={setDate} absoluteDuration={true} />
-                <SetTargetDialog
-                    monthlyTargets={monthlyTargets}
-                    onSetTarget={onSetTarget}
-                    initialMonth={targetMonth}
-                    initialYear={targetYear}
-                />
+                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 backdrop-blur-sm">
+                    <DateFilter date={date} setDate={setDate} absoluteDuration={true} className="border-0" />
+                    <SetTargetDialog
+                        monthlyTargets={monthlyTargets}
+                        onSetTarget={onSetTarget}
+                        initialMonth={targetMonth}
+                        initialYear={targetYear}
+                    />
+                </div>
             </div>
         </div>
     );

@@ -44,7 +44,7 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
         additionalNotes: "Launched a new marketing campaign this month."
       };
       const result = await generateBusinessInsights(input);
-      
+
       let animatedText = "";
       const words = result.insights.split(' ');
       for (const word of words) {
@@ -67,33 +67,52 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wand2 className="text-primary" />
-          <span>AI-Powered Insights</span>
-        </CardTitle>
-        <CardDescription>
-          Get AI-driven recommendations based on your data.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="min-h-[160px]">
-        {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">{insights}</p>
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button onClick={handleGenerateInsights} disabled={loading} className="w-full">
-          {loading ? "Generating..." : "Generate New Insights"}
-        </Button>
-      </CardFooter>
-    </Card>
+    <div className="relative group h-full">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl opacity-75 blur transition duration-1000 group-hover:opacity-100 group-hover:duration-200 animate-tilt"></div>
+      <Card className="relative h-full border-0 bg-black/40 backdrop-blur-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Wand2 className="h-5 w-5 text-purple-400" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+              AI-Powered Insights
+            </span>
+          </CardTitle>
+          <CardDescription className="text-blue-200/60">
+            Get AI-driven recommendations based on your data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="min-h-[160px]">
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full bg-white/10" />
+              <Skeleton className="h-4 w-full bg-white/10" />
+              <Skeleton className="h-4 w-3/4 bg-white/10" />
+              <Skeleton className="h-4 w-1/2 bg-white/10" />
+            </div>
+          ) : (
+            <p className="text-sm text-blue-100/90 leading-relaxed">{insights}</p>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleGenerateInsights}
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-purple-500/20 transition-all duration-300 hover:shadow-purple-500/40"
+          >
+            {loading ? (
+              <>
+                <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate New Insights
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
