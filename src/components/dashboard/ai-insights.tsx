@@ -15,7 +15,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { generateBusinessInsights } from "@/ai/flows/generate-business-insights";
 import { useToast } from "@/hooks/use-toast";
 
-export default function AiInsights({ initialInsights }: { initialInsights: string }) {
+import { type DashboardOverviewData } from "@/lib/services/analyticsService";
+
+interface AiInsightsProps {
+  initialInsights: string;
+  dashboardMetrics: Partial<DashboardOverviewData>;
+}
+
+export default function AiInsights({ initialInsights, dashboardMetrics }: AiInsightsProps) {
   const [insights, setInsights] = useState(initialInsights);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -24,25 +31,36 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
     setLoading(true);
     setInsights("");
     try {
-      // In a real app, this data would be dynamic based on filters.
+      // Construct input from real dashboard data
+      const totalRevenue = dashboardMetrics.totalRevenue?.value || 0;
+      const totalExpenses = 0; // We might need to fetch this or derive it if available in metrics
+      // Actually, netProfit is available in dashboardMetrics
+      const netProfit = dashboardMetrics.netProfit?.value || 0;
+      const orderCount = dashboardMetrics.orderMetrics?.total || 0;
+      const averageOrderValue = dashboardMetrics.averageOrderValue?.value || 0;
+      const monthlyTargetRevenue = dashboardMetrics.monthlyTarget || 0;
+      const averageDailyRevenue = dashboardMetrics.keyMetrics?.adr || 0;
+      const requiredDailyRevenue = dashboardMetrics.requiredDailyRevenue || 0;
+
       const input = {
-        totalRevenue: 45231.89,
-        totalExpenses: 10543.00,
-        netProfit: 34688.89,
-        orderCount: 12234,
-        clientAcquisitionRate: 15,
-        repeatClientRate: 34,
-        averageOrderValue: 131.5,
-        monthlyTargetRevenue: 50000,
-        averageDailyRevenue: 1507.73,
-        requiredDailyRevenue: 1625.6,
-        // Chart data would be base64 encoded images in a real scenario
-        dailyRevenueTrendGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-        netProfitGraph: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-        incomeBySourceChart: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-        competitorOrderCount: 10500,
-        additionalNotes: "Launched a new marketing campaign this month."
+        totalRevenue,
+        totalExpenses: totalRevenue - netProfit, // Derive expenses
+        netProfit,
+        orderCount,
+        clientAcquisitionRate: 0, // Not yet calculated
+        repeatClientRate: 0, // Not yet calculated
+        averageOrderValue,
+        monthlyTargetRevenue,
+        averageDailyRevenue,
+        requiredDailyRevenue,
+        // Optional fields left undefined
+        // dailyRevenueTrendGraph: ...,
+        // netProfitGraph: ...,
+        // incomeBySourceChart: ...,
+        competitorOrderCount: 0,
+        additionalNotes: "Generated from live dashboard data."
       };
+
       const result = await generateBusinessInsights(input);
 
       let animatedText = "";

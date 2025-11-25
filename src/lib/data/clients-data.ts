@@ -1,24 +1,24 @@
 
 import { z } from "zod";
-import { Facebook, Twitter, Linkedin, Github, Globe } from "lucide-react";
+import { Facebook, Linkedin, Github, Globe, Instagram, Youtube, X } from "lucide-react";
 import { differenceInMonths } from "date-fns";
 import type { ObjectId } from 'mongodb';
 
 export const socialLinkSchema = z.object({
-  platform: z.string().min(1, "Platform is required."),
-  url: z.string().url("Please enter a valid URL."),
+    platform: z.string().min(1, "Platform is required."),
+    url: z.string().url("Please enter a valid URL."),
 });
 
 export const clientFormSchema = z.object({
-  username: z.string().min(2, { message: "Username must be at least 2 characters." }),
-  name: z.string().optional(),
-  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
-  avatarUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  source: z.string().min(1, { message: "Income source is required." }),
-  socialLinks: z.array(socialLinkSchema).optional(),
-  notes: z.string().optional(),
-  tags: z.string().optional(),
-  isVip: z.boolean().default(false),
+    username: z.string().min(2, { message: "Username must be at least 2 characters." }),
+    name: z.string().optional(),
+    email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+    avatarUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+    source: z.string().min(1, { message: "Income source is required." }),
+    socialLinks: z.array(socialLinkSchema).optional(),
+    notes: z.string().optional(),
+    tags: z.string().optional(),
+    isVip: z.boolean().default(false),
 });
 
 export type ClientFormValues = z.infer<typeof clientFormSchema>;
@@ -61,8 +61,10 @@ export const getClientStatus = (lastOrderDateString: string): { text: 'Active' |
 
 export const socialPlatforms = [
     { value: "Facebook", icon: Facebook },
-    { value: "Twitter", icon: Twitter },
+    { value: "X", icon: X },
+    { value: "Instagram", icon: Instagram },
     { value: "LinkedIn", icon: Linkedin },
     { value: "GitHub", icon: Github },
+    { value: "YouTube", icon: Youtube },
     { value: "Website", icon: Globe },
 ];

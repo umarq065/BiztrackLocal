@@ -8,8 +8,8 @@
  * - GenerateBusinessInsightsOutput - The return type for the generateBusinessInsights function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const GenerateBusinessInsightsInputSchema = z.object({
   totalRevenue: z.number().describe('The total revenue for the selected period.'),
@@ -18,9 +18,11 @@ const GenerateBusinessInsightsInputSchema = z.object({
   orderCount: z.number().describe('The total number of orders for the selected period.'),
   clientAcquisitionRate: z
     .number()
+    .optional()
     .describe('The rate of new client acquisition for the selected period.'),
   repeatClientRate: z
     .number()
+    .optional()
     .describe('The rate of repeat clients for the selected period.'),
   averageOrderValue: z
     .number()
@@ -32,11 +34,13 @@ const GenerateBusinessInsightsInputSchema = z.object({
   ),
   dailyRevenueTrendGraph: z
     .string()
+    .optional()
     .describe('A data URI representing the daily revenue trend graph.'),
-  netProfitGraph: z.string().describe('A data URI representing the net profit graph.'),
-  incomeBySourceChart: z.string().describe('A data URI representing the income by source chart.'),
+  netProfitGraph: z.string().optional().describe('A data URI representing the net profit graph.'),
+  incomeBySourceChart: z.string().optional().describe('A data URI representing the income by source chart.'),
   competitorOrderCount: z
     .number()
+    .optional()
     .describe('The average order count of competitors for the selected period.'),
   additionalNotes: z.string().optional().describe('Additional notes about the business.'),
 });
@@ -61,8 +65,8 @@ export async function generateBusinessInsights(
 
 const prompt = ai.definePrompt({
   name: 'generateBusinessInsightsPrompt',
-  input: {schema: GenerateBusinessInsightsInputSchema},
-  output: {schema: GenerateBusinessInsightsOutputSchema},
+  input: { schema: GenerateBusinessInsightsInputSchema },
+  output: { schema: GenerateBusinessInsightsOutputSchema },
   prompt: `You are an AI-powered business consultant. Analyze the following business data and provide insights and recommendations to improve business performance.
 
 Business Data:
@@ -79,9 +83,15 @@ Required Daily Revenue: {{{requiredDailyRevenue}}}
 Competitor Order Count: {{{competitorOrderCount}}}
 
 Charts:
+{{#dailyRevenueTrendGraph}}
 Daily Revenue Trend Graph: {{media url=dailyRevenueTrendGraph}}
+{{/dailyRevenueTrendGraph}}
+{{#netProfitGraph}}
 Net Profit Graph: {{media url=netProfitGraph}}
+{{/netProfitGraph}}
+{{#incomeBySourceChart}}
 Income by Source Chart: {{media url=incomeBySourceChart}}
+{{/incomeBySourceChart}}
 
 Additional Notes: {{{additionalNotes}}}
 
@@ -95,7 +105,7 @@ const generateBusinessInsightsFlow = ai.defineFlow(
     outputSchema: GenerateBusinessInsightsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

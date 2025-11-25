@@ -1326,23 +1326,30 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
         const periodOrders = allOrders.filter(o => o.date >= startStr && o.date <= endStr);
         const periodExpenses = allExpenses.filter(e => e.date >= startStr && e.date <= endStr);
 
-        const completedOrders = periodOrders.filter(o => o.status === 'Completed');
+        // Revenue now includes Completed AND In Progress orders
+        const revenueOrders = periodOrders.filter(o => o.status === 'Completed' || o.status === 'In Progress');
+
+        // Pending orders count still refers to In Progress for the specific metric card if needed, 
+        // but for revenue we use both. 
+        // Actually, "Pending Orders" card usually implies things that need action. 
+        // If the user considers "In Progress" as revenue, maybe "Pending" means something else or just "In Progress" count.
+        // I will keep "Pending Orders" metric as count of "In Progress" for the card, but use them for revenue.
         const pendingOrdersCount = periodOrders.filter(o => o.status === 'In Progress').length;
         const cancelledOrdersCount = periodOrders.filter(o => o.status === 'Cancelled').length;
         const ratedOrdersCount = periodOrders.filter(o => o.rating != null).length;
         const uniqueBuyers = new Set(periodOrders.map(o => o.clientUsername)).size;
 
-        const totalRevenue = completedOrders.reduce((sum, o) => sum + o.amount, 0);
+        const totalRevenue = revenueOrders.reduce((sum, o) => sum + o.amount, 0);
         const totalExpenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
         const netProfit = totalRevenue - totalExpenses;
-        const averageOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+        const averageOrderValue = revenueOrders.length > 0 ? totalRevenue / revenueOrders.length : 0;
 
         return {
             totalRevenue,
             netProfit,
             pendingOrders: pendingOrdersCount,
             averageOrderValue,
-            totalOrders: completedOrders.length,
+            totalOrders: revenueOrders.length, // Total orders for revenue context
             cancelledOrders: cancelledOrdersCount,
             ratedOrders: ratedOrdersCount,
             uniqueBuyers
@@ -1365,7 +1372,7 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
     const revenueByDay: RevenueByDay[] = eachDayOfInterval({ start: p2Start, end: p2End }).map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
         const dayRevenue = allOrders
-            .filter(o => o.date === dayStr && o.status === 'Completed')
+            .filter(o => o.date === dayStr && (o.status === 'Completed' || o.status === 'In Progress'))
             .reduce((sum, o) => sum + o.amount, 0);
         return { date: dayStr, revenue: dayRevenue };
     });
@@ -1374,7 +1381,7 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
     const previousRevenueByDay: RevenueByDay[] = eachDayOfInterval({ start: p1Start, end: p1End }).map(day => {
         const dayStr = format(day, 'yyyy-MM-dd');
         const dayRevenue = allOrders
-            .filter(o => o.date === dayStr && o.status === 'Completed')
+            .filter(o => o.date === dayStr && (o.status === 'Completed' || o.status === 'In Progress'))
             .reduce((sum, o) => sum + o.amount, 0);
         return { date: dayStr, revenue: dayRevenue };
     });
@@ -1388,7 +1395,7 @@ export async function getDashboardOverview(from: string, to: string): Promise<Da
     const startOfCurrentMonth = startOfMonth(today);
     const monthOrders = await ordersCol.find({
         date: { $gte: format(startOfCurrentMonth, 'yyyy-MM-dd'), $lte: format(today, 'yyyy-MM-dd') },
-        status: 'Completed'
+        status: { $in: ['Completed', 'In Progress'] }
     }).toArray();
     const monthRevenue = monthOrders.reduce((sum, o) => sum + o.amount, 0);
 

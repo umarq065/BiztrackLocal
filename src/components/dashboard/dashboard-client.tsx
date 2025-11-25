@@ -507,7 +507,10 @@ export function DashboardClient({
               </Suspense>
             </CardContent>
           </Card>
-          <AiInsights initialInsights={aiInsights} />
+          <AiInsights
+            initialInsights="Click 'Generate New Insights' to analyze your current dashboard data."
+            dashboardMetrics={dashboardMetrics}
+          />
         </div>
 
         <Card>

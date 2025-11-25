@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import StatCard from "@/components/dashboard/stat-card";
-import { Facebook, Twitter, Linkedin, Github, Globe, DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse, Loader2 } from "lucide-react";
+import { DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse, Loader2, Globe } from "lucide-react";
 import type { Stat } from "@/lib/placeholder-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,13 +36,7 @@ import { MonthYearPicker } from "@/components/clients/month-year-picker";
 
 const ClientOrderHistoryChart = lazy(() => import("@/components/clients/client-order-history-chart"));
 
-const socialPlatforms = [
-  { value: "Facebook", icon: Facebook },
-  { value: "Twitter", icon: Twitter },
-  { value: "LinkedIn", icon: Linkedin },
-  { value: "GitHub", icon: Github },
-  { value: "Website", icon: Globe },
-];
+import { socialPlatforms } from "@/lib/data/clients-data";
 
 const SocialIcon = ({ platform }: { platform: string }) => {
   const platformConfig = socialPlatforms.find(p => p.value === platform);
