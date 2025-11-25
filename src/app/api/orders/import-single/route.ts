@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 const importSchema = z.object({
   source: z.string().min(1, 'Income source is required.'),
+  status: z.enum(['In Progress', 'Completed', 'Cancelled']),
   orderData: z.object({
     date: z.string().min(1),
     'order id': z.string().min(1),
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid input data', details: parsedData.error.errors }, { status: 400 });
     }
 
-    const result = await importSingleOrder(parsedData.data.source, parsedData.data.orderData);
-    
+    const result = await importSingleOrder(parsedData.data.source, parsedData.data.orderData, parsedData.data.status);
+
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
     if (error.message.includes('already exists')) {

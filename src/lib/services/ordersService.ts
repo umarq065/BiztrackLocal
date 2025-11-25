@@ -13,9 +13,9 @@ import { addGigToSource, getIncomeSources } from './incomesService';
 import Papa from 'papaparse';
 
 async function getOrdersCollection() {
-  const client = await clientPromise;
-  const db = client.db("biztrack-pro");
-  return db.collection<Omit<Order, '_id'>>('orders');
+    const client = await clientPromise;
+    const db = client.db("biztrack-pro");
+    return db.collection<Omit<Order, '_id'>>('orders');
 }
 
 /**
@@ -23,31 +23,31 @@ async function getOrdersCollection() {
  * @returns A promise that resolves to an array of all orders with minimal fields.
  */
 export async function getOrdersList(): Promise<Partial<Order>[]> {
-  try {
-    const ordersCollection = await getOrdersCollection();
-    const orders = await ordersCollection.find({}, {
-      projection: {
-        _id: 1,
-        id: 1,
-        date: 1,
-        clientUsername: 1,
-        amount: 1,
-        source: 1,
-        gig: 1,
-        status: 1,
-        rating: 1,
-        cancellationReasons: 1,
-      }
-    }).sort({ date: -1 }).toArray();
-    
-    return orders.map(order => ({
-      ...order,
-      id: order.id || order._id.toString(), // Fallback for any missing id fields
-    }));
-  } catch (error) {
-    console.error('Error fetching orders list from DB:', error);
-    return [];
-  }
+    try {
+        const ordersCollection = await getOrdersCollection();
+        const orders = await ordersCollection.find({}, {
+            projection: {
+                _id: 1,
+                id: 1,
+                date: 1,
+                clientUsername: 1,
+                amount: 1,
+                source: 1,
+                gig: 1,
+                status: 1,
+                rating: 1,
+                cancellationReasons: 1,
+            }
+        }).sort({ date: -1 }).toArray();
+
+        return orders.map(order => ({
+            ...order,
+            id: order.id || order._id.toString(), // Fallback for any missing id fields
+        }));
+    } catch (error) {
+        console.error('Error fetching orders list from DB:', error);
+        return [];
+    }
 }
 
 /**
@@ -56,9 +56,9 @@ export async function getOrdersList(): Promise<Partial<Order>[]> {
  * @returns A promise that resolves to true if the order exists, false otherwise.
  */
 export async function checkOrderExists(orderId: string): Promise<boolean> {
-  const ordersCollection = await getOrdersCollection();
-  const count = await ordersCollection.countDocuments({ id: orderId });
-  return count > 0;
+    const ordersCollection = await getOrdersCollection();
+    const count = await ordersCollection.countDocuments({ id: orderId });
+    return count > 0;
 }
 
 
@@ -153,7 +153,7 @@ export async function updateOrder(orderId: string, orderData: OrderFormValues): 
         rating: orderData.rating,
         cancellationReasons: finalCancellationReasons,
     };
-    
+
     const result = await ordersCollection.findOneAndUpdate(
         { id: orderId },
         { $set: updateData },
@@ -200,7 +200,7 @@ export async function deleteOrdersByIds(orderIds: string[]): Promise<number> {
  * @param orderData - The parsed data from the CSV row.
  * @returns The created order object.
  */
-export async function importSingleOrder(sourceName: string, orderData: Record<string, string>): Promise<{ order: Order }> {
+export async function importSingleOrder(sourceName: string, orderData: Record<string, string>, status: Order['status']): Promise<{ order: Order }> {
     const incomesCollection = (await clientPromise).db("biztrack-pro").collection('incomes');
 
     const orderId = orderData['order id'];
@@ -208,12 +208,6 @@ export async function importSingleOrder(sourceName: string, orderData: Record<st
     const gigName = orderData['gig name'];
     const dateStr = orderData['date'];
     const amount = parseFloat(orderData['amount']);
-    
-    const type = orderData['type'];
-    let status: Order['status'] = 'Completed';
-    if (type?.toLowerCase() === 'cancellation') {
-        status = 'Cancelled';
-    }
 
     // Attempt to parse multiple date formats
     let orderDate;
@@ -312,7 +306,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
     // Get existing data to avoid repeated DB calls inside the loop
     const existingOrdersCursor = await ordersCollection.find({}, { projection: { id: 1, _id: 0 } });
     const existingOrderIds = new Set((await existingOrdersCursor.toArray()).map(o => o.id));
-    
+
     const existingClientsCursor = await clientCollection.find({}, { projection: { username: 1, _id: 0 } });
     const existingClients = new Set((await existingClientsCursor.toArray()).map(c => c.username));
     let sourceGigs = new Map(source.gigs.map(g => [g.name.toLowerCase(), g]));
@@ -348,13 +342,13 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
     for (const row of rows) {
         // Standardize headers
         const orderData = Object.fromEntries(Object.entries(row).map(([key, value]) => [key.trim().toLowerCase(), value]));
-        
+
         const orderId = orderData['order id'];
         const clientUsername = orderData['client username'];
         const gigName = orderData['gig name'];
         const amountStr = orderData['amount'];
         const type = orderData['type'];
-        
+
         if (!orderId || !clientUsername || !gigName || !orderData['date'] || !amountStr) {
             console.warn("Skipping row due to missing required fields:", row);
             skippedCount++;
@@ -384,7 +378,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
             updatedCount++;
             continue;
         }
-        
+
         // Add client to creation list if new
         if (!existingClients.has(clientUsername) && !newClientsToCreate.some(c => c.username === clientUsername)) {
             const clientSinceDate = newClientFirstOrderDates.get(clientUsername) || orderDate; // Use pre-calculated first order date
@@ -406,11 +400,11 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
         // Add gig to creation list if new
         const gigNameLower = gigName.toLowerCase();
         if (!sourceGigs.has(gigNameLower) && !newGigsToCreate.some(g => g.name.toLowerCase() === gigNameLower)) {
-             const newGig = { name: gigName, date: orderDate };
-             newGigsToCreate.push(newGig);
-             sourceGigs.set(gigNameLower, { id: '', name: gigName, date: format(orderDate, 'yyyy-MM-dd') });
+            const newGig = { name: gigName, date: orderDate };
+            newGigsToCreate.push(newGig);
+            sourceGigs.set(gigNameLower, { id: '', name: gigName, date: format(orderDate, 'yyyy-MM-dd') });
         }
-        
+
         let status: Order['status'] = 'Completed';
         if (type?.toLowerCase() === 'cancellation') {
             status = 'Cancelled';
@@ -442,7 +436,7 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
     }
 
     if (newGigsToCreate.length > 0) {
-        for(const gig of newGigsToCreate) {
+        for (const gig of newGigsToCreate) {
             await addGigToSource(sourceId, gig);
         }
     }
@@ -460,6 +454,6 @@ export async function importBulkOrders(sourceName: string, csvContent: string): 
         }));
         await ordersCollection.bulkWrite(bulkUpdateOps);
     }
-    
+
     return { importedCount, updatedCount, skippedCount };
 }
