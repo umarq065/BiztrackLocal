@@ -35,6 +35,7 @@ import { ThemeToggle } from "./theme-toggle";
 import NProgressLink from "./nprogress-link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -50,39 +51,39 @@ const navItems = [
 ];
 
 const settingsItems = [
-    { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
-    { href: "/settings", icon: Settings, label: "Settings" },
+  { href: "/business-profile", icon: UserCircle, label: "Business Profile" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 function AppLogo() {
-    return (
-        <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="shrink-0"
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 28 28"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      <rect width="28" height="28" rx="8" fill="url(#logo-gradient)" />
+      <path d="M8 18.5V14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 18.5V9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 18.5V12.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <defs>
+        <linearGradient
+          id="logo-gradient"
+          x1="0"
+          y1="0"
+          x2="28"
+          y2="28"
+          gradientUnits="userSpaceOnUse"
         >
-            <rect width="28" height="28" rx="8" fill="url(#logo-gradient)" />
-            <path d="M8 18.5V14.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M14 18.5V9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M20 18.5V12.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <defs>
-                <linearGradient
-                    id="logo-gradient"
-                    x1="0"
-                    y1="0"
-                    x2="28"
-                    y2="28"
-                    gradientUnits="userSpaceOnUse"
-                >
-                    <stop stopColor="hsl(var(--primary))" />
-                    <stop offset="1" stopColor="hsl(var(--primary) / 0.5)" />
-                </linearGradient>
-            </defs>
-        </svg>
-    )
+          <stop stopColor="hsl(var(--primary))" />
+          <stop offset="1" stopColor="hsl(var(--primary) / 0.5)" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -99,91 +100,123 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       toast({ variant: "destructive", title: "Logout Failed", description: "Could not log out. Please try again." });
     }
   };
-  
+
   return (
     <SidebarProvider>
-      <div className="relative flex h-screen w-full">
-        <Sidebar>
-          <SidebarHeader>
-            <div className="flex items-center gap-3">
-              <AppLogo />
+      <div className="relative flex h-screen w-full bg-background">
+        <Sidebar className="border-r-0 bg-[#0f172a] text-slate-300 shadow-2xl" data-premium="true">
+          <SidebarHeader className="border-b border-white/5 bg-[#0f172a] pb-4 pt-4">
+            <div className="flex items-center gap-3 px-2">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-500/20">
+                <AppLogo />
+              </div>
               <div className="flex flex-col group-data-[collapsed=true]:hidden">
-                <h2 className="font-headline text-lg font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary to-foreground/80">
-                  BizTrack Pro
+                <h2 className="font-headline text-xl font-bold tracking-tight text-white">
+                  BizTrack<span className="text-blue-400">Pro</span>
                 </h2>
+                <span className="text-xs font-medium text-slate-500">Business Management</span>
               </div>
             </div>
           </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={item.label}
-                  >
-                    <NProgressLink href={item.href}>
-                      <item.icon />
-                      <span className="group-data-[collapsed=true]:hidden">{item.label}</span>
-                    </NProgressLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+          <SidebarContent className="bg-[#0f172a] px-2 py-4">
+            <SidebarMenu className="gap-2">
+              {navItems.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+                return (
+                  <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.label}
+                      className={cn(
+                        "relative overflow-hidden rounded-lg px-3 py-2.5 transition-all duration-200",
+                        isActive
+                          ? "bg-gradient-to-r from-blue-600/20 to-violet-600/20 text-white shadow-sm ring-1 ring-white/10"
+                          : "text-slate-400 hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      <NProgressLink href={item.href} className="flex items-center gap-3">
+                        <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300")} />
+                        <span className="font-medium tracking-wide group-data-[collapsed=true]:hidden">{item.label}</span>
+                        {isActive && (
+                          <div className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]" />
+                        )}
+                      </NProgressLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="mt-auto">
-            <SidebarMenu>
-              {settingsItems.map((item) => (
+          <SidebarFooter className="border-t border-white/5 bg-[#0f172a] p-4">
+            <SidebarMenu className="gap-2">
+              {settingsItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
                   <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
-                          <NProgressLink href={item.href}>
-                              <item.icon />
-                              <span className="group-data-[collapsed=true]:hidden">{item.label}</span>
-                          </NProgressLink>
-                      </SidebarMenuButton>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.label}
+                      className={cn(
+                        "rounded-lg px-3 py-2 transition-colors",
+                        isActive ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      <NProgressLink href={item.href} className="flex items-center gap-3">
+                        <item.icon className="h-4 w-4" />
+                        <span className="group-data-[collapsed=true]:hidden">{item.label}</span>
+                      </NProgressLink>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
-              ))}
+                )
+              })}
               <SidebarMenuItem>
-                <ThemeToggle />
+                <div className="px-3 py-2">
+                  <ThemeToggle />
+                </div>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
-                    <LogOut />
-                    <span className="group-data-[collapsed=true]:hidden">Sign Out</span>
+                <SidebarMenuButton
+                  onClick={handleSignOut}
+                  tooltip="Sign Out"
+                  className="rounded-lg px-3 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="group-data-[collapsed=true]:hidden">Sign Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
 
-            <SidebarSeparator />
-            
+            <div className="my-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
             <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                      <NProgressLink href="/business-profile">
-                          <Avatar className="size-7">
-                              <AvatarImage src="https://placehold.co/100x100.png" alt="@johndoe" data-ai-hint="male avatar" />
-                              <AvatarFallback>JD</AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col group-data-[collapsed=true]:hidden">
-                              <span className="font-semibold text-sm">John Doe</span>
-                              <span className="text-xs text-muted-foreground">john.doe@example.com</span>
-                          </div>
-                      </NProgressLink>
-                  </SidebarMenuButton>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="h-auto py-3 hover:bg-white/5">
+                  <NProgressLink href="/business-profile" className="flex items-center gap-3">
+                    <div className="relative">
+                      <Avatar className="h-9 w-9 border-2 border-white/10 shadow-sm">
+                        <AvatarImage src="https://placehold.co/100x100.png" alt="@johndoe" />
+                        <AvatarFallback className="bg-blue-600 text-white">JD</AvatarFallback>
+                      </Avatar>
+                      <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-[#0f172a]" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 group-data-[collapsed=true]:hidden text-left">
+                      <span className="text-sm font-semibold text-white">John Doe</span>
+                      <span className="text-xs text-slate-500">Pro Member</span>
+                    </div>
+                  </NProgressLink>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-            
-            <SidebarSeparator />
-            <div className="p-2 flex items-center justify-center">
-                <SidebarTrigger className="hidden md:block" />
+
+            <div className="mt-2 flex justify-center md:justify-end">
+              <SidebarTrigger className="text-slate-400 hover:text-white" />
             </div>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
-          <div className="p-2 md:hidden">
+        <SidebarInset className="bg-muted/5">
+          <div className="p-4 md:hidden">
             <SidebarTrigger />
           </div>
           {children}
