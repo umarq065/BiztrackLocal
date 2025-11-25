@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -64,24 +63,19 @@ export function DateFilter({
       const parts = [];
       if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
       if (days >= 7) {
-        const weeks = differenceInWeeks(date.to, date.from, { roundingMethod: 'floor' });
-        if (weeks > 0) parts.push(`${weeks} week${weeks > 1 ? 's' : ''}`);
+        const weeks = (days / 7).toFixed(1);
+        parts.push(`${weeks} weeks`);
       }
       if (days >= 30) {
-        // More precise month calculation
         const months = parseFloat((days / 30.44).toFixed(1));
         if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
       }
 
-
       if (parts.length > 0) {
         return (
-          <p className={cn(
-            "text-xs text-muted-foreground mt-1 text-center",
-            absoluteDuration && "absolute top-full left-0 w-full"
-          )}>
+          <span className="text-[10px] text-muted-foreground ml-2 whitespace-nowrap hidden xl:inline-block">
             {parts.join(' | ')}
-          </p>
+          </span>
         );
       }
     }
@@ -89,7 +83,7 @@ export function DateFilter({
   };
 
   return (
-    <div className={cn(absoluteDuration ? "relative" : "grid gap-1", className)}>
+    <div className={cn("grid gap-1", className)}>
       <div className="flex items-center gap-1">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
@@ -97,11 +91,11 @@ export function DateFilter({
               id="date"
               variant={"outline"}
               className={cn(
-                "w-[260px] justify-start text-left font-normal",
+                "w-[240px] justify-start text-left font-normal h-8 text-xs",
                 !date && "text-muted-foreground"
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
               {date?.from ? (
                 date.to ? (
                   <>
@@ -128,32 +122,32 @@ export function DateFilter({
             <div className="border-t p-2">
               <Button
                 variant="ghost"
-                className="w-full justify-center"
+                className="w-full justify-center h-8 text-xs"
                 onClick={() => {
                   setDate(undefined);
                   setIsOpen(false);
                 }}
               >
-                All Time
+                Clear Filter (All Time)
               </Button>
             </div>
           </PopoverContent>
         </Popover>
-        <div className="flex items-center rounded-md border p-0.5">
+        <div className="hidden lg:flex items-center rounded-md border p-0.5 bg-background/50">
           {predefinedRanges.map(range => (
             <Button
               key={range.label}
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-7 px-2 text-[10px]"
               onClick={() => handlePredefinedRangeClick(range.value)}
             >
               {range.label}
             </Button>
           ))}
         </div>
+        {renderDuration()}
       </div>
-      {renderDuration()}
     </div>
   );
 }

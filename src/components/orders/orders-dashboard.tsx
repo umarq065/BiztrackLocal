@@ -400,83 +400,31 @@ export function OrdersDashboard() {
 
     const numSelected = Object.values(selectedOrders).filter(Boolean).length;
 
-    const renderContent = () => {
-        if (isLoading) {
-            return <Skeleton className="h-[400px] w-full" />
-        }
-
-        const renderTabContent = (
-            orderList: (Order & { dateObj: Date; })[],
-            tabKey: keyof typeof visibleCounts
-        ) => {
-            const visibleOrderList = orderList;
-            return (
-                <div className="space-y-4">
-                    <OrdersTable
-                        orders={visibleOrderList}
-                        onEdit={handleOpenDialog}
-                        onDelete={setOrderToDelete}
-                        requestSort={requestSort}
-                        sortConfig={sortConfig}
-                        selectedOrders={selectedOrders}
-                        onSelectionChange={setSelectedOrders}
-                    />
-                </div>
-            );
-        };
-
-        return (
-            <Tabs defaultValue="in-progress" onValueChange={() => setSelectedOrders({})}>
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="in-progress">In Progress ({inProgressOrders.length})</TabsTrigger>
-                    <TabsTrigger value="completed">Completed ({completedOrders.length})</TabsTrigger>
-                    <TabsTrigger value="cancelled">Cancelled ({cancelledOrders.length})</TabsTrigger>
-                    <TabsTrigger value="all">All ({sortedOrders.length})</TabsTrigger>
-                </TabsList>
-                <TabsContent value="in-progress" className="mt-4">
-                    {renderTabContent(inProgressOrders, "in-progress")}
-                </TabsContent>
-                <TabsContent value="completed" className="mt-4">
-                    {renderTabContent(completedOrders, "completed")}
-                </TabsContent>
-                <TabsContent value="cancelled" className="mt-4">
-                    {renderTabContent(cancelledOrders, "cancelled")}
-                </TabsContent>
-                <TabsContent value="all" className="mt-4">
-                    {renderTabContent(sortedOrders, "all")}
-                </TabsContent>
-            </Tabs>
-        )
-    }
-
-
     return (
-        <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8 bg-muted/30 dark:bg-gradient-to-br dark:from-[#0f172a] dark:via-[#1e1b4b] dark:to-[#0f172a] min-h-screen">
+        <main className="flex flex-1 flex-col gap-2 p-2 md:gap-4 md:p-4 bg-muted/30 dark:bg-gradient-to-br dark:from-[#0f172a] dark:via-[#1e1b4b] dark:to-[#0f172a] min-h-screen">
             {/* Header Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 p-8 text-white shadow-xl">
-                <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-2">
-                        <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 p-3 sm:p-4 text-white shadow-lg">
+                <div className="relative z-10 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-0.5">
+                        <h1 className="font-headline text-xl font-bold tracking-tight md:text-2xl">
                             Manage Orders
                         </h1>
-                        <p className="text-blue-100/80 max-w-md text-sm md:text-base">
-                            Track and manage your client orders, view financial summaries, and handle imports efficiently.
-                        </p>
+
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button
                             onClick={() => handleOpenDialog()}
-                            size="lg"
-                            className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg border-0 font-semibold"
+                            size="sm"
+                            className="bg-white text-blue-600 hover:bg-blue-50 shadow-sm border-0 font-semibold h-8 text-xs"
                         >
                             Add New Order
                         </Button>
-                        <div className="flex gap-2">
-                            <Button variant="outline" size="icon" onClick={() => setSingleImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" title="Import Single Order">
-                                <FileUp className="h-5 w-5" />
+                        <div className="flex gap-1">
+                            <Button variant="outline" size="icon" onClick={() => setSingleImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8 w-8" title="Import Single Order">
+                                <FileUp className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" onClick={() => setImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" title="Bulk Import">
-                                <Upload className="h-5 w-5" />
+                            <Button variant="outline" size="icon" onClick={() => setImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8 w-8" title="Bulk Import">
+                                <Upload className="h-3.5 w-3.5" />
                             </Button>
                         </div>
                     </div>
@@ -488,80 +436,86 @@ export function OrdersDashboard() {
             </div>
 
             {/* Metrics Summary */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                            <ShoppingCart className="h-4 w-4" />
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="relative overflow-hidden border-border/50 dark:border-blue-500/20 dark:bg-blue-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-blue-500/10 group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
+                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-blue-200 uppercase tracking-wider">Total Orders</CardTitle>
+                        <div className="h-5 w-5 rounded-md bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
+                            <ShoppingCart className="h-2.5 w-2.5" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{orders.length}</div>
-                        <p className="text-xs text-muted-foreground">All time orders</p>
+                    <CardContent className="relative z-10 p-3 pt-0">
+                        <div className="text-lg font-bold text-foreground dark:text-white">{orders.length}</div>
+                        <p className="text-[9px] text-muted-foreground dark:text-blue-300/60">All time orders</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                            <Loader2 className="h-4 w-4" />
+                <Card className="relative overflow-hidden border-border/50 dark:border-amber-500/20 dark:bg-amber-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-amber-500/10 group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
+                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-amber-200 uppercase tracking-wider">Pending</CardTitle>
+                        <div className="h-5 w-5 rounded-md bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20">
+                            <Loader2 className="h-2.5 w-2.5" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{inProgressOrders.length}</div>
-                        <p className="text-xs text-muted-foreground">Orders in progress</p>
+                    <CardContent className="relative z-10 p-3 pt-0">
+                        <div className="text-lg font-bold text-foreground dark:text-white">{inProgressOrders.length}</div>
+                        <p className="text-[9px] text-muted-foreground dark:text-amber-300/60">Orders in progress</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                        <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                            <FileUp className="h-4 w-4" />
+                <Card className="relative overflow-hidden border-border/50 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-emerald-500/10 group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
+                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-emerald-200 uppercase tracking-wider">Completed</CardTitle>
+                        <div className="h-5 w-5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                            <FileUp className="h-2.5 w-2.5" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{completedOrders.length}</div>
-                        <p className="text-xs text-muted-foreground">Successfully delivered</p>
+                    <CardContent className="relative z-10 p-3 pt-0">
+                        <div className="text-lg font-bold text-foreground dark:text-white">{completedOrders.length}</div>
+                        <p className="text-[9px] text-muted-foreground dark:text-emerald-300/60">Successfully delivered</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-                        <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
-                            <Trash2 className="h-4 w-4" />
+                <Card className="relative overflow-hidden border-border/50 dark:border-red-500/20 dark:bg-red-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-red-500/10 group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
+                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-red-200 uppercase tracking-wider">Cancelled</CardTitle>
+                        <div className="h-5 w-5 rounded-md bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 ring-1 ring-red-500/20">
+                            <Trash2 className="h-2.5 w-2.5" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{cancelledOrders.length}</div>
-                        <p className="text-xs text-muted-foreground">Orders cancelled</p>
+                    <CardContent className="relative z-10 p-3 pt-0">
+                        <div className="text-lg font-bold text-foreground dark:text-white">{cancelledOrders.length}</div>
+                        <p className="text-[9px] text-muted-foreground dark:text-red-300/60">Orders cancelled</p>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Filters and Actions Bar */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/50 dark:border-white/10 bg-card/50 dark:bg-white/5 dark:backdrop-blur-sm p-4 shadow-sm">
-                <div className="flex flex-1 items-center gap-4">
-                    <div className="relative flex-1 md:max-w-sm">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border/50 dark:border-white/10 bg-card/50 dark:bg-white/5 dark:backdrop-blur-sm p-2 shadow-sm">
+                <div className="flex flex-1 items-center gap-2">
+                    <div className="relative flex-1 md:max-w-xs">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             type="search"
                             placeholder="Search orders..."
-                            className="pl-9 bg-muted/50 border-border/50 focus:bg-background transition-colors"
+                            className="pl-8 bg-muted/50 border-border/50 focus:bg-background transition-colors h-8 text-xs"
                             value={localSearch}
                             onChange={(e) => setLocalSearch(e.target.value)}
                         />
                     </div>
-                    <DateFilter date={date} setDate={handleSetDate} absoluteDuration={true} />
+                    <div className="scale-90 origin-left">
+                        <DateFilter date={date} setDate={handleSetDate} absoluteDuration={true} />
+                    </div>
                 </div>
 
                 {numSelected > 0 && (
-                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
-                        <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
                             {numSelected} selected
                         </span>
-                        <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)} className="shadow-sm">
-                            <Trash2 className="mr-2 h-4 w-4" />
+                        <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)} className="shadow-sm h-8 text-xs">
+                            <Trash2 className="mr-2 h-3.5 w-3.5" />
                             Delete
                         </Button>
                     </div>
@@ -577,18 +531,18 @@ export function OrdersDashboard() {
                         </div>
                     ) : (
                         <Tabs defaultValue="in-progress" onValueChange={() => setSelectedOrders({})} className="w-full">
-                            <div className="border-b border-border/50 dark:border-white/10 px-6 py-4 bg-muted/10 dark:bg-white/5">
-                                <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 dark:bg-black/20 p-1">
-                                    <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
+                            <div className="border-b border-border/50 dark:border-white/10 px-6 py-3 bg-muted/10 dark:bg-white/5">
+                                <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 dark:bg-black/20 p-1 h-9">
+                                    <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
                                         In Progress
                                     </TabsTrigger>
-                                    <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
                                         Completed
                                     </TabsTrigger>
-                                    <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
                                         Cancelled
                                     </TabsTrigger>
-                                    <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
                                         All Orders
                                     </TabsTrigger>
                                 </TabsList>
