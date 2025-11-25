@@ -446,7 +446,10 @@ export function OrderFormDialog({
                                                         step="0.1"
                                                         placeholder="e.g., 4.2"
                                                         {...field}
-                                                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            field.onChange(value === '' ? null : parseFloat(value));
+                                                        }}
                                                         value={field.value ?? ''}
                                                     />
                                                 </FormControl>
