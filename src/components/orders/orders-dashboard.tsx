@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { DateFilter } from "@/components/dashboard/date-filter";
 import type { IncomeSource } from "@/lib/data/incomes-data";
-import type { Order } from "@/lib/data/orders-data";
+import { type Order, type OrderFormValues } from "@/lib/data/orders-data";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrdersTable } from "@/components/orders/orders-table";
@@ -70,6 +70,60 @@ export function OrdersDashboard() {
     const sortParam = searchParams.get('sort');
     const searchQuery = searchParams.get('q') || "";
     const [localSearch, setLocalSearch] = useState(searchQuery);
+
+    const [initialFormValues, setInitialFormValues] = useState<Partial<OrderFormValues> | undefined>(undefined);
+
+    // Effect to handle URL-based pre-filling
+    useEffect(() => {
+        const orderIdParam = searchParams.get('order id');
+        const gigNameParam = searchParams.get('gig name');
+
+        if (orderIdParam || gigNameParam) {
+            const dateParam = searchParams.get('date');
+            const clientUsernameParam = searchParams.get('client username');
+            const amountParam = searchParams.get('amount');
+
+            let parsedDate = undefined;
+            if (dateParam) {
+                // Try parsing MM/DD/YYYY first
+                const parts = dateParam.split('/');
+                if (parts.length === 3) {
+                    parsedDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                } else {
+                    parsedDate = new Date(dateParam);
+                }
+            }
+
+            let foundSource = "";
+            let foundGig = "";
+
+            if (gigNameParam) {
+                foundGig = gigNameParam;
+                // Find source that contains this gig
+                const sourceWithGig = incomeSources.find(source =>
+                    source.gigs.some(gig => gig.name.toLowerCase() === gigNameParam.toLowerCase())
+                );
+                if (sourceWithGig) {
+                    foundSource = sourceWithGig.name;
+                }
+            }
+
+            setInitialFormValues({
+                id: orderIdParam || "",
+                date: parsedDate,
+                username: clientUsernameParam || "",
+                amount: amountParam ? parseFloat(amountParam) : undefined,
+                gig: foundGig,
+                source: foundSource,
+                status: "In Progress", // Default as per requirement
+            });
+
+            // Only open if we haven't already opened it for this specific request
+            // We can check if the form is already open to prevent loops, 
+            // but for now, we'll assume the user lands on this URL to create an order.
+            setIsFormDialogOpen(true);
+        }
+    }, [searchParams, incomeSources]);
 
     const [visibleCounts, setVisibleCounts] = useState({
         all: INITIAL_LOAD_COUNT,
@@ -447,6 +501,7 @@ export function OrdersDashboard() {
                 incomeSources={incomeSources}
                 onOrderAdded={handleOrderAdded}
                 onOrderUpdated={handleOrderUpdated}
+                initialValues={initialFormValues}
             />
 
             <ImportOrdersDialog
