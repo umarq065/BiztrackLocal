@@ -31,19 +31,19 @@ export function DashboardHeader({
     return (
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
             <div className="space-y-1">
-                <h1 className="font-headline text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white drop-shadow-sm md:text-4xl">
+                <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground drop-shadow-sm md:text-4xl">
                     Dashboard
                 </h1>
-                <p className="text-sm text-blue-200/60 font-medium">
+                <p className="text-sm text-muted-foreground font-medium">
                     Overview of your business performance
                 </p>
             </div>
             <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
-                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-blue-100 backdrop-blur-md shadow-sm sm:flex ring-1 ring-white/5">
-                    <CalendarDays className="h-3.5 w-3.5 text-blue-400" />
+                <div className="hidden items-center gap-2 rounded-full border border-border bg-card/50 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-md shadow-sm sm:flex">
+                    <CalendarDays className="h-3.5 w-3.5 text-primary" />
                     <span>{daysLeft} days left in {targetMonth}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10 backdrop-blur-sm">
+                <div className="flex items-center gap-2 bg-card/50 p-1 rounded-lg border border-border backdrop-blur-sm">
                     <DateFilter date={date} setDate={setDate} absoluteDuration={true} className="border-0" />
                     <SetTargetDialog
                         monthlyTargets={monthlyTargets}

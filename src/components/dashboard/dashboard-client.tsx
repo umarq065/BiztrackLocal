@@ -50,7 +50,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, endOfMonth, differenceInDays } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -239,6 +239,12 @@ export function DashboardClient({
   }), [dashboardMetrics.orderMetrics]);
 
   useEffect(() => {
+    // Calculate days left in the current month
+    const today = new Date();
+    const lastDay = endOfMonth(today);
+    const days = Math.max(0, differenceInDays(lastDay, today));
+    setDaysLeft(days);
+
     async function fetchOverview() {
       if (!date?.from || !date?.to) return;
       try {
@@ -259,6 +265,14 @@ export function DashboardClient({
           keyMetrics: data.keyMetrics,
           orderMetrics: data.orderMetrics
         });
+
+        // Sync local monthly target state with fetched data for the current month
+        if (data.monthlyTarget) {
+          setMonthlyTargets(prev => ({
+            ...prev,
+            [currentMonthKey]: data.monthlyTarget
+          }));
+        }
 
         setFinancialStats([
           {
@@ -307,7 +321,7 @@ export function DashboardClient({
       }
     }
     fetchOverview();
-  }, [date]);
+  }, [date, currentMonthKey]);
 
   const totalRevenue = useMemo(() => revenueByDay.reduce((sum, day) => sum + day.revenue, 0), [revenueByDay]);
 

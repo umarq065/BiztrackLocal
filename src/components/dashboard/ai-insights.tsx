@@ -69,28 +69,28 @@ export default function AiInsights({ initialInsights }: { initialInsights: strin
   return (
     <div className="relative group h-full">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl opacity-75 blur transition duration-1000 group-hover:opacity-100 group-hover:duration-200 animate-tilt"></div>
-      <Card className="relative h-full border-0 bg-black/40 backdrop-blur-xl">
+      <Card className="relative h-full border-0 bg-card/90 backdrop-blur-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Wand2 className="h-5 w-5 text-purple-400" />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+          <CardTitle className="flex items-center gap-2 text-card-foreground">
+            <Wand2 className="h-5 w-5 text-purple-500" />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-600">
               AI-Powered Insights
             </span>
           </CardTitle>
-          <CardDescription className="text-blue-200/60">
+          <CardDescription className="text-muted-foreground">
             Get AI-driven recommendations based on your data.
           </CardDescription>
         </CardHeader>
         <CardContent className="min-h-[160px]">
           {loading ? (
             <div className="space-y-2">
-              <Skeleton className="h-4 w-full bg-white/10" />
-              <Skeleton className="h-4 w-full bg-white/10" />
-              <Skeleton className="h-4 w-3/4 bg-white/10" />
-              <Skeleton className="h-4 w-1/2 bg-white/10" />
+              <Skeleton className="h-4 w-full bg-muted" />
+              <Skeleton className="h-4 w-full bg-muted" />
+              <Skeleton className="h-4 w-3/4 bg-muted" />
+              <Skeleton className="h-4 w-1/2 bg-muted" />
             </div>
           ) : (
-            <p className="text-sm text-blue-100/90 leading-relaxed">{insights}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{insights}</p>
           )}
         </CardContent>
         <CardFooter>

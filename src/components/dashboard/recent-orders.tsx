@@ -21,50 +21,50 @@ interface RecentOrdersProps {
 
 export default function RecentOrders({ orders, onEditOrder }: RecentOrdersProps) {
   return (
-    <div className="rounded-md border border-white/10 bg-white/5 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-md border border-border bg-card backdrop-blur-sm overflow-hidden">
       <Table>
-        <TableHeader className="bg-white/5">
-          <TableRow className="border-white/10 hover:bg-white/5">
-            <TableHead className="text-blue-100/80">Client</TableHead>
-            <TableHead className="text-blue-100/80">Date</TableHead>
-            <TableHead className="text-blue-100/80">Source</TableHead>
-            <TableHead className="text-blue-100/80">Status</TableHead>
-            <TableHead className="text-right text-blue-100/80">Amount</TableHead>
-            <TableHead className="text-right text-blue-100/80">Actions</TableHead>
+        <TableHeader className="bg-muted/50">
+          <TableRow className="border-border hover:bg-muted/50">
+            <TableHead className="text-muted-foreground">Client</TableHead>
+            <TableHead className="text-muted-foreground">Date</TableHead>
+            <TableHead className="text-muted-foreground">Source</TableHead>
+            <TableHead className="text-muted-foreground">Status</TableHead>
+            <TableHead className="text-right text-muted-foreground">Amount</TableHead>
+            <TableHead className="text-right text-muted-foreground">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id} className="border-white/5 hover:bg-white/10 transition-colors">
+            <TableRow key={order.id} className="border-border hover:bg-muted/50 transition-colors">
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar className="hidden h-8 w-8 sm:flex ring-2 ring-white/10">
+                  <Avatar className="hidden h-8 w-8 sm:flex ring-2 ring-border">
                     <AvatarImage src={order.avatarUrl} alt="Avatar" />
-                    <AvatarFallback className="bg-blue-900/50 text-blue-200">{order.username.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary">{order.username.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="grid gap-0.5">
-                    <p className="text-sm font-medium leading-none text-white">
+                    <p className="text-sm font-medium leading-none text-foreground">
                       {order.username}
                     </p>
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-blue-200/70">
+              <TableCell className="text-muted-foreground">
                 {format(toZonedTime(order.date, 'UTC'), "MMM dd, yyyy")}
               </TableCell>
-              <TableCell className="text-blue-200/70">{order.source}</TableCell>
+              <TableCell className="text-muted-foreground">{order.source}</TableCell>
               <TableCell>
                 <Badge
                   variant="outline"
-                  className={`border-0 ${order.status === 'Cancelled' ? 'bg-red-500/20 text-red-300' :
-                      order.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-300' :
-                        'bg-blue-500/20 text-blue-300'
+                  className={`border-0 ${order.status === 'Cancelled' ? 'bg-red-500/20 text-red-600 dark:text-red-300' :
+                    order.status === 'Completed' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' :
+                      'bg-blue-500/20 text-blue-600 dark:text-blue-300'
                     }`}
                 >
                   {order.status}
                 </Badge>
               </TableCell>
-              <TableCell className="text-right font-medium text-white">
+              <TableCell className="text-right font-medium text-foreground">
                 ${order.amount.toFixed(2)}
               </TableCell>
               <TableCell className="text-right">
@@ -72,7 +72,7 @@ export default function RecentOrders({ orders, onEditOrder }: RecentOrdersProps)
                   variant="ghost"
                   size="sm"
                   onClick={() => onEditOrder(order.id)}
-                  className="h-8 w-8 p-0 text-blue-200/70 hover:text-white hover:bg-white/10"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <Edit className="h-4 w-4" />
                   <span className="sr-only">Edit</span>

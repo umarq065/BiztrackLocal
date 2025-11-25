@@ -108,10 +108,10 @@ export function FinancialStatCard({
           </div>
 
           <div className="space-y-1">
-            <p className="text-3xl font-bold text-white tracking-tight drop-shadow-md group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-blue-100 transition-all duration-300">
+            <p className="text-3xl font-bold text-foreground tracking-tight drop-shadow-md group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-foreground group-hover:to-muted-foreground transition-all duration-300">
               {value}
             </p>
-            <p className="text-xs text-blue-200/50 font-medium">{dateRange}</p>
+            <p className="text-xs text-muted-foreground font-medium">{dateRange}</p>
           </div>
         </div>
       </div>
