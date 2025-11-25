@@ -451,7 +451,7 @@ export function OrdersDashboard() {
 
 
     return (
-        <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8 bg-muted/30 dark:bg-muted/5 min-h-screen">
+        <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8 bg-muted/30 dark:bg-gradient-to-br dark:from-[#0f172a] dark:via-[#1e1b4b] dark:to-[#0f172a] min-h-screen">
             {/* Header Section */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 p-8 text-white shadow-xl">
                 <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -489,7 +489,7 @@ export function OrdersDashboard() {
 
             {/* Metrics Summary */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
                         <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -501,7 +501,7 @@ export function OrdersDashboard() {
                         <p className="text-xs text-muted-foreground">All time orders</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Pending</CardTitle>
                         <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
@@ -513,7 +513,7 @@ export function OrdersDashboard() {
                         <p className="text-xs text-muted-foreground">Orders in progress</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Completed</CardTitle>
                         <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
@@ -525,7 +525,7 @@ export function OrdersDashboard() {
                         <p className="text-xs text-muted-foreground">Successfully delivered</p>
                     </CardContent>
                 </Card>
-                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
                         <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
@@ -540,7 +540,7 @@ export function OrdersDashboard() {
             </div>
 
             {/* Filters and Actions Bar */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/50 dark:border-white/10 bg-card/50 dark:bg-white/5 dark:backdrop-blur-sm p-4 shadow-sm">
                 <div className="flex flex-1 items-center gap-4">
                     <div className="relative flex-1 md:max-w-sm">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -569,7 +569,7 @@ export function OrdersDashboard() {
             </div>
 
             {/* Main Content Area */}
-            <Card className="border-border/50 shadow-lg dark:shadow-blue-900/5 overflow-hidden">
+            <Card className="border-border/50 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-sm shadow-lg dark:shadow-blue-900/20 overflow-hidden">
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="flex h-[400px] items-center justify-center">
@@ -577,18 +577,18 @@ export function OrdersDashboard() {
                         </div>
                     ) : (
                         <Tabs defaultValue="in-progress" onValueChange={() => setSelectedOrders({})} className="w-full">
-                            <div className="border-b px-6 py-4 bg-muted/10">
-                                <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 p-1">
-                                    <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                            <div className="border-b border-border/50 dark:border-white/10 px-6 py-4 bg-muted/10 dark:bg-white/5">
+                                <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 dark:bg-black/20 p-1">
+                                    <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
                                         In Progress
                                     </TabsTrigger>
-                                    <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
                                         Completed
                                     </TabsTrigger>
-                                    <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
                                         Cancelled
                                     </TabsTrigger>
-                                    <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                    <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">
                                         All Orders
                                     </TabsTrigger>
                                 </TabsList>

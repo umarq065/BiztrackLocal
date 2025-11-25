@@ -82,10 +82,9 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                 <TableRow>
                     <TableHead className="w-12">
                         <Checkbox
-                            checked={isAllSelected}
+                            checked={isAllSelected ? true : (isSomeSelected ? "indeterminate" : false)}
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                             aria-label="Select all"
-                            indeterminate={isSomeSelected && !isAllSelected}
                         />
                     </TableHead>
                     <TableHead>
@@ -114,7 +113,11 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
             <TableBody>
                 {orders.length > 0 ? (
                     orders.map((order) => (
-                        <TableRow key={order.id} data-state={selectedOrders[order.id] && 'selected'}>
+                        <TableRow
+                            key={order.id}
+                            data-state={selectedOrders[order.id] && 'selected'}
+                            className="hover:bg-muted/50 dark:hover:bg-white/5 data-[state=selected]:bg-muted dark:data-[state=selected]:bg-white/10 border-border/50 dark:border-white/5"
+                        >
                             <TableCell>
                                 <Checkbox
                                     checked={!!selectedOrders[order.id]}
