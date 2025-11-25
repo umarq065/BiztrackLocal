@@ -38,7 +38,7 @@ export function DashboardHeader({
                     <CalendarDays className="h-4 w-4" />
                     <span>{daysLeft} days left</span>
                 </div>
-                <DateFilter date={date} setDate={setDate} />
+                <DateFilter date={date} setDate={setDate} absoluteDuration={true} />
                 <SetTargetDialog
                     monthlyTargets={monthlyTargets}
                     onSetTarget={onSetTarget}
