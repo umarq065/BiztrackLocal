@@ -6,19 +6,19 @@ import { format } from "date-fns";
 import { MoreHorizontal, Star, Edit, Trash2, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +47,7 @@ interface OrdersTableProps {
 }
 
 const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfig, selectedOrders, onSelectionChange }: OrdersTableProps) => {
-    
+
     const getSortIndicator = (key: keyof Order) => {
         if (sortConfig.key === key) {
             return sortConfig.direction === 'ascending' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
@@ -62,7 +62,7 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
         }
         onSelectionChange(newSelection);
     };
-    
+
     const handleRowSelect = (orderId: string, checked: boolean) => {
         const newSelection = { ...selectedOrders };
         if (checked) {
@@ -75,13 +75,13 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
 
     const isAllSelected = orders.length > 0 && orders.every(order => selectedOrders[order.id]);
     const isSomeSelected = orders.length > 0 && orders.some(order => selectedOrders[order.id]);
-    
+
     return (
         <Table>
             <TableHeader>
                 <TableRow>
                     <TableHead className="w-12">
-                         <Checkbox
+                        <Checkbox
                             checked={isAllSelected}
                             onCheckedChange={(checked) => handleSelectAll(!!checked)}
                             aria-label="Select all"
@@ -90,21 +90,21 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                     </TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('date')} className="-ml-4">
-                           Date {getSortIndicator('date')}
+                            Date {getSortIndicator('date')}
                         </Button>
                     </TableHead>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Client Username</TableHead>
                     <TableHead className="text-right">
-                         <Button variant="ghost" onClick={() => requestSort('amount')} className="justify-end w-full -mr-4">
-                           Amount {getSortIndicator('amount')}
+                        <Button variant="ghost" onClick={() => requestSort('amount')} className="justify-end w-full -mr-4">
+                            Amount {getSortIndicator('amount')}
                         </Button>
                     </TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Gig</TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('rating')} className="-ml-4">
-                           Rating {getSortIndicator('rating')}
+                            Rating {getSortIndicator('rating')}
                         </Button>
                     </TableHead>
                     <TableHead>Status</TableHead>
@@ -123,7 +123,17 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                                 />
                             </TableCell>
                             <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
-                            <TableCell className="font-medium">{order.id}</TableCell>
+                            <TableCell className="font-medium">
+                                <a
+                                    href={`https://www.fiverr.com/orders/${order.id}/activities`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:underline text-primary"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {order.id}
+                                </a>
+                            </TableCell>
                             <TableCell>
                                 <NProgressLink href={`/clients/${order.clientUsername}`} className="font-medium hover:underline">
                                     {order.clientUsername}
