@@ -6,22 +6,22 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ArrowUpDown, Search, Sparkles, X, ChevronDown, Database, Loader2, Trash2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import type { Client } from "@/lib/data/clients-data";
@@ -54,7 +54,7 @@ const ClientsPageComponent = () => {
     const [aiSearchQuery, setAiSearchQuery] = useState("");
     const [isAiSearching, setIsAiSearching] = useState(false);
     const { toast } = useToast();
-    
+
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -80,7 +80,7 @@ const ClientsPageComponent = () => {
         lastOrder: true,
         social: true,
     });
-    
+
     const [fromDate, setFromDate] = useState<{ month: number; year: number } | null>(() => {
         const fromM = searchParams.get('fromMonth');
         const fromY = searchParams.get('fromYear');
@@ -93,7 +93,7 @@ const ClientsPageComponent = () => {
         if (toM && toY) return { month: parseInt(toM), year: parseInt(toY) };
         return null;
     });
-    
+
     useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
@@ -107,13 +107,13 @@ const ClientsPageComponent = () => {
                 if (!clientsRes.ok) {
                     throw new Error('Failed to fetch clients from the server.');
                 }
-                 if (!incomesRes.ok) {
+                if (!incomesRes.ok) {
                     throw new Error('Failed to fetch income sources from the server.');
                 }
 
                 const clientsData = await clientsRes.json();
                 const incomesData = await incomesRes.json();
-                
+
                 setClients(clientsData);
                 setIncomeSources(incomesData);
 
@@ -128,7 +128,7 @@ const ClientsPageComponent = () => {
     }, []);
 
     useEffect(() => {
-      setLocalSearch(searchQuery);
+        setLocalSearch(searchQuery);
     }, [searchQuery]);
 
     const sortConfig = useMemo(() => {
@@ -162,23 +162,23 @@ const ClientsPageComponent = () => {
     };
 
     useEffect(() => {
-      const handler = setTimeout(() => {
-        if (localSearch !== searchQuery) {
-          router.push(`${pathname}?${createQueryString({ q: localSearch || null })}`);
-        }
-      }, 300);
+        const handler = setTimeout(() => {
+            if (localSearch !== searchQuery) {
+                router.push(`${pathname}?${createQueryString({ q: localSearch || null })}`);
+            }
+        }, 300);
 
-      return () => {
-        clearTimeout(handler);
-      };
+        return () => {
+            clearTimeout(handler);
+        };
     }, [localSearch, searchQuery, router, pathname, createQueryString]);
-    
+
     const handleAiSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!aiSearchQuery.trim()) return;
 
         setIsAiSearching(true);
-        setLocalSearch(""); 
+        setLocalSearch("");
         router.push(`${pathname}?${createQueryString({ q: null })}`, { scroll: false });
 
         try {
@@ -215,7 +215,7 @@ const ClientsPageComponent = () => {
     };
 
     const handleClientUpdated = (updatedClient: Client) => {
-        setClients(prevClients => 
+        setClients(prevClients =>
             prevClients.map(c => (c.id === updatedClient.id ? updatedClient : c))
         );
         setEditingClient(null);
@@ -233,9 +233,9 @@ const ClientsPageComponent = () => {
                 throw new Error(errorData.error || 'Failed to delete client');
             }
             setClients(prev => prev.filter(c => c.id !== deletingClient.id));
-            toast({ title: "Client Deleted", description: `Client "${deletingClient.name || deletingClient.username}" has been removed.`});
+            toast({ title: "Client Deleted", description: `Client "${deletingClient.name || deletingClient.username}" has been removed.` });
         } catch (error) {
-             toast({
+            toast({
                 variant: "destructive",
                 title: "Error",
                 description: (error as Error).message || "Could not delete client. Please try again.",
@@ -256,14 +256,14 @@ const ClientsPageComponent = () => {
                 body: JSON.stringify({ clientIds: idsToDelete }),
             });
             const result = await response.json();
-             if (!response.ok) {
+            if (!response.ok) {
                 throw new Error(result.error || 'Failed to delete selected clients');
             }
             setClients(prev => prev.filter(c => !idsToDelete.includes(c.id)));
             setSelectedClients({});
             toast({ title: 'Clients Deleted', description: result.message });
-        } catch(error) {
-             toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: (error as Error).message });
         } finally {
             setIsSubmitting(false);
             setDeletingSelected(false);
@@ -309,7 +309,7 @@ const ClientsPageComponent = () => {
                 if (aiFilters.dateRange) {
                     if (client.lastOrder === 'N/A') return false;
                     const clientDate = new Date(client.lastOrder.replace(/-/g, '/'));
-                    
+
                     if (aiFilters.dateRange.from) {
                         const fromDate = new Date(aiFilters.dateRange.from.replace(/-/g, '/'));
                         if (clientDate < fromDate) return false;
@@ -322,11 +322,11 @@ const ClientsPageComponent = () => {
                 return true;
             });
         } else {
-             if (fromDate || toDate) {
+            if (fromDate || toDate) {
                 clientsToFilter = clientsToFilter.filter(client => {
                     if (client.lastOrder === 'N/A') return false;
                     const lastOrderDate = new Date(client.lastOrder.replace(/-/g, '/'));
-                    
+
                     if (fromDate) {
                         const filterFromDate = new Date(fromDate.year, fromDate.month - 1, 1);
                         if (lastOrderDate < filterFromDate) return false;
@@ -340,9 +340,12 @@ const ClientsPageComponent = () => {
             }
             if (searchQuery) {
                 const lowercasedQuery = searchQuery.toLowerCase();
-                clientsToFilter = clientsToFilter.filter(client => 
+                clientsToFilter = clientsToFilter.filter(client =>
                     (client.name || '').toLowerCase().includes(lowercasedQuery) ||
-                    client.username.toLowerCase().includes(lowercasedQuery)
+                    client.username.toLowerCase().includes(lowercasedQuery) ||
+                    (client.notes || '').toLowerCase().includes(lowercasedQuery) ||
+                    (client.tags || []).some(tag => tag.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.socialLinks || []).some(link => link.url.toLowerCase().includes(lowercasedQuery) || link.platform.toLowerCase().includes(lowercasedQuery))
                 );
             }
         }
@@ -381,12 +384,12 @@ const ClientsPageComponent = () => {
         }
         return sortableItems;
     }, [filteredClients, sortConfig]);
-    
+
     const activeFilterCount = useMemo(() => {
-      if (!aiFilters) return 0;
-      return Object.values(aiFilters).filter(v => v !== undefined && v !== null && v !== "" && !(typeof v === 'object' && Object.keys(v).length === 0)).length;
+        if (!aiFilters) return 0;
+        return Object.values(aiFilters).filter(v => v !== undefined && v !== null && v !== "" && !(typeof v === 'object' && Object.keys(v).length === 0)).length;
     }, [aiFilters]);
-    
+
     const numSelected = Object.values(selectedClients).filter(Boolean).length;
     const visibleClients = useMemo(() => sortedClients.slice(0, visibleCount), [sortedClients, visibleCount]);
 
@@ -401,7 +404,7 @@ const ClientsPageComponent = () => {
         }
 
         return (
-             <ClientsTable 
+            <ClientsTable
                 clients={visibleClients}
                 requestSort={requestSort}
                 getSortIndicator={getSortIndicator}
@@ -414,209 +417,209 @@ const ClientsPageComponent = () => {
         )
     }
 
-  return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center">
-        <h1 className="font-headline text-lg font-semibold md:text-2xl">
-          Clients
-        </h1>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Search clients..."
-                    className="pl-8 sm:w-[200px] md:w-[250px]"
-                    value={localSearch}
-                    onChange={handleSearchChange}
-                />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {Object.entries({
-                  status: "Status",
-                  clientType: "Type",
-                  source: "Source",
-                  totalEarning: "Earning",
-                  totalOrders: "Orders",
-                  clientSince: "Client Since",
-                  lastOrder: "Last Order",
-                  social: "Social",
-                }).map(([key, label]) => (
-                  <DropdownMenuCheckboxItem
-                    key={key}
-                    className="capitalize"
-                    checked={columnVisibility[key as keyof typeof columnVisibility]}
-                    onCheckedChange={(value) =>
-                      setColumnVisibility((prev) => ({
-                        ...prev,
-                        [key]: !!value,
-                      }))
-                    }
-                  >
-                    {label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex items-center gap-2">
-                <MonthYearPicker date={fromDate} setDate={(d) => { setFromDate(d); updateUrlWithDate(d, toDate); }} label="From" />
-                <MonthYearPicker date={toDate} setDate={(d) => { setToDate(d); updateUrlWithDate(fromDate, d); }} label="To" />
-            </div>
-          <AddClientDialog 
-            open={isAddClientOpen} 
-            onOpenChange={setIsAddClientOpen} 
-            onClientAdded={handleClientAdded}
-            incomeSources={incomeSources.map(s => s.name)}
-          >
-            <Button>Add New Client</Button>
-          </AddClientDialog>
-        </div>
-      </div>
-
-       {error && (
-            <Alert variant="destructive">
-                <Database className="h-4 w-4" />
-                <AlertTitle>Database Connection Error</AlertTitle>
-                <AlertDescription>
-                    {error}
-                </AlertDescription>
-            </Alert>
-        )}
-      
-      <div className="space-y-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-        <form onSubmit={handleAiSearch} className="flex gap-2">
-            <div className="relative flex-grow">
-                 <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                 <Input
-                    type="text"
-                    placeholder="Ask AI to filter clients... (e.g., 'show me VIP clients from last year')"
-                    className="pl-9"
-                    value={aiSearchQuery}
-                    onChange={e => setAiSearchQuery(e.target.value)}
-                    disabled={isAiSearching}
-                />
-            </div>
-            <Button type="submit" disabled={isAiSearching || !aiSearchQuery.trim()}>
-                {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Ask AI"}
-            </Button>
-        </form>
-         {aiFilters && (
-            <div className="flex items-center gap-4">
-                <div className="text-sm font-medium">
-                    Active AI Filters ({activeFilterCount}):
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {Object.entries(aiFilters).map(([key, value]) => {
-                        if (value === undefined || value === null || value === "" || (typeof value === 'object' && Object.keys(value).length === 0)) return null;
-                        let displayValue = "";
-                        if (key === 'dateRange') {
-                            const { from, to } = value as {from?: string, to?: string};
-                            if (from && to) displayValue = `${from} to ${to}`;
-                            else if (from) displayValue = `from ${from}`;
-                            else if (to) displayValue = `until ${to}`;
-                        } else if (typeof value === 'boolean') {
-                            displayValue = value ? "Yes" : "No";
-                        } else {
-                            displayValue = String(value);
-                        }
-                        
-                        return (
-                            <div key={key} className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                                <strong>{key.replace(/([A-Z])/g, ' $1')}:</strong> {displayValue}
-                            </div>
-                        )
-                    })}
-                </div>
-                <Button variant="ghost" size="sm" onClick={clearAiFilters} className="ml-auto">
-                    <X className="mr-2 h-4 w-4" />
-                    Clear Filters
-                </Button>
-            </div>
-        )}
-      </div>
-
-       {numSelected > 0 && (
-          <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
-            <p className="text-sm font-medium">{numSelected} client{numSelected > 1 ? 's' : ''} selected</p>
-            <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected
-            </Button>
-          </div>
-        )}
-
-        <div className="space-y-4">
-            {renderContent()}
-            {visibleCount < sortedClients.length && (
-                <div className="text-center">
-                    <Button
-                        variant="outline"
-                        onClick={() => setVisibleCount(prev => prev + LOAD_MORE_COUNT)}
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <h1 className="font-headline text-lg font-semibold md:text-2xl">
+                    Clients
+                </h1>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search clients..."
+                            className="pl-8 sm:w-[200px] md:w-[250px]"
+                            value={localSearch}
+                            onChange={handleSearchChange}
+                        />
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline">
+                                Columns <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {Object.entries({
+                                status: "Status",
+                                clientType: "Type",
+                                source: "Source",
+                                totalEarning: "Earning",
+                                totalOrders: "Orders",
+                                clientSince: "Client Since",
+                                lastOrder: "Last Order",
+                                social: "Social",
+                            }).map(([key, label]) => (
+                                <DropdownMenuCheckboxItem
+                                    key={key}
+                                    className="capitalize"
+                                    checked={columnVisibility[key as keyof typeof columnVisibility]}
+                                    onCheckedChange={(value) =>
+                                        setColumnVisibility((prev) => ({
+                                            ...prev,
+                                            [key]: !!value,
+                                        }))
+                                    }
+                                >
+                                    {label}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <div className="flex items-center gap-2">
+                        <MonthYearPicker date={fromDate} setDate={(d) => { setFromDate(d); updateUrlWithDate(d, toDate); }} label="From" />
+                        <MonthYearPicker date={toDate} setDate={(d) => { setToDate(d); updateUrlWithDate(fromDate, d); }} label="To" />
+                    </div>
+                    <AddClientDialog
+                        open={isAddClientOpen}
+                        onOpenChange={setIsAddClientOpen}
+                        onClientAdded={handleClientAdded}
+                        incomeSources={incomeSources.map(s => s.name)}
                     >
-                        Load More ({sortedClients.length - visibleCount} remaining)
+                        <Button>Add New Client</Button>
+                    </AddClientDialog>
+                </div>
+            </div>
+
+            {error && (
+                <Alert variant="destructive">
+                    <Database className="h-4 w-4" />
+                    <AlertTitle>Database Connection Error</AlertTitle>
+                    <AlertDescription>
+                        {error}
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            <div className="space-y-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+                <form onSubmit={handleAiSearch} className="flex gap-2">
+                    <div className="relative flex-grow">
+                        <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                        <Input
+                            type="text"
+                            placeholder="Ask AI to filter clients... (e.g., 'show me VIP clients from last year')"
+                            className="pl-9"
+                            value={aiSearchQuery}
+                            onChange={e => setAiSearchQuery(e.target.value)}
+                            disabled={isAiSearching}
+                        />
+                    </div>
+                    <Button type="submit" disabled={isAiSearching || !aiSearchQuery.trim()}>
+                        {isAiSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Ask AI"}
+                    </Button>
+                </form>
+                {aiFilters && (
+                    <div className="flex items-center gap-4">
+                        <div className="text-sm font-medium">
+                            Active AI Filters ({activeFilterCount}):
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {Object.entries(aiFilters).map(([key, value]) => {
+                                if (value === undefined || value === null || value === "" || (typeof value === 'object' && Object.keys(value).length === 0)) return null;
+                                let displayValue = "";
+                                if (key === 'dateRange') {
+                                    const { from, to } = value as { from?: string, to?: string };
+                                    if (from && to) displayValue = `${from} to ${to}`;
+                                    else if (from) displayValue = `from ${from}`;
+                                    else if (to) displayValue = `until ${to}`;
+                                } else if (typeof value === 'boolean') {
+                                    displayValue = value ? "Yes" : "No";
+                                } else {
+                                    displayValue = String(value);
+                                }
+
+                                return (
+                                    <div key={key} className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                                        <strong>{key.replace(/([A-Z])/g, ' $1')}:</strong> {displayValue}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={clearAiFilters} className="ml-auto">
+                            <X className="mr-2 h-4 w-4" />
+                            Clear Filters
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {numSelected > 0 && (
+                <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
+                    <p className="text-sm font-medium">{numSelected} client{numSelected > 1 ? 's' : ''} selected</p>
+                    <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Selected
                     </Button>
                 </div>
             )}
-        </div>
 
-      {editingClient && (
-        <EditClientDialog
-          open={!!editingClient}
-          onOpenChange={(isOpen) => !isOpen && setEditingClient(null)}
-          client={editingClient}
-          onClientUpdated={handleClientUpdated}
-          incomeSources={incomeSources.map(s => s.name)}
-        />
-      )}
+            <div className="space-y-4">
+                {renderContent()}
+                {visibleCount < sortedClients.length && (
+                    <div className="text-center">
+                        <Button
+                            variant="outline"
+                            onClick={() => setVisibleCount(prev => prev + LOAD_MORE_COUNT)}
+                        >
+                            Load More ({sortedClients.length - visibleCount} remaining)
+                        </Button>
+                    </div>
+                )}
+            </div>
 
-      <AlertDialog open={!!deletingClient} onOpenChange={() => setDeletingClient(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    This will permanently delete the client "{deletingClient?.name || deletingClient?.username}" and all of their associated data. This action cannot be undone.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteClient} disabled={isDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Delete
-                </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            {editingClient && (
+                <EditClientDialog
+                    open={!!editingClient}
+                    onOpenChange={(isOpen) => !isOpen && setEditingClient(null)}
+                    client={editingClient}
+                    onClientUpdated={handleClientUpdated}
+                    incomeSources={incomeSources.map(s => s.name)}
+                />
+            )}
 
-       <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Delete {numSelected} Clients?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This action is permanent and cannot be undone. Are you sure you want to delete the selected clients and all their associated data?
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSelectedClients} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
-            </AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </main>
-  );
+            <AlertDialog open={!!deletingClient} onOpenChange={() => setDeletingClient(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the client "{deletingClient?.name || deletingClient?.username}" and all of their associated data. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteClient} disabled={isDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={deletingSelected} onOpenChange={setDeletingSelected}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {numSelected} Clients?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action is permanent and cannot be undone. Are you sure you want to delete the selected clients and all their associated data?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedClients} className={cn(buttonVariants({ variant: "destructive" }))} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Delete Selected"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </main>
+    );
 }
 
 const MemoizedClientsPage = memo(ClientsPageComponent);
 
 export default function ClientsPage() {
-  return <MemoizedClientsPage />;
+    return <MemoizedClientsPage />;
 }

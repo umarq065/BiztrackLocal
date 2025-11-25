@@ -154,14 +154,65 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                                     </Tooltip>
                                 </TooltipProvider>
                             </TableCell>
-                            <TableCell>{order.gig || <span className="text-muted-foreground">N/A</span>}</TableCell>
+                            <TableCell>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span className="inline-block max-w-[150px] truncate cursor-help">
+                                                {order.gig || <span className="text-muted-foreground">N/A</span>}
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{order.gig || "N/A"}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </TableCell>
                             <TableCell>
                                 <StarDisplay rating={order.rating} />
                             </TableCell>
                             <TableCell>
-                                <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
-                                    {order.status}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant={order.status === 'Cancelled' ? 'destructive' : order.status === 'Completed' ? 'default' : 'secondary'}>
+                                        {order.status}
+                                    </Badge>
+                                    {order.status === 'Cancelled' && order.cancellationReasons && order.cancellationReasons.length > 0 && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="cursor-help rounded-full bg-destructive/10 p-1 text-destructive hover:bg-destructive/20">
+                                                        <span className="sr-only">Cancellation Reasons</span>
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="12"
+                                                            height="12"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        >
+                                                            <circle cx="12" cy="12" r="10" />
+                                                            <line x1="12" y1="16" x2="12" y2="12" />
+                                                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                                                        </svg>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <div className="text-xs">
+                                                        <p className="font-semibold mb-1">Cancellation Reasons:</p>
+                                                        <ul className="list-disc pl-4 space-y-1">
+                                                            {order.cancellationReasons.map((reason, i) => (
+                                                                <li key={i}>{reason}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
+                                </div>
                             </TableCell>
                             <TableCell className="text-right">
                                 <DropdownMenu>
