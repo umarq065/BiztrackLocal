@@ -26,9 +26,9 @@ type EditGigFormValues = z.infer<typeof editGigFormSchema>;
 
 
 async function getIncomesCollection() {
-  const client = await clientPromise;
-  const db = client.db("biztrack-pro");
-  return db.collection<IncomeSource>('incomes');
+    const client = await clientPromise;
+    const db = client.db("biztrack-pro");
+    return db.collection<IncomeSource>('incomes');
 }
 
 async function getOrdersCollection() {
@@ -42,19 +42,19 @@ async function getOrdersCollection() {
  * @returns A promise that resolves to an array of all income sources.
  */
 export async function getIncomeSources(): Promise<IncomeSource[]> {
-  try {
-    const incomesCollection = await getIncomesCollection();
-    
-    const sources = await incomesCollection.find({}).sort({ _id: -1 }).toArray();
-    
-    return sources.map(source => ({
-      ...source,
-      id: source._id.toString(),
-    }));
-  } catch (error) {
-    console.error('Error fetching income sources from DB:', error);
-    return [];
-  }
+    try {
+        const incomesCollection = await getIncomesCollection();
+
+        const sources = await incomesCollection.find({}).sort({ _id: -1 }).toArray();
+
+        return sources.map(source => ({
+            ...source,
+            id: source._id.toString(),
+        }));
+    } catch (error) {
+        console.error('Error fetching income sources from DB:', error);
+        return [];
+    }
 }
 
 /**
@@ -63,26 +63,26 @@ export async function getIncomeSources(): Promise<IncomeSource[]> {
  * @returns The newly created income source object.
  */
 export async function addIncomeSource(sourceData: z.infer<typeof formSchema>): Promise<IncomeSource> {
-  const incomesCollection = await getIncomesCollection();
-  const _id = new ObjectId();
-  
-  const newSource: IncomeSource = {
-    _id,
-    id: _id.toString(),
-    name: sourceData.sourceName,
-    gigs: sourceData.gigs.map((gig) => ({
-      id: randomBytes(8).toString('hex'), // Unique ID for the gig
-      name: gig.name,
-      date: format(new Date(gig.date), 'yyyy-MM-dd'),
-    })),
-  };
+    const incomesCollection = await getIncomesCollection();
+    const _id = new ObjectId();
 
-  const result = await incomesCollection.insertOne(newSource);
-  if (!result.insertedId) {
-      throw new Error('Failed to insert new income source.');
-  }
+    const newSource: IncomeSource = {
+        _id,
+        id: _id.toString(),
+        name: sourceData.sourceName,
+        gigs: sourceData.gigs.map((gig) => ({
+            id: randomBytes(8).toString('hex'), // Unique ID for the gig
+            name: gig.name,
+            date: format(new Date(gig.date), 'yyyy-MM-dd'),
+        })),
+    };
 
-  return newSource;
+    const result = await incomesCollection.insertOne(newSource);
+    if (!result.insertedId) {
+        throw new Error('Failed to insert new income source.');
+    }
+
+    return newSource;
 }
 
 /**
@@ -99,7 +99,7 @@ export async function updateIncomeSource(sourceId: string, newName: string): Pro
 
     try {
         let updatedSource: IncomeSource | null = null;
-        
+
         await session.withTransaction(async () => {
             const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
             if (!source) {
@@ -131,13 +131,13 @@ export async function updateIncomeSource(sourceId: string, newName: string): Pro
                     { session }
                 );
             }
-            
+
             const result = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
             if (result) {
-              updatedSource = { ...result, id: result._id.toString() };
+                updatedSource = { ...result, id: result._id.toString() };
             }
         });
-        
+
         return updatedSource;
     } finally {
         await session.endSession();
@@ -187,7 +187,7 @@ export async function updateGig(sourceId: string, gigId: string, gigData: EditGi
 
     try {
         let updatedGig: Gig | null = null;
-        
+
         await session.withTransaction(async () => {
             const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
             if (!source) {
@@ -230,11 +230,11 @@ export async function updateGig(sourceId: string, gigId: string, gigData: EditGi
             if (result.modifiedCount === 0) {
                 throw new Error("Failed to update gig in incomes collection.");
             }
-            
+
             const updatedSource = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
             updatedGig = updatedSource?.gigs.find(g => g.id === gigId) || null;
         });
-        
+
         return updatedGig;
 
     } finally {
@@ -271,4 +271,53 @@ export async function deleteIncomeSource(sourceId: string): Promise<boolean> {
     const result = await incomesCollection.deleteOne({ _id: new ObjectId(sourceId) });
 
     return result.deletedCount > 0;
+}
+
+/**
+ * Merges multiple gigs into a main gig.
+ * Updates all associated orders to point to the main gig and removes the merged gigs.
+ * @param sourceId The ID of the income source.
+ * @param mainGigId The ID of the gig to keep.
+ * @param gigsToMergeIds The IDs of the gigs to merge into the main gig.
+ * @returns A boolean indicating success.
+ */
+export async function mergeGigs(sourceId: string, mainGigId: string, gigsToMergeIds: string[]): Promise<boolean> {
+    const incomesCollection = await getIncomesCollection();
+    const ordersCollection = await getOrdersCollection();
+
+    try {
+        const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
+        if (!source) {
+            throw new Error("Income source not found.");
+        }
+
+        const mainGig = source.gigs.find(g => g.id === mainGigId);
+        if (!mainGig) {
+            throw new Error("Main gig not found.");
+        }
+
+        const gigsToMerge = source.gigs.filter(g => gigsToMergeIds.includes(g.id));
+        if (gigsToMerge.length !== gigsToMergeIds.length) {
+            throw new Error("One or more gigs to merge not found.");
+        }
+
+        const gigNamesToMerge = gigsToMerge.map(g => g.name);
+
+        // 1. Update orders associated with the merged gigs
+        await ordersCollection.updateMany(
+            { source: source.name, gig: { $in: gigNamesToMerge } },
+            { $set: { gig: mainGig.name } }
+        );
+
+        // 2. Remove the merged gigs from the income source
+        await incomesCollection.updateOne(
+            { _id: new ObjectId(sourceId) },
+            { $pull: { gigs: { id: { $in: gigsToMergeIds } } } }
+        );
+
+        return true;
+    } catch (error) {
+        console.error("Error merging gigs:", error);
+        throw error;
+    }
 }
