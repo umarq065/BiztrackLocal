@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { Upload, FileUp, Loader2, Search, Trash2 } from "lucide-react";
+import { Upload, FileUp, Loader2, Search, Trash2, ShoppingCart } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -451,46 +451,195 @@ export function OrdersDashboard() {
 
 
     return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <h1 className="font-headline text-lg font-semibold md:text-2xl">
-                    Manage Orders ({isLoading ? <Loader2 className="inline h-5 w-5 animate-spin" /> : orders.length})
-                </h1>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-3 h-4 w-4 text-muted-foreground" />
+        <main className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-8 bg-muted/30 dark:bg-muted/5 min-h-screen">
+            {/* Header Section */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-violet-600 to-purple-600 p-8 text-white shadow-xl">
+                <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-2">
+                        <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl">
+                            Manage Orders
+                        </h1>
+                        <p className="text-blue-100/80 max-w-md text-sm md:text-base">
+                            Track and manage your client orders, view financial summaries, and handle imports efficiently.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                            onClick={() => handleOpenDialog()}
+                            size="lg"
+                            className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg border-0 font-semibold"
+                        >
+                            Add New Order
+                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="icon" onClick={() => setSingleImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" title="Import Single Order">
+                                <FileUp className="h-5 w-5" />
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => setImportDialogOpen(true)} className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" title="Bulk Import">
+                                <Upload className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Decorative background elements */}
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+                <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+            </div>
+
+            {/* Metrics Summary */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <ShoppingCart className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{orders.length}</div>
+                        <p className="text-xs text-muted-foreground">All time orders</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                            <Loader2 className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{inProgressOrders.length}</div>
+                        <p className="text-xs text-muted-foreground">Orders in progress</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                            <FileUp className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{completedOrders.length}</div>
+                        <p className="text-xs text-muted-foreground">Successfully delivered</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+                        <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                            <Trash2 className="h-4 w-4" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{cancelledOrders.length}</div>
+                        <p className="text-xs text-muted-foreground">Orders cancelled</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters and Actions Bar */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border bg-card p-4 shadow-sm">
+                <div className="flex flex-1 items-center gap-4">
+                    <div className="relative flex-1 md:max-w-sm">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             type="search"
                             placeholder="Search orders..."
-                            className="pl-8 sm:w-[200px] md:w-[250px]"
+                            className="pl-9 bg-muted/50 border-border/50 focus:bg-background transition-colors"
                             value={localSearch}
                             onChange={(e) => setLocalSearch(e.target.value)}
                         />
                     </div>
                     <DateFilter date={date} setDate={handleSetDate} absoluteDuration={true} />
-                    <Button variant="default" onClick={() => setSingleImportDialogOpen(true)}>
-                        <FileUp className="mr-2 h-4 w-4" />
-                        Import Single Order
-                    </Button>
-                    <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Import Orders
-                    </Button>
-                    <Button onClick={() => handleOpenDialog()}>Add New Order</Button>
                 </div>
+
+                {numSelected > 0 && (
+                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                        <span className="text-sm font-medium text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+                            {numSelected} selected
+                        </span>
+                        <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)} className="shadow-sm">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                        </Button>
+                    </div>
+                )}
             </div>
-            {numSelected > 0 && (
-                <div className="flex items-center gap-4 rounded-lg border bg-card p-3 px-4 shadow-sm">
-                    <p className="text-sm font-medium">{numSelected} order{numSelected > 1 ? 's' : ''} selected</p>
-                    <Button variant="destructive" size="sm" onClick={() => setDeletingSelected(true)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Selected
-                    </Button>
-                </div>
-            )}
-            <Card>
+
+            {/* Main Content Area */}
+            <Card className="border-border/50 shadow-lg dark:shadow-blue-900/5 overflow-hidden">
                 <CardContent className="p-0">
-                    {renderContent()}
+                    {isLoading ? (
+                        <div className="flex h-[400px] items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <Tabs defaultValue="in-progress" onValueChange={() => setSelectedOrders({})} className="w-full">
+                            <div className="border-b px-6 py-4 bg-muted/10">
+                                <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 p-1">
+                                    <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                        In Progress
+                                    </TabsTrigger>
+                                    <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                        Completed
+                                    </TabsTrigger>
+                                    <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                        Cancelled
+                                    </TabsTrigger>
+                                    <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:shadow-sm transition-all">
+                                        All Orders
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
+
+                            <TabsContent value="in-progress" className="m-0">
+                                <OrdersTable
+                                    orders={inProgressOrders}
+                                    onEdit={handleOpenDialog}
+                                    onDelete={setOrderToDelete}
+                                    requestSort={requestSort}
+                                    sortConfig={sortConfig}
+                                    selectedOrders={selectedOrders}
+                                    onSelectionChange={setSelectedOrders}
+                                />
+                            </TabsContent>
+                            <TabsContent value="completed" className="m-0">
+                                <OrdersTable
+                                    orders={completedOrders}
+                                    onEdit={handleOpenDialog}
+                                    onDelete={setOrderToDelete}
+                                    requestSort={requestSort}
+                                    sortConfig={sortConfig}
+                                    selectedOrders={selectedOrders}
+                                    onSelectionChange={setSelectedOrders}
+                                />
+                            </TabsContent>
+                            <TabsContent value="cancelled" className="m-0">
+                                <OrdersTable
+                                    orders={cancelledOrders}
+                                    onEdit={handleOpenDialog}
+                                    onDelete={setOrderToDelete}
+                                    requestSort={requestSort}
+                                    sortConfig={sortConfig}
+                                    selectedOrders={selectedOrders}
+                                    onSelectionChange={setSelectedOrders}
+                                />
+                            </TabsContent>
+                            <TabsContent value="all" className="m-0">
+                                <OrdersTable
+                                    orders={sortedOrders}
+                                    onEdit={handleOpenDialog}
+                                    onDelete={setOrderToDelete}
+                                    requestSort={requestSort}
+                                    sortConfig={sortConfig}
+                                    selectedOrders={selectedOrders}
+                                    onSelectionChange={setSelectedOrders}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    )}
                 </CardContent>
             </Card>
 
