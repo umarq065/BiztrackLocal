@@ -6,7 +6,7 @@
 import { ObjectId } from 'mongodb';
 import { format, subDays, eachDayOfInterval, differenceInDays, parseISO, sub, startOfMonth, endOfMonth, eachMonthOfInterval, startOfYear, endOfYear, getMonth, getYear, differenceInMonths, startOfWeek, eachWeekOfInterval, getQuarter, startOfQuarter, eachQuarterOfInterval, eachYearOfInterval, endOfQuarter } from 'date-fns';
 import clientPromise from '@/lib/mongodb';
-import { type Competitor } from '@/lib/data/incomes-data';
+import { type Competitor } from '@/lib/data/competitors-data';
 import type { IncomeSource } from '@/lib/data/incomes-data';
 import type { Client } from '@/lib/data/clients-data';
 import type { Order } from '@/lib/data/orders-data';
@@ -99,8 +99,8 @@ export interface SourceAnalyticsData {
     sourceName: string;
     gigs: { id: string; name: string; date: string; messages?: number; }[];
     timeSeries: TimeSeriesDataPoint[];
-    totals: Omit<Totals, 'conversionRate'> & {ctr: number};
-    previousTotals: Omit<Totals, 'conversionRate'> & {ctr: number};
+    totals: Omit<Totals, 'conversionRate'> & { ctr: number };
+    previousTotals: Omit<Totals, 'conversionRate'> & { ctr: number };
 }
 
 export interface RevenueDataPoint {
@@ -118,16 +118,16 @@ export interface ClientDataPoint {
 }
 
 export interface GrowthMetricData {
-  revenueGrowth: { value: number; previousValue: number };
-  profitGrowth: { value: number; previousValue: number };
-  clientGrowth: { value: number; previousValue: number };
-  aovGrowth: { value: number; previousValue: number };
-  vipClientGrowth: { value: number; previousValue: number };
-  topSourceGrowth: { value: number; previousValue: number; source: string };
-  timeSeries?: {
-      currentPeriod: (RevenueDataPoint & ClientDataPoint)[];
-      previousPeriod: RevenueDataPoint[];
-  }
+    revenueGrowth: { value: number; previousValue: number };
+    profitGrowth: { value: number; previousValue: number };
+    clientGrowth: { value: number; previousValue: number };
+    aovGrowth: { value: number; previousValue: number };
+    vipClientGrowth: { value: number; previousValue: number };
+    topSourceGrowth: { value: number; previousValue: number; source: string };
+    timeSeries?: {
+        currentPeriod: (RevenueDataPoint & ClientDataPoint)[];
+        previousPeriod: RevenueDataPoint[];
+    }
 }
 
 export interface FinancialMetricTimeSeries {
@@ -163,10 +163,10 @@ export interface FinancialMetricData {
 }
 
 export interface PerformanceMetric {
-  value: number;
-  change: number;
-  previousValue: number;
-  previousPeriodChange: number;
+    value: number;
+    change: number;
+    previousValue: number;
+    previousPeriodChange: number;
 }
 export interface PerformanceMetricTimeSeries {
     date: string;
@@ -177,11 +177,11 @@ export interface PerformanceMetricTimeSeries {
     note?: Pick<BusinessNote, 'title' | 'content' | 'date'>[];
 }
 export interface PerformanceMetricData {
-  impressions: PerformanceMetric;
-  clicks: PerformanceMetric;
-  messages: PerformanceMetric;
-  ctr: PerformanceMetric;
-  timeSeries: PerformanceMetricTimeSeries[];
+    impressions: PerformanceMetric;
+    clicks: PerformanceMetric;
+    messages: PerformanceMetric;
+    ctr: PerformanceMetric;
+    timeSeries: PerformanceMetricTimeSeries[];
 }
 
 export interface MarketingMetric {
@@ -246,9 +246,9 @@ async function processAnalytics(
 
     const dateArray = eachDayOfInterval({ start: from, end: to }).map(d => format(d, 'yyyy-MM-dd'));
     const prevDateArray = eachDayOfInterval({ start: prevFrom, end: prevTo }).map(d => format(d, 'yyyy-MM-dd'));
-    
+
     // Find the relevant source/gig
-    const source = await incomesCollection.findOne({ 
+    const source = await incomesCollection.findOne({
         ...(filter.sourceId && { _id: new ObjectId(filter.sourceId) }),
         ...(filter.gigId && { "gigs.id": filter.gigId })
     });
@@ -256,26 +256,30 @@ async function processAnalytics(
 
     const sourceId = source._id.toString();
 
-    const gigNames = filter.gigId 
-        ? [source.gigs.find(g => g.id === filter.gigId)?.name] 
+    const gigNames = filter.gigId
+        ? [source.gigs.find(g => g.id === filter.gigId)?.name]
         : source.gigs.map(g => g.name);
-    
+
     const getOrdersForPeriod = async (start: Date, end: Date) => {
         return ordersCollection.aggregate([
-            { $match: { 
-                source: source.name,
-                ...(gigNames.length > 0 && gigNames[0] && { gig: { $in: gigNames } }),
-                date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
-                status: { $ne: 'Cancelled' }
-            }},
-            { $group: {
-                _id: "$date",
-                orders: { $sum: 1 },
-                revenue: { $sum: '$amount' }
-            }}
+            {
+                $match: {
+                    source: source.name,
+                    ...(gigNames.length > 0 && gigNames[0] && { gig: { $in: gigNames } }),
+                    date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
+                    status: { $ne: 'Cancelled' }
+                }
+            },
+            {
+                $group: {
+                    _id: "$date",
+                    orders: { $sum: 1 },
+                    revenue: { $sum: '$amount' }
+                }
+            }
         ]).toArray();
     }
-    
+
     const [currentOrders, previousOrders] = await Promise.all([
         getOrdersForPeriod(from, to),
         getOrdersForPeriod(prevFrom, prevTo)
@@ -286,16 +290,20 @@ async function processAnalytics(
 
     const getPerformanceForPeriod = async (start: Date, end: Date) => {
         return gigPerformancesCollection.aggregate([
-            { $match: { 
-                sourceId: sourceId,
-                ...(filter.gigId && { gigId: filter.gigId }),
-                date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
-            }},
-            { $group: {
-                _id: "$date",
-                impressions: { $sum: '$impressions' },
-                clicks: { $sum: '$clicks' }
-            }}
+            {
+                $match: {
+                    sourceId: sourceId,
+                    ...(filter.gigId && { gigId: filter.gigId }),
+                    date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') },
+                }
+            },
+            {
+                $group: {
+                    _id: "$date",
+                    impressions: { $sum: '$impressions' },
+                    clicks: { $sum: '$clicks' }
+                }
+            }
         ]).toArray();
     };
 
@@ -306,17 +314,21 @@ async function processAnalytics(
 
     const performanceMap = new Map(currentPerf.map(p => [p._id, p]));
     const prevPerformanceMap = new Map(previousPerf.map(p => [p._id, p]));
-    
+
     const getMessagesForPeriod = async (start: Date, end: Date) => {
         return messagesCollection.aggregate([
-             { $match: { 
-                sourceId: source._id.toString(),
-                date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') }
-            }},
-            { $group: {
-                _id: "$date",
-                messages: { $sum: '$messages' }
-            }}
+            {
+                $match: {
+                    sourceId: source._id.toString(),
+                    date: { $gte: format(start, 'yyyy-MM-dd'), $lte: format(end, 'yyyy-MM-dd') }
+                }
+            },
+            {
+                $group: {
+                    _id: "$date",
+                    messages: { $sum: '$messages' }
+                }
+            }
         ]).toArray();
     };
 
@@ -328,11 +340,11 @@ async function processAnalytics(
 
     const messagesMap = new Map(currentMessages.map(m => [m._id, m]));
     const prevMessagesMap = new Map(previousMessages.map(m => [m._id, m]));
-    
+
     // Combine all data into a time series
     const timeSeries = dateArray.map((date, i) => {
         const prevDate = prevDateArray[i];
-        
+
         const perfData = performanceMap.get(date) || { impressions: 0, clicks: 0 };
         const prevPerfData = prevPerformanceMap.get(prevDate) || { impressions: 0, clicks: 0 };
         const orderData = ordersMap.get(date) || { orders: 0, revenue: 0 };
@@ -365,14 +377,14 @@ async function processAnalytics(
             revenue: acc.revenue + curr.revenue,
             messages: acc.messages + curr.messages,
         }), { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 });
-        
+
         return {
             ...totals,
             ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
             conversionRate: totals.impressions > 0 ? (totals.orders / totals.impressions) * 100 : 0,
         };
     };
-    
+
     const calculatePreviousTotals = (series: TimeSeriesDataPoint[]) => {
         const totals = series.reduce((acc, curr) => ({
             impressions: acc.impressions + curr.prevImpressions,
@@ -381,8 +393,8 @@ async function processAnalytics(
             revenue: acc.revenue + curr.prevRevenue,
             messages: acc.messages + curr.prevMessages,
         }), { impressions: 0, clicks: 0, orders: 0, revenue: 0, messages: 0 });
-        
-         return {
+
+        return {
             ...totals,
             ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
             conversionRate: totals.impressions > 0 ? (totals.orders / totals.impressions) * 100 : 0,
@@ -405,13 +417,13 @@ async function getFullDateRange(sourceName: string, sourceId: string) {
         { $match: { source: sourceName } },
         { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
     ]).toArray();
-    
+
     const messageDateRangePromise = messagesCollection.aggregate([
         { $match: { sourceId: sourceId } },
         { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
     ]).toArray();
-    
-     const performanceDateRangePromise = gigPerformancesCollection.aggregate([
+
+    const performanceDateRangePromise = gigPerformancesCollection.aggregate([
         { $match: { sourceId: sourceId } },
         { $group: { _id: null, minDate: { $min: "$date" }, maxDate: { $max: "$date" } } }
     ]).toArray();
@@ -421,7 +433,7 @@ async function getFullDateRange(sourceName: string, sourceId: string) {
         messageDateRangePromise,
         performanceDateRangePromise
     ]);
-    
+
     const allDates = [
         orderDateRange[0]?.minDate,
         orderDateRange[0]?.maxDate,
@@ -433,7 +445,7 @@ async function getFullDateRange(sourceName: string, sourceId: string) {
 
     if (allDates.length === 0) return null;
 
-    const sortedDates = allDates.map(d => new Date(d.replace(/-/g, '/'))).sort((a,b) => a.getTime() - b.getTime());
+    const sortedDates = allDates.map(d => new Date(d.replace(/-/g, '/'))).sort((a, b) => a.getTime() - b.getTime());
 
     return { from: sortedDates[0], to: sortedDates[sortedDates.length - 1] };
 }
@@ -450,10 +462,10 @@ export async function getGigAnalytics(gigId: string, fromDate?: string, toDate?:
     const { source, timeSeries, totals, previousTotals } = result;
     const gig = source.gigs.find(g => g.id === gigId);
     if (!gig) return null;
-    
+
     const ordersCollection = await getOrdersCollection();
     const sourceTotalOrders = await ordersCollection.countDocuments({ source: source.name, status: { $ne: 'Cancelled' } });
-    
+
     return {
         gigId,
         gigName: gig.name,
@@ -467,7 +479,7 @@ export async function getGigAnalytics(gigId: string, fromDate?: string, toDate?:
 
 export async function getSourceAnalytics(sourceId: string, fromDate?: string, toDate?: string): Promise<SourceAnalyticsData | null> {
     const incomesCollection = await getIncomesCollection();
-    const sourceDoc = await incomesCollection.findOne({_id: new ObjectId(sourceId)});
+    const sourceDoc = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
     if (!sourceDoc) return null;
 
     let dateRange;
@@ -476,7 +488,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
     } else {
         const fullRange = await getFullDateRange(sourceDoc.name, sourceId);
         if (!fullRange) {
-             return {
+            return {
                 sourceId,
                 sourceName: sourceDoc.name,
                 gigs: sourceDoc.gigs.map(g => ({ id: g.id, name: g.name, date: g.date })),
@@ -490,7 +502,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
 
     const result = await processAnalytics(dateRange, { sourceId });
     if (!result) return null;
-    
+
     const { source, timeSeries, totals, previousTotals } = result;
 
     const messagesCollection = await getMessagesCollection();
@@ -499,7 +511,7 @@ export async function getSourceAnalytics(sourceId: string, fromDate?: string, to
         { $group: { _id: "$gigId", messages: { $sum: "$messages" } } }
     ]).toArray();
     const messageMap = new Map(messagesPerGig.map(m => [m._id, m.messages]));
-    
+
     return {
         sourceId,
         sourceName: source.name,
@@ -523,29 +535,29 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
     const P1_from = subDays(P1_to, durationInDays);
     const P0_to = subDays(P1_from, 1);
     const P0_from = subDays(P0_to, durationInDays);
-    
+
     const overallStart = P0_from;
     const overallEnd = P2_to;
-    
+
     const ordersCol = await getOrdersCollection();
     const expensesCol = await getExpensesCollection();
     const clientsCol = await getClientsCollection();
     const businessNotesCol = await getBusinessNotesCollection();
-    
+
     const calculateGrowth = (currentVal: number, prevVal: number) => {
         if (prevVal === 0) return currentVal > 0 ? 100 : 0;
         return ((currentVal - prevVal) / prevVal) * 100;
     }
 
     const sourceFilter = sources ? { source: { $in: sources } } : {};
-    
+
     const [allOrders, allExpenses, allClients, allNotes] = await Promise.all([
         ordersCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') }, status: 'Completed', ...sourceFilter }).toArray(),
         expensesCol.find({ date: { $gte: format(overallStart, 'yyyy-MM-dd'), $lte: format(overallEnd, 'yyyy-MM-dd') } }).toArray(),
         clientsCol.find({ clientSince: { $lte: format(overallEnd, 'yyyy-MM-dd') }, ...sourceFilter }).project({ username: 1, clientSince: 1 }).toArray(),
         businessNotesCol.find({ date: { $gte: P2_from, $lte: P2_to } }).project({ title: 1, content: 1, date: 1 }).toArray(),
     ]);
-    
+
     const notesByDate: Record<string, { title: string; content: string; date: Date; }[]> = {};
     allNotes.forEach(note => {
         const dateKey = format(note.date as Date, 'yyyy-MM-dd');
@@ -564,41 +576,41 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         const revenue = periodOrders.reduce((sum, o) => sum + o.amount, 0);
         const expenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
         const aov = periodOrders.length > 0 ? revenue / periodOrders.length : 0;
-        
+
         const sourcesInPeriod = periodOrders.reduce((acc, order) => {
             acc[order.source] = (acc[order.source] || 0) + order.amount;
             return acc;
         }, {} as Record<string, number>);
-        
+
         const topSource = Object.entries(sourcesInPeriod).sort((a, b) => b[1] - a[1])[0];
 
-        const vipClients = await clientsCol.countDocuments({ isVip: true, clientSince: {$lte: endStr}, ...sourceFilter });
+        const vipClients = await clientsCol.countDocuments({ isVip: true, clientSince: { $lte: endStr }, ...sourceFilter });
         const clientsAtStart = allClients.filter(c => c.clientSince < startStr).length;
 
-        return { 
-            revenue, 
-            netProfit: revenue - expenses, 
-            newClients: periodNewClients, 
-            aov, 
-            vipClients, 
-            topSource: topSource ? {source: topSource[0], revenue: topSource[1]} : {source: 'N/A', revenue: 0},
+        return {
+            revenue,
+            netProfit: revenue - expenses,
+            newClients: periodNewClients,
+            aov,
+            vipClients,
+            topSource: topSource ? { source: topSource[0], revenue: topSource[1] } : { source: 'N/A', revenue: 0 },
             clientsAtStart
         };
     };
-    
+
     const [P2_metrics, P1_metrics, P0_metrics] = await Promise.all([
         calcPeriodMetrics(P2_from, P2_to),
         calcPeriodMetrics(P1_from, P1_to),
         calcPeriodMetrics(P0_from, P0_to)
     ]);
-    
-    const P1_topSourceRevenue = P1_metrics.topSource.source !== 'N/A' 
+
+    const P1_topSourceRevenue = P1_metrics.topSource.source !== 'N/A'
         ? allOrders.filter(o => o.source === P1_metrics.topSource.source && o.date >= format(P1_from, 'yyyy-MM-dd') && o.date <= format(P1_to, 'yyyy-MM-dd')).reduce((sum, o) => sum + o.amount, 0)
         : 0;
 
     const generateTimeSeries = (start: Date, end: Date): (RevenueDataPoint & ClientDataPoint)[] => {
         let clientsAtStartDate = allClients.filter(c => c.clientSince < format(start, 'yyyy-MM-dd')).length;
-        
+
         return eachDayOfInterval({ start, end }).map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
             const revenue = allOrders
@@ -607,14 +619,14 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
             const expenses = allExpenses
                 .filter(e => e.date === dayStr)
                 .reduce((sum, e) => sum + e.amount, 0);
-            
+
             const newClientsToday = allClients.filter(c => c.clientSince === dayStr).length;
             const clientsAtDayStart = clientsAtStartDate;
             clientsAtStartDate += newClientsToday;
 
-            return { 
-                date: dayStr, 
-                revenue, 
+            return {
+                date: dayStr,
+                revenue,
                 netProfit: revenue - expenses,
                 newClients: newClientsToday,
                 clientsAtStart: clientsAtDayStart,
@@ -640,16 +652,16 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
 export async function getClientMetrics(from: string, to: string, sources?: string[]): Promise<ClientMetricData> {
     const fromDate = parseISO(from);
     const toDate = parseISO(to);
-    
+
     const sourceFilter = sources ? { source: { $in: sources } } : {};
-    
+
     const calcPeriodMetrics = async (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
-        
+
         const ordersCol = await getOrdersCollection();
         const clientsCol = await getClientsCollection();
-        
+
         const [
             ordersInPeriod,
             newClientsInPeriodCount,
@@ -680,10 +692,10 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
                 { $match: { 'clientOrders.1': { $exists: true } } },
                 { $addFields: { firstOrderDate: { $min: '$clientOrders.date' }, lastOrderDate: { $max: '$clientOrders.date' } } },
                 { $match: { lastOrderDate: { $gte: startStr, $lte: endStr } } },
-                { $project: { lifespanDays: { $cond: { if: { $and: [{ $ne: ['$firstOrderDate', null] }, { $ne: ['$lastOrderDate', null] }, { $ne: ['$firstOrderDate', '$lastOrderDate'] }] }, then: { $divide: [ { $subtract: [ { $dateFromString: { dateString: '$lastOrderDate' } }, { $dateFromString: { dateString: '$firstOrderDate' } } ]}, 1000 * 60 * 60 * 24 ] }, else: 0 } } } }
+                { $project: { lifespanDays: { $cond: { if: { $and: [{ $ne: ['$firstOrderDate', null] }, { $ne: ['$lastOrderDate', null] }, { $ne: ['$firstOrderDate', '$lastOrderDate'] }] }, then: { $divide: [{ $subtract: [{ $dateFromString: { dateString: '$lastOrderDate' } }, { $dateFromString: { dateString: '$firstOrderDate' } }] }, 1000 * 60 * 60 * 24] }, else: 0 } } } }
             ]).toArray(),
         ]);
-        
+
         const clientUsernamesInPeriod = new Set(ordersInPeriod.map(o => o.clientUsername));
         const totalClientsInPeriod = clientUsernamesInPeriod.size;
 
@@ -691,14 +703,14 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
             acc[order.clientUsername] = (acc[order.clientUsername] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
-        
+
         const repeatClientsCount = Object.values(clientOrderCounts).filter(count => count > 1).length;
         const clientsAtStartUsernames = new Set(clientsAtStart.map(c => c.username));
         const retainedClientsCount = Array.from(clientUsernamesInPeriod).filter(username => clientsAtStartUsernames.has(username)).length;
-        
-        const allLifespans = lifespanResults.map(r => r.lifespanDays).sort((a,b) => a - b);
+
+        const allLifespans = lifespanResults.map(r => r.lifespanDays).sort((a, b) => a - b);
         const avgLifespanDays = allLifespans.length > 0 ? allLifespans.reduce((sum, val) => sum + val, 0) / allLifespans.length : 0;
-        
+
         let medianLifespanDays = 0;
         if (allLifespans.length > 0) {
             const mid = Math.floor(allLifespans.length / 2);
@@ -708,7 +720,7 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
                 medianLifespanDays = allLifespans[mid];
             }
         }
-        
+
         const repeatPurchaseRate = totalClientsInPeriod > 0 ? (repeatClientsCount / totalClientsInPeriod) * 100 : 0;
         const retentionRate = clientsAtStart.length > 0 ? (retainedClientsCount / clientsAtStart.length) * 100 : 0;
 
@@ -731,7 +743,7 @@ export async function getClientMetrics(from: string, to: string, sources?: strin
         calcPeriodMetrics(fromDate, toDate),
         calcPeriodMetrics(prevFromDate, prevToDate)
     ]);
-    
+
     const calculateChange = (current: number, prev: number) => prev === 0 ? (current !== 0 ? 100 : 0) : ((current - prev) / prev) * 100;
 
     return {
@@ -758,16 +770,16 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
     const p1_from = subDays(p1_to, durationInDays);
     const p0_to = subDays(p1_from, 1);
     const p0_from = subDays(p0_to, durationInDays);
-    
+
     const sourceFilter = sources ? { source: { $in: sources } } : {};
-    
+
     const getPeriodStats = async (start: Date, end: Date): Promise<PeriodOrderStats> => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
 
         const ordersCol = await getOrdersCollection();
         const clientsCol = await getClientsCollection();
-       
+
         const ordersInPeriod = await ordersCol.find({
             date: { $gte: startStr, $lte: endStr },
             ...sourceFilter
@@ -779,12 +791,12 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
         if (completedOrders.length === 0) {
             return { total: 0, fromNewBuyers: 0, fromRepeatBuyers: 0, cancelled: cancelledOrdersCount, avgRating: 0 };
         }
-        
+
         const clientUsernamesInPeriod = new Set(completedOrders.map(o => o.clientUsername));
-        
+
         const clientsInPeriod = await clientsCol.find({ username: { $in: Array.from(clientUsernamesInPeriod) } }).project({ username: 1, clientSince: 1 }).toArray();
         const clientSinceMap = new Map(clientsInPeriod.map(c => [c.username, parseISO(c.clientSince as string)]));
-        
+
         let newBuyerOrders = 0;
         let repeatBuyerOrders = 0;
 
@@ -796,12 +808,12 @@ export async function getOrderCountAnalytics(from: string, to: string, sources?:
                 repeatBuyerOrders++;
             }
         }
-        
+
         const ratedOrders = completedOrders.filter(o => o.rating != null);
         const avgRating = ratedOrders.length > 0
             ? ratedOrders.reduce((sum, o) => sum + (o.rating ?? 0), 0) / ratedOrders.length
             : 0;
-        
+
         return { total: completedOrders.length, fromNewBuyers: newBuyerOrders, fromRepeatBuyers: repeatBuyerOrders, cancelled: cancelledOrdersCount, avgRating };
     };
 
@@ -859,7 +871,7 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
     const p1Start = subDays(p1End, durationDays);
     const p0End = subDays(p1Start, 1);
     const p0Start = subDays(p0End, durationDays);
-    
+
     const overallStart = p0Start;
     const overallEnd = p2End;
 
@@ -885,15 +897,15 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         }
         notesByDate[dateKey].push({ title: note.title, content: note.content, date: note.date as Date });
     });
-    
+
     const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
-        
+
         const periodOrders = allOrders.filter(o => o.date >= startStr && o.date <= endStr);
         const periodExpenses = allExpenses.filter(e => e.date >= startStr && e.date <= endStr);
         const periodNewClients = allNewClients.filter(c => c.clientSince >= startStr && c.clientSince <= endStr);
-        
+
         const totalRevenue = periodOrders.reduce((sum, o) => sum + o.amount, 0);
         const totalOrders = periodOrders.length;
         const totalExpenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -937,7 +949,7 @@ export async function getFinancialMetrics(from: string, to: string, sources?: st
         if (previous === 0) return current !== 0 ? 100 : 0;
         return ((current - previous) / previous) * 100;
     };
-    
+
     return {
         totalRevenue: { value: metricsP2.totalRevenue, change: calculateChangePercentage(metricsP2.totalRevenue, metricsP1.totalRevenue), previousPeriodChange: calculateChangePercentage(metricsP1.totalRevenue, metricsP0.totalRevenue), previousValue: metricsP1.totalRevenue },
         totalExpenses: { value: metricsP2.totalExpenses, change: calculateChangePercentage(metricsP2.totalExpenses, metricsP1.totalExpenses), previousPeriodChange: calculateChangePercentage(metricsP1.totalExpenses, metricsP0.totalExpenses), previousValue: metricsP1.totalExpenses },
@@ -979,7 +991,7 @@ export async function getMarketingMetrics(from: string, to: string, sources: str
         // Get source IDs from names
         const incomeSourceDocs = await incomesCol.find({ name: { $in: sources } }).project({ _id: 1 }).toArray();
         const sourceIds = incomeSourceDocs.map(s => s._id.toString());
-        
+
         const marketingExpensesPromise = expensesCol.aggregate([
             { $match: { date: { $gte: startStr, $lte: endStr }, category: 'Marketing' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
@@ -1000,7 +1012,7 @@ export async function getMarketingMetrics(from: string, to: string, sources: str
             messagesPromise,
             revenuePromise
         ]);
-        
+
         const marketingExpenses = marketingExpensesRes[0]?.total || 0;
         const totalMessages = messagesRes[0]?.total || 0;
         const totalRevenue = revenueRes[0]?.total || 0;
@@ -1020,7 +1032,7 @@ export async function getMarketingMetrics(from: string, to: string, sources: str
         if (previous === 0) return current > 0 ? 100 : 0;
         return ((current - previous) / previous) * 100;
     };
-    
+
     return {
         cpl: {
             value: metricsP2.cpl,
@@ -1048,7 +1060,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
     const p1_from = subDays(p1_to, durationDays);
     const p0_to = subDays(p1_from, 1);
     const p0_from = subDays(p0_to, durationDays);
-    
+
     const overallStart = p0_from;
     const overallEnd = p2_to;
 
@@ -1074,11 +1086,11 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
         }
         notesByDate[dateKey].push({ title: note.title, content: note.content, date: note.date as Date });
     });
-    
+
     const calculateMetricsForPeriod = (start: Date, end: Date) => {
         const startStr = format(start, 'yyyy-MM-dd');
         const endStr = format(end, 'yyyy-MM-dd');
-        
+
         const periodPerformances = allPerformances.filter(p => p.date >= startStr && p.date <= endStr);
         const periodMessages = allMessages.filter(m => m.date >= startStr && m.date <= endStr);
 
@@ -1086,7 +1098,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
         const clicks = periodPerformances.reduce((sum, p) => sum + p.clicks, 0);
         const messages = periodMessages.reduce((sum, m) => sum + m.messages, 0);
         const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
-        
+
         return { impressions, clicks, messages, ctr };
     };
 
@@ -1105,7 +1117,7 @@ export async function getPerformanceMetrics(from: string, to: string, sources: s
         calculateMetricsForPeriod(p1_from, p1_to),
         calculateMetricsForPeriod(p0_from, p0_to),
     ];
-    
+
     const calculateChangePercentage = (current: number, previous: number) => {
         if (previous === 0) return current !== 0 ? 100 : 0;
         return ((current - previous) / previous) * 100;
@@ -1149,7 +1161,7 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     const yearStart = format(startOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
     const yearEnd = format(endOfYear(new Date(year, 0, 1)), 'yyyy-MM-dd');
-    
+
     const monthlyTargets = await getMonthlyTargets();
 
     // Initialize with a default structure
@@ -1174,7 +1186,7 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
         { $group: { _id: '$month', orders: { $sum: 1 }, revenue: { $sum: '$amount' } } },
         { $sort: { '_id': 1 } }
     ]).toArray();
-    
+
     myMonthlyDataArr.forEach(item => {
         const monthIndex = parseInt(item._id, 10) - 1;
         if (monthIndex >= 0 && monthIndex < 12) {
@@ -1185,18 +1197,18 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
     const monthlyExpensesArr = await expensesCol.aggregate([
         { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
-        { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } } ,
+        { $project: { month: { $substrBytes: ['$date', 5, 2] }, amount: '$amount' } },
         { $group: { _id: '$month', totalExpenses: { $sum: '$amount' } } },
         { $sort: { '_id': 1 } }
     ]).toArray();
-    
+
     monthlyExpensesArr.forEach(item => {
         const monthIndex = parseInt(item._id, 10) - 1;
         if (monthIndex >= 0 && monthIndex < 12) {
             data.monthlyFinancials[monthIndex].expenses = item.totalExpenses;
         }
     });
-    
+
     const notesForYear = await businessNotesCol.find({
         date: { $gte: new Date(yearStart), $lte: new Date(yearEnd) }
     }).project({ title: 1, content: 1, date: 1 }).toArray();
@@ -1224,7 +1236,7 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
             (comp.monthlyData || [])
                 .filter((d: { year: number; }) => d.year === year)
                 .forEach((d: { month: number; orders: any; }) => {
-                    if(d.month >= 1 && d.month <= 12) {
+                    if (d.month >= 1 && d.month <= 12) {
                         monthlyOrders[d.month - 1] = d.orders;
                     }
                 });
@@ -1244,12 +1256,97 @@ export async function getYearlyStats(year: number): Promise<SingleYearData> {
 
 
 
-    
-
-    
 
 
 
 
 
 
+
+
+
+
+export interface DashboardOverviewData {
+    totalRevenue: FinancialMetric;
+    netProfit: FinancialMetric;
+    pendingOrders: FinancialMetric;
+    averageOrderValue: FinancialMetric;
+}
+
+export async function getDashboardOverview(from: string, to: string): Promise<DashboardOverviewData> {
+    const fromDate = parseISO(from);
+    const toDate = parseISO(to);
+
+    const durationDays = differenceInDays(toDate, fromDate);
+    if (durationDays < 0) throw new Error("Invalid date range.");
+
+    const p2End = toDate;
+    const p2Start = fromDate;
+    const p1End = subDays(p2Start, 1);
+    const p1Start = subDays(p1End, durationDays);
+
+    const ordersCol = await getOrdersCollection();
+    const expensesCol = await getExpensesCollection();
+
+    const [allOrders, allExpenses] = await Promise.all([
+        ordersCol.find({
+            date: { $gte: format(p1Start, 'yyyy-MM-dd'), $lte: format(p2End, 'yyyy-MM-dd') }
+        }).toArray(),
+        expensesCol.find({
+            date: { $gte: format(p1Start, 'yyyy-MM-dd'), $lte: format(p2End, 'yyyy-MM-dd') }
+        }).toArray(),
+    ]);
+
+    const calculateMetrics = (start: Date, end: Date) => {
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+
+        const periodOrders = allOrders.filter(o => o.date >= startStr && o.date <= endStr);
+        const periodExpenses = allExpenses.filter(e => e.date >= startStr && e.date <= endStr);
+
+        const completedOrders = periodOrders.filter(o => o.status === 'Completed');
+        const pendingOrdersCount = periodOrders.filter(o => o.status === 'In Progress').length;
+
+        const totalRevenue = completedOrders.reduce((sum, o) => sum + o.amount, 0);
+        const totalExpenses = periodExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const netProfit = totalRevenue - totalExpenses;
+        const averageOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+
+        return { totalRevenue, netProfit, pendingOrders: pendingOrdersCount, averageOrderValue };
+    };
+
+    const currentMetrics = calculateMetrics(p2Start, p2End);
+    const previousMetrics = calculateMetrics(p1Start, p1End);
+
+    const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) return current !== 0 ? 100 : 0;
+        return ((current - previous) / previous) * 100;
+    };
+
+    return {
+        totalRevenue: {
+            value: currentMetrics.totalRevenue,
+            change: calculateChange(currentMetrics.totalRevenue, previousMetrics.totalRevenue),
+            previousValue: previousMetrics.totalRevenue,
+            previousPeriodChange: 0 // Not needed for this view
+        },
+        netProfit: {
+            value: currentMetrics.netProfit,
+            change: calculateChange(currentMetrics.netProfit, previousMetrics.netProfit),
+            previousValue: previousMetrics.netProfit,
+            previousPeriodChange: 0
+        },
+        pendingOrders: {
+            value: currentMetrics.pendingOrders,
+            change: calculateChange(currentMetrics.pendingOrders, previousMetrics.pendingOrders),
+            previousValue: previousMetrics.pendingOrders,
+            previousPeriodChange: 0
+        },
+        averageOrderValue: {
+            value: currentMetrics.averageOrderValue,
+            change: calculateChange(currentMetrics.averageOrderValue, previousMetrics.averageOrderValue),
+            previousValue: previousMetrics.averageOrderValue,
+            previousPeriodChange: 0
+        }
+    };
+}
