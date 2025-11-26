@@ -98,49 +98,43 @@ export async function updateIncomeSource(sourceId: string, newName: string): Pro
     const session = client.startSession();
 
     try {
-        let updatedSource: IncomeSource | null = null;
+        const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
+        if (!source) {
+            throw new Error("Income source not found.");
+        }
+        const oldName = source.name;
 
-        await session.withTransaction(async () => {
-            const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
-            if (!source) {
-                throw new Error("Income source not found.");
+        // Check if new name already exists (case-insensitive) to prevent duplicates
+        if (oldName.toLowerCase() !== newName.toLowerCase()) {
+            const existingSource = await incomesCollection.findOne({ name: { $regex: `^${newName}$`, $options: 'i' } });
+            if (existingSource) {
+                throw new Error(`An income source with the name "${newName}" already exists.`);
             }
-            const oldName = source.name;
+        }
 
-            // Check if new name already exists (case-insensitive) to prevent duplicates
-            if (oldName.toLowerCase() !== newName.toLowerCase()) {
-                const existingSource = await incomesCollection.findOne({ name: { $regex: `^${newName}$`, $options: 'i' } }, { session });
-                if (existingSource) {
-                    throw new Error(`An income source with the name "${newName}" already exists.`);
-                }
-            }
+        // Only proceed if the name has changed
+        if (oldName !== newName) {
+            // 1. Update all orders with the old source name
+            await ordersCollection.updateMany(
+                { source: oldName },
+                { $set: { source: newName } }
+            );
 
-            // Only proceed if the name has changed
-            if (oldName !== newName) {
-                // 1. Update all orders with the old source name
-                await ordersCollection.updateMany(
-                    { source: oldName },
-                    { $set: { source: newName } },
-                    { session }
-                );
+            // 2. Update the income source document itself
+            await incomesCollection.updateOne(
+                { _id: new ObjectId(sourceId) },
+                { $set: { name: newName } }
+            );
+        }
 
-                // 2. Update the income source document itself
-                await incomesCollection.updateOne(
-                    { _id: new ObjectId(sourceId) },
-                    { $set: { name: newName } },
-                    { session }
-                );
-            }
-
-            const result = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
-            if (result) {
-                updatedSource = { ...result, id: result._id.toString() };
-            }
-        });
-
-        return updatedSource;
-    } finally {
-        await session.endSession();
+        const result = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
+        if (result) {
+            return { ...result, id: result._id.toString() };
+        }
+        return null;
+    } catch (error) {
+        console.error("Error updating income source:", error);
+        throw error;
     }
 }
 
@@ -186,59 +180,52 @@ export async function updateGig(sourceId: string, gigId: string, gigData: EditGi
     const session = client.startSession();
 
     try {
-        let updatedGig: Gig | null = null;
+        const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
+        if (!source) {
+            throw new Error("Income source not found.");
+        }
 
-        await session.withTransaction(async () => {
-            const source = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
-            if (!source) {
-                throw new Error("Income source not found.");
-            }
+        const oldGig = source.gigs.find(g => g.id === gigId);
+        if (!oldGig) {
+            throw new Error("Gig not found in the source.");
+        }
 
-            const oldGig = source.gigs.find(g => g.id === gigId);
-            if (!oldGig) {
-                throw new Error("Gig not found in the source.");
-            }
+        const oldGigName = oldGig.name;
+        const newGigName = gigData.name;
 
-            const oldGigName = oldGig.name;
-            const newGigName = gigData.name;
-
-            // Only proceed with order updates if the name has actually changed
-            if (oldGigName !== newGigName) {
-                await ordersCollection.updateMany(
-                    { source: source.name, gig: oldGigName },
-                    { $set: { gig: newGigName } },
-                    { session }
-                );
-            }
-
-            const updatedGigFields: Partial<Gig> = {
-                name: gigData.name,
-                date: format(gigData.date, "yyyy-MM-dd"),
-            };
-
-            const updateQuery: Record<string, any> = {};
-            for (const [key, value] of Object.entries(updatedGigFields)) {
-                updateQuery[`gigs.$.${key}`] = value;
-            }
-
-            const result = await incomesCollection.updateOne(
-                { _id: new ObjectId(sourceId), "gigs.id": gigId },
-                { $set: updateQuery },
-                { session }
+        // Only proceed with order updates if the name has actually changed
+        if (oldGigName !== newGigName) {
+            await ordersCollection.updateMany(
+                { source: source.name, gig: oldGigName },
+                { $set: { gig: newGigName } }
             );
+        }
 
-            if (result.modifiedCount === 0) {
-                throw new Error("Failed to update gig in incomes collection.");
-            }
+        const updatedGigFields: Partial<Gig> = {
+            name: gigData.name,
+            date: format(gigData.date, "yyyy-MM-dd"),
+        };
 
-            const updatedSource = await incomesCollection.findOne({ _id: new ObjectId(sourceId) }, { session });
-            updatedGig = updatedSource?.gigs.find(g => g.id === gigId) || null;
-        });
+        const updateQuery: Record<string, any> = {};
+        for (const [key, value] of Object.entries(updatedGigFields)) {
+            updateQuery[`gigs.$.${key}`] = value;
+        }
 
-        return updatedGig;
+        const result = await incomesCollection.updateOne(
+            { _id: new ObjectId(sourceId), "gigs.id": gigId },
+            { $set: updateQuery }
+        );
 
-    } finally {
-        await session.endSession();
+        if (result.modifiedCount === 0) {
+            throw new Error("Failed to update gig in incomes collection.");
+        }
+
+        const updatedSource = await incomesCollection.findOne({ _id: new ObjectId(sourceId) });
+        return updatedSource?.gigs.find(g => g.id === gigId) || null;
+
+    } catch (error) {
+        console.error("Error updating gig:", error);
+        throw error;
     }
 }
 

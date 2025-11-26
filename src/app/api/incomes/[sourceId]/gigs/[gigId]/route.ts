@@ -1,23 +1,23 @@
 export const dynamic = 'force-dynamic';
 
-
 import { NextResponse } from 'next/server';
 import { updateGig, deleteGig } from '@/lib/services/incomesService';
 import { z } from 'zod';
 
 const editGigFormSchema = z.object({
-    name: z.string().min(2, { message: "Gig name must be at least 2 characters." }),
-    date: z.date({ required_error: "A date for the gig is required." }),
+  name: z.string().min(2, { message: "Gig name must be at least 2 characters." }),
+  date: z.date({ required_error: "A date for the gig is required." }),
 });
 
-export async function PUT(request: Request, { params }: { params: { sourceId: string; gigId: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ sourceId: string; gigId: string }> }) {
   try {
+    const { sourceId, gigId } = await params;
     const json = await request.json();
     // The date comes in as a string, so we need to parse it.
     const parsedJson = { ...json, date: new Date(json.date) };
     const parsedData = editGigFormSchema.parse(parsedJson);
 
-    const updatedGig = await updateGig(params.sourceId, params.gigId, parsedData);
+    const updatedGig = await updateGig(sourceId, gigId, parsedData);
 
     if (!updatedGig) {
       return NextResponse.json({ error: 'Gig not found or failed to update' }, { status: 404 });
@@ -36,17 +36,18 @@ export async function PUT(request: Request, { params }: { params: { sourceId: st
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { sourceId: string; gigId: string } }) {
-    try {
-        const success = await deleteGig(params.sourceId, params.gigId);
+export async function DELETE(request: Request, { params }: { params: Promise<{ sourceId: string; gigId: string }> }) {
+  try {
+    const { sourceId, gigId } = await params;
+    const success = await deleteGig(sourceId, gigId);
 
-        if (!success) {
-            return NextResponse.json({ error: 'Gig not found or failed to delete' }, { status: 404 });
-        }
-
-        return NextResponse.json({ message: 'Gig deleted successfully' }, { status: 200 });
-    } catch (error) {
-        console.error('API Error deleting gig:', error);
-        return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    if (!success) {
+      return NextResponse.json({ error: 'Gig not found or failed to delete' }, { status: 404 });
     }
+
+    return NextResponse.json({ message: 'Gig deleted successfully' }, { status: 200 });
+  } catch (error) {
+    console.error('API Error deleting gig:', error);
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+  }
 }
