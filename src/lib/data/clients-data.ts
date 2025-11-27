@@ -12,7 +12,9 @@ export const socialLinkSchema = z.object({
 export const clientFormSchema = z.object({
     username: z.string().min(2, { message: "Username must be at least 2 characters." }),
     name: z.string().optional(),
-    email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+    emails: z.array(z.object({ value: z.string().email("Invalid email address.") })).optional(),
+    phoneNumbers: z.array(z.object({ value: z.string().min(5, "Invalid phone number.") })).optional(),
+    country: z.string().optional(),
     avatarUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
     source: z.string().min(1, { message: "Income source is required." }),
     socialLinks: z.array(socialLinkSchema).optional(),
@@ -28,7 +30,10 @@ export interface Client {
     id: string; // String version of _id
     username: string;
     name?: string;
-    email?: string;
+    email?: string; // Kept for backward compatibility, but we'll prefer emails array
+    emails?: { value: string }[];
+    phoneNumbers?: { value: string }[];
+    country?: string;
     avatarUrl?: string;
     source: string;
     socialLinks?: { platform: string; url: string }[];
@@ -68,3 +73,7 @@ export const socialPlatforms = [
     { value: "YouTube", icon: Youtube },
     { value: "Website", icon: Globe },
 ];
+
+export const countries = [
+    "United States", "United Kingdom", "Canada", "Australia", "Germany", "France", "Spain", "Italy", "Netherlands", "Brazil", "India", "China", "Japan", "South Korea", "Russia", "Mexico", "Indonesia", "Turkey", "Saudi Arabia", "Switzerland", "Sweden", "Poland", "Belgium", "Austria", "Norway", "United Arab Emirates", "Singapore", "Denmark", "Finland", "Ireland", "New Zealand", "Portugal", "Greece", "Czech Republic", "Hungary", "Romania", "Ukraine", "South Africa", "Egypt", "Nigeria", "Kenya", "Argentina", "Chile", "Colombia", "Peru", "Thailand", "Vietnam", "Malaysia", "Philippines", "Pakistan", "Bangladesh", "Israel"
+].sort();

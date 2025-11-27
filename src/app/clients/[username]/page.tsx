@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import StatCard from "@/components/dashboard/stat-card";
-import { DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse, Loader2, Globe } from "lucide-react";
+import { DollarSign, ShoppingCart, BarChart, Calendar, ArrowLeft, Pencil, Star, HeartPulse, Loader2, Globe, MessageSquare, Phone, Mail, MapPin } from "lucide-react";
 import type { Stat } from "@/lib/placeholder-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -354,6 +354,21 @@ export default function ClientDetailsPage() {
                       Back
                     </Button>
                   </NProgressLink>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shadow-sm hover:bg-muted"
+                    asChild
+                  >
+                    <a
+                      href={`https://www.fiverr.com/inbox/${client.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Inbox
+                    </a>
+                  </Button>
                   <EditClientDialog
                     open={isEditDialogOpen}
                     onOpenChange={setIsEditDialogOpen}
@@ -428,22 +443,67 @@ export default function ClientDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
-                  <span className="text-xs font-bold">@</span>
-                </div>
-                <div>
-                  <p className="font-medium">Email</p>
-                  <p className="text-muted-foreground">{client.email || "Not provided"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-medium">Primary Source</p>
-                  <p className="text-muted-foreground">{client.source}</p>
+              <div className="space-y-3">
+                {/* Emails */}
+                {(client.emails && client.emails.length > 0) ? (
+                  client.emails.map((email, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                      <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Email {client.emails!.length > 1 ? i + 1 : ''}</p>
+                        <p className="text-muted-foreground">{email.value}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                      <Mail className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Email</p>
+                      <p className="text-muted-foreground">{client.email || "Not provided"}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Phone Numbers */}
+                {client.phoneNumbers && client.phoneNumbers.map((phone, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Phone {client.phoneNumbers!.length > 1 ? i + 1 : ''}</p>
+                      <p className="text-muted-foreground">{phone.value}</p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Country */}
+                {client.country && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Country</p>
+                      <p className="text-muted-foreground">{client.country}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Income Source */}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                  <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Primary Source</p>
+                    <p className="text-muted-foreground">{client.source}</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
