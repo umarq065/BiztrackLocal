@@ -1,6 +1,6 @@
 
 import { z } from "zod";
-import { Facebook, Linkedin, Github, Globe, Instagram, Youtube, X, AtSign } from "lucide-react";
+import { Facebook, Linkedin, Github, Globe, Instagram, Youtube, X, AtSign, Music } from "lucide-react";
 import { differenceInMonths } from "date-fns";
 import type { ObjectId } from 'mongodb';
 
@@ -67,13 +67,14 @@ export const getClientStatus = (lastOrderDateString: string): { text: 'Active' |
 };
 
 export const socialPlatforms = [
-    { value: "Facebook", icon: Facebook, color: "text-[#1877F2]" },
-    { value: "X", icon: X, color: "text-black dark:text-white" },
     { value: "Instagram", icon: Instagram, color: "text-[#E4405F]" },
-    { value: "LinkedIn", icon: Linkedin, color: "text-[#0A66C2]" },
-    { value: "GitHub", icon: Github, color: "text-[#181717] dark:text-white" },
-    { value: "YouTube", icon: Youtube, color: "text-[#FF0000]" },
+    { value: "Facebook", icon: Facebook, color: "text-[#1877F2]" },
+    { value: "Tiktok", icon: Music, color: "text-[#000000] dark:text-white" },
     { value: "Threads", icon: AtSign, color: "text-black dark:text-white" },
+    { value: "YouTube", icon: Youtube, color: "text-[#FF0000]" },
+    { value: "LinkedIn", icon: Linkedin, color: "text-[#0A66C2]" },
+    { value: "X", icon: X, color: "text-black dark:text-white" },
+    { value: "GitHub", icon: Github, color: "text-[#181717] dark:text-white" },
     { value: "Website", icon: Globe, color: "text-blue-500" },
 ];
 
