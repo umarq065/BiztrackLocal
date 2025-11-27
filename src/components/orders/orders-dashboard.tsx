@@ -259,6 +259,12 @@ export function OrdersDashboard() {
 
     const handleOrderAdded = (newOrder: Order) => {
         setOrders(prev => [newOrder, ...prev]);
+
+        // Check if we have URL params that triggered the form
+        if (searchParams.get('order id') || searchParams.get('gig name')) {
+            // Clear the URL parameters to prevent re-opening the form on refresh/interaction
+            router.replace(pathname);
+        }
     };
 
     const handleOrderImported = (newOrder: Order) => {
