@@ -39,6 +39,8 @@ import { MonthYearPicker } from "@/components/clients/month-year-picker";
 const INITIAL_LOAD_COUNT = 50;
 const LOAD_MORE_COUNT = 200;
 
+const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
 const ClientsPageComponent = () => {
     const [clients, setClients] = useState<Client[]>([]);
     const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -347,7 +349,7 @@ const ClientsPageComponent = () => {
                     (client.tags || []).some(tag => tag.toLowerCase().includes(lowercasedQuery)) ||
                     (client.socialLinks || []).some(link => link.url.toLowerCase().includes(lowercasedQuery) || link.platform.toLowerCase().includes(lowercasedQuery)) ||
                     (client.emails || []).some(e => e.value.toLowerCase().includes(lowercasedQuery)) ||
-                    (client.phoneNumbers || []).some(p => p.value.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.phoneNumbers || []).some(p => normalizePhone(p.value).includes(normalizePhone(lowercasedQuery))) ||
                     (client.addresses || []).some(a => a.value.toLowerCase().includes(lowercasedQuery)) ||
                     (client.country || '').toLowerCase().includes(lowercasedQuery)
                 );

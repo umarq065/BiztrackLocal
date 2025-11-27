@@ -35,6 +35,8 @@ const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean
     return <Icon className={cn("h-5 w-5 transition-colors", isMatch ? "text-primary animate-pulse scale-110" : "text-muted-foreground hover:text-foreground")} />;
 };
 
+const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
+
 const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility, selectedClients, onSelectionChange, searchQuery = "" }: ClientsTableProps) => {
 
     const handleSelectAll = (checked: boolean) => {
@@ -126,7 +128,7 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                     // Check for matches
                                     const matchesNotes = searchQuery && (client.notes || '').toLowerCase().includes(lowerQuery);
                                     const matchesEmail = searchQuery && (client.emails || []).find(e => e.value.toLowerCase().includes(lowerQuery));
-                                    const matchesPhone = searchQuery && (client.phoneNumbers || []).find(p => p.value.toLowerCase().includes(lowerQuery));
+                                    const matchesPhone = searchQuery && (client.phoneNumbers || []).find(p => normalizePhone(p.value).includes(normalizePhone(lowerQuery)));
                                     const matchesAddress = searchQuery && (client.addresses || []).find(a => a.value.toLowerCase().includes(lowerQuery));
                                     const matchesCountry = searchQuery && (client.country || '').toLowerCase().includes(lowerQuery);
 
