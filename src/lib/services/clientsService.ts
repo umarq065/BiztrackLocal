@@ -22,41 +22,41 @@ async function getClientsCollection() {
 export async function getClients(): Promise<Client[]> {
   try {
     const clientsCollection = await getClientsCollection();
-    
+
     const aggregationPipeline = [
       // Stage 1: Lookup orders for each client
       {
         '$lookup': {
-          'from': 'orders', 
-          'localField': 'username', 
-          'foreignField': 'clientUsername', 
+          'from': 'orders',
+          'localField': 'username',
+          'foreignField': 'clientUsername',
           'as': 'orders'
         }
       },
       // Stage 2: Add fields to calculate totals and last order date
       {
         '$addFields': {
-          'totalOrders': { '$size': '$orders' }, 
-          'totalEarning': { '$sum': '$orders.amount' }, 
-          'lastOrder': { '$ifNull': [ { '$max': '$orders.date' }, 'N/A' ] },
-          'clientSince': { 
-            '$ifNull': [ 
-              '$clientSince', 
+          'totalOrders': { '$size': '$orders' },
+          'totalEarning': { '$sum': '$orders.amount' },
+          'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
+          'clientSince': {
+            '$ifNull': [
+              '$clientSince',
               { '$dateToString': { 'format': '%Y-%m-%d', 'date': '$_id' } }
-            ] 
+            ]
           }
         }
       },
-       // Stage 3: Add clientType based on order count
+      // Stage 3: Add clientType based on order count
       {
         '$addFields': {
-            'clientType': {
-                '$cond': {
-                    'if': { '$gt': ['$totalOrders', 1] },
-                    'then': 'Repeat',
-                    'else': 'New'
-                }
+          'clientType': {
+            '$cond': {
+              'if': { '$gt': ['$totalOrders', 1] },
+              'then': 'Repeat',
+              'else': 'New'
             }
+          }
         }
       },
       // Stage 4: Project the final fields to match the Client interface
@@ -77,13 +77,17 @@ export async function getClients(): Promise<Client[]> {
           'totalEarning': 1,
           'clientType': 1,
           'lastOrder': 1,
+          'emails': 1,
+          'phoneNumbers': 1,
+          'addresses': 1,
+          'country': 1,
         }
       },
       { '$sort': { 'lastOrder': -1 } }
     ];
 
     const clients = await clientsCollection.aggregate(aggregationPipeline).toArray();
-    
+
     return clients.map((client: any) => ({
       ...client,
       id: client._id.toString(),
@@ -100,75 +104,79 @@ export async function getClients(): Promise<Client[]> {
  * @returns The client object with calculated stats, or null if not found.
  */
 export async function getClientByUsername(username: string): Promise<Client | null> {
-    const clientsCollection = await getClientsCollection();
-    
-    const aggregationPipeline = [
-      { '$match': { 'username': username } },
-      { '$limit': 1 },
-      {
-        '$lookup': {
-          'from': 'orders', 
-          'localField': 'username', 
-          'foreignField': 'clientUsername', 
-          'as': 'orders'
-        }
-      },
-      {
-        '$addFields': {
-          'totalOrders': { '$size': '$orders' }, 
-          'totalEarning': { '$sum': '$orders.amount' }, 
-          'lastOrder': { '$ifNull': [ { '$max': '$orders.date' }, 'N/A' ] },
-          'clientSince': { 
-            '$ifNull': [ 
-              '$clientSince', 
-              { '$dateToString': { 'format': '%Y-%m-%d', 'date': '$_id' } }
-            ] 
-          }
-        }
-      },
-      {
-        '$addFields': {
-            'clientType': {
-                '$cond': {
-                    'if': { '$gt': ['$totalOrders', 1] },
-                    'then': 'Repeat',
-                    'else': 'New'
-                }
-            }
-        }
-      },
-      {
-        '$project': {
-          '_id': 1,
-          'username': 1,
-          'name': 1,
-          'email': 1,
-          'avatarUrl': 1,
-          'source': 1,
-          'socialLinks': 1,
-          'notes': 1,
-          'tags': 1,
-          'isVip': 1,
-          'clientSince': 1,
-          'totalOrders': 1,
-          'totalEarning': 1,
-          'clientType': 1,
-          'lastOrder': 1,
+  const clientsCollection = await getClientsCollection();
+
+  const aggregationPipeline = [
+    { '$match': { 'username': username } },
+    { '$limit': 1 },
+    {
+      '$lookup': {
+        'from': 'orders',
+        'localField': 'username',
+        'foreignField': 'clientUsername',
+        'as': 'orders'
+      }
+    },
+    {
+      '$addFields': {
+        'totalOrders': { '$size': '$orders' },
+        'totalEarning': { '$sum': '$orders.amount' },
+        'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
+        'clientSince': {
+          '$ifNull': [
+            '$clientSince',
+            { '$dateToString': { 'format': '%Y-%m-%d', 'date': '$_id' } }
+          ]
         }
       }
-    ];
-
-    const results = await clientsCollection.aggregate(aggregationPipeline).toArray();
-    
-    if (results.length === 0) {
-        return null;
+    },
+    {
+      '$addFields': {
+        'clientType': {
+          '$cond': {
+            'if': { '$gt': ['$totalOrders', 1] },
+            'then': 'Repeat',
+            'else': 'New'
+          }
+        }
+      }
+    },
+    {
+      '$project': {
+        '_id': 1,
+        'username': 1,
+        'name': 1,
+        'email': 1,
+        'avatarUrl': 1,
+        'source': 1,
+        'socialLinks': 1,
+        'notes': 1,
+        'tags': 1,
+        'isVip': 1,
+        'clientSince': 1,
+        'totalOrders': 1,
+        'totalEarning': 1,
+        'clientType': 1,
+        'lastOrder': 1,
+        'emails': 1,
+        'phoneNumbers': 1,
+        'addresses': 1,
+        'country': 1,
+      }
     }
+  ];
 
-    const client = results[0];
-    return {
-        ...client,
-        id: client._id.toString(),
-    } as Client;
+  const results = await clientsCollection.aggregate(aggregationPipeline).toArray();
+
+  if (results.length === 0) {
+    return null;
+  }
+
+  const client = results[0];
+  return {
+    ...client,
+    id: client._id.toString(),
+  } as Client;
 }
 
 
@@ -178,42 +186,46 @@ export async function getClientByUsername(username: string): Promise<Client | nu
  * @returns The newly created client object.
  */
 export async function addClient(clientData: ClientFormValues & { clientSince?: Date }): Promise<Client> {
-    const clientsCollection = await getClientsCollection();
-    
-    const existingClient = await clientsCollection.findOne({ username: clientData.username });
-    if (existingClient) {
-        throw new Error('A client with this username already exists.');
-    }
+  const clientsCollection = await getClientsCollection();
 
-    const _id = new ObjectId();
+  const existingClient = await clientsCollection.findOne({ username: clientData.username });
+  if (existingClient) {
+    throw new Error('A client with this username already exists.');
+  }
 
-    const newClientDocument: Omit<Client, 'id' | 'totalOrders' | 'totalEarning' | 'lastOrder' | 'clientType'> & { _id: ObjectId } = {
-        _id,
-        username: clientData.username,
-        name: clientData.name || clientData.username,
-        email: clientData.email || '',
-        avatarUrl: clientData.avatarUrl || '',
-        source: clientData.source,
-        socialLinks: clientData.socialLinks || [],
-        notes: clientData.notes || '',
-        tags: clientData.tags ? clientData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        isVip: clientData.isVip || false,
-        clientSince: format(clientData.clientSince || _id.getTimestamp(), 'yyyy-MM-dd'),
-    };
+  const _id = new ObjectId();
 
-    const result = await clientsCollection.insertOne(newClientDocument as any);
-    if (!result.insertedId) {
-        throw new Error('Failed to insert new client.');
-    }
+  const newClientDocument: Omit<Client, 'id' | 'totalOrders' | 'totalEarning' | 'lastOrder' | 'clientType'> & { _id: ObjectId } = {
+    _id,
+    username: clientData.username,
+    name: clientData.name || clientData.username,
+    email: clientData.emails?.[0]?.value || '',
+    avatarUrl: clientData.avatarUrl || '',
+    source: clientData.source,
+    socialLinks: clientData.socialLinks || [],
+    notes: clientData.notes || '',
+    tags: clientData.tags ? clientData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    isVip: clientData.isVip || false,
+    clientSince: format(clientData.clientSince || _id.getTimestamp(), 'yyyy-MM-dd'),
+    emails: clientData.emails || [],
+    phoneNumbers: clientData.phoneNumbers || [],
+    addresses: clientData.addresses || [],
+    country: clientData.country || '',
+  };
 
-    return {
-        ...newClientDocument,
-        id: result.insertedId.toString(),
-        totalOrders: 0,
-        totalEarning: 0,
-        lastOrder: 'N/A',
-        clientType: 'New',
-    };
+  const result = await clientsCollection.insertOne(newClientDocument as any);
+  if (!result.insertedId) {
+    throw new Error('Failed to insert new client.');
+  }
+
+  return {
+    ...newClientDocument,
+    id: result.insertedId.toString(),
+    totalOrders: 0,
+    totalEarning: 0,
+    lastOrder: 'N/A',
+    clientType: 'New',
+  };
 }
 
 /**
@@ -223,26 +235,26 @@ export async function addClient(clientData: ClientFormValues & { clientSince?: D
  * @returns The updated client object, or null if not found.
  */
 export async function updateClient(clientId: string, clientData: ClientFormValues): Promise<Client | null> {
-    const clientsCollection = await getClientsCollection();
-    const _id = new ObjectId(clientId);
+  const clientsCollection = await getClientsCollection();
+  const _id = new ObjectId(clientId);
 
-    const updateData = {
-        ...clientData,
-        tags: clientData.tags ? clientData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-    };
-    
-    const result = await clientsCollection.updateOne(
-        { _id },
-        { $set: updateData }
-    );
-    
-    if (result.modifiedCount === 0 && result.upsertedCount === 0 && result.matchedCount === 0) {
-        return null;
-    }
+  const updateData = {
+    ...clientData,
+    tags: clientData.tags ? clientData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+  };
 
-    // Fetch the updated client with aggregated data
-    const updatedClient = await getClientByUsername(clientData.username);
-    return updatedClient;
+  const result = await clientsCollection.updateOne(
+    { _id },
+    { $set: updateData }
+  );
+
+  if (result.modifiedCount === 0 && result.upsertedCount === 0 && result.matchedCount === 0) {
+    return null;
+  }
+
+  // Fetch the updated client with aggregated data
+  const updatedClient = await getClientByUsername(clientData.username);
+  return updatedClient;
 }
 
 
@@ -252,11 +264,11 @@ export async function updateClient(clientId: string, clientData: ClientFormValue
  * @returns A boolean indicating whether the deletion was successful.
  */
 export async function deleteClient(clientId: string): Promise<boolean> {
-    const clientsCollection = await getClientsCollection();
-    const _id = new ObjectId(clientId);
+  const clientsCollection = await getClientsCollection();
+  const _id = new ObjectId(clientId);
 
-    const result = await clientsCollection.deleteOne({ _id });
-    return result.deletedCount === 1;
+  const result = await clientsCollection.deleteOne({ _id });
+  return result.deletedCount === 1;
 }
 
 /**
@@ -265,8 +277,8 @@ export async function deleteClient(clientId: string): Promise<boolean> {
  * @returns The number of clients deleted.
  */
 export async function deleteClientsByIds(clientIds: string[]): Promise<number> {
-    const clientsCollection = await getClientsCollection();
-    const objectIds = clientIds.map(id => new ObjectId(id));
-    const result = await clientsCollection.deleteMany({ _id: { $in: objectIds } });
-    return result.deletedCount;
+  const clientsCollection = await getClientsCollection();
+  const objectIds = clientIds.map(id => new ObjectId(id));
+  const result = await clientsCollection.deleteMany({ _id: { $in: objectIds } });
+  return result.deletedCount;
 }

@@ -14,6 +14,7 @@ export const clientFormSchema = z.object({
     name: z.string().optional(),
     emails: z.array(z.object({ value: z.string().email("Invalid email address.") })).optional(),
     phoneNumbers: z.array(z.object({ value: z.string().min(5, "Invalid phone number.") })).optional(),
+    addresses: z.array(z.object({ value: z.string().min(5, "Address too short.") })).optional(),
     country: z.string().optional(),
     avatarUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
     source: z.string().min(1, { message: "Income source is required." }),
@@ -33,6 +34,7 @@ export interface Client {
     email?: string; // Kept for backward compatibility, but we'll prefer emails array
     emails?: { value: string }[];
     phoneNumbers?: { value: string }[];
+    addresses?: { value: string }[];
     country?: string;
     avatarUrl?: string;
     source: string;

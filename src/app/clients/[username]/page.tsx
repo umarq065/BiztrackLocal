@@ -482,11 +482,24 @@ export default function ClientDetailsPage() {
                   </div>
                 ))}
 
+                {/* Addresses */}
+                {client.addresses && client.addresses.map((address, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                    <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Address {client.addresses!.length > 1 ? i + 1 : ''}</p>
+                      <p className="text-muted-foreground">{address.value}</p>
+                    </div>
+                  </div>
+                ))}
+
                 {/* Country */}
                 {client.country && (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
                     <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
-                      <MapPin className="h-4 w-4" />
+                      <Globe className="h-4 w-4" />
                     </div>
                     <div>
                       <p className="font-medium">Country</p>

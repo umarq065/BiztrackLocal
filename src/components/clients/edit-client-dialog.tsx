@@ -57,6 +57,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
         defaultValues: {
             emails: [],
             phoneNumbers: [],
+            addresses: [],
             socialLinks: [],
         }
     });
@@ -71,6 +72,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
                 name: client.name || "",
                 emails: existingEmails,
                 phoneNumbers: client.phoneNumbers || [],
+                addresses: client.addresses || [],
                 country: client.country || "",
                 avatarUrl: client.avatarUrl || "",
                 source: client.source,
@@ -95,6 +97,11 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
     const { fields: phoneFields, append: appendPhone, remove: removePhone } = useFieldArray({
         control: form.control,
         name: "phoneNumbers",
+    });
+
+    const { fields: addressFields, append: appendAddress, remove: removeAddress } = useFieldArray({
+        control: form.control,
+        name: "addresses",
     });
 
     async function onSubmit(values: ClientFormValues) {
@@ -372,6 +379,51 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
                                     ))}
                                     {phoneFields.length === 0 && (
                                         <div className="text-sm text-muted-foreground/60 italic pl-1">No phone numbers added.</div>
+                                    )}
+                                </div>
+
+                                {/* Addresses */}
+                                <div className="md:col-span-2 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <FormLabel className="text-foreground/80">Addresses</FormLabel>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 text-xs text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                                            onClick={() => appendAddress({ value: "" })}
+                                        >
+                                            <PlusCircle className="mr-1.5 h-3 w-3" />
+                                            Add Address
+                                        </Button>
+                                    </div>
+                                    {addressFields.map((field, index) => (
+                                        <div key={field.id} className="flex items-center gap-2 group/item animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <FormField
+                                                control={form.control}
+                                                name={`addresses.${index}.value`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-grow">
+                                                        <FormControl>
+                                                            <Input placeholder="123 Main St, City, Country" {...field} className="bg-background/50 border-emerald-200/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all" />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                                onClick={() => removeAddress(index)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    {addressFields.length === 0 && (
+                                        <div className="text-sm text-muted-foreground/60 italic pl-1">No addresses added.</div>
                                     )}
                                 </div>
 
