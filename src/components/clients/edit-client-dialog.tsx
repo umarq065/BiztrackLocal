@@ -556,8 +556,8 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client, 
                                                                                 return (
                                                                                     <SelectItem key={p.value} value={p.value}>
                                                                                         <div className="flex items-center gap-2">
-                                                                                            <Icon className="h-4 w-4" />
-                                                                                            <span>{p.value}</span>
+                                                                                            <Icon className={`h-4 w-4 ${p.color}`} />
+                                                                                            <span className={p.color}>{p.value}</span>
                                                                                         </div>
                                                                                     </SelectItem>
                                                                                 )

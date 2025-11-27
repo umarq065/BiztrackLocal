@@ -32,7 +32,7 @@ const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean
     const platformConfig = socialPlatforms.find(p => p.value === platform);
     if (!platformConfig) return <Globe className={cn("h-5 w-5", isMatch ? "text-primary animate-pulse" : "text-muted-foreground")} />;
     const Icon = platformConfig.icon;
-    return <Icon className={cn("h-5 w-5 transition-colors", isMatch ? "text-primary animate-pulse scale-110" : "text-muted-foreground hover:text-foreground")} />;
+    return <Icon className={cn("h-5 w-5 transition-colors", isMatch ? "text-primary animate-pulse scale-110" : platformConfig.color)} />;
 };
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');

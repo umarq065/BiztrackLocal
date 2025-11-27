@@ -42,7 +42,7 @@ const SocialIcon = ({ platform }: { platform: string }) => {
   const platformConfig = socialPlatforms.find(p => p.value === platform);
   if (!platformConfig) return <Globe className="h-5 w-5 text-muted-foreground" />;
   const Icon = platformConfig.icon;
-  return <Icon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />;
+  return <Icon className={cn("h-5 w-5 transition-colors", platformConfig.color)} />;
 }
 
 // A more robust date parsing function to avoid performance issues.

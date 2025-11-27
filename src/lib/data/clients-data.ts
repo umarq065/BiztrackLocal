@@ -67,14 +67,14 @@ export const getClientStatus = (lastOrderDateString: string): { text: 'Active' |
 };
 
 export const socialPlatforms = [
-    { value: "Facebook", icon: Facebook },
-    { value: "X", icon: X },
-    { value: "Instagram", icon: Instagram },
-    { value: "LinkedIn", icon: Linkedin },
-    { value: "GitHub", icon: Github },
-    { value: "YouTube", icon: Youtube },
-    { value: "Threads", icon: AtSign },
-    { value: "Website", icon: Globe },
+    { value: "Facebook", icon: Facebook, color: "text-[#1877F2]" },
+    { value: "X", icon: X, color: "text-black dark:text-white" },
+    { value: "Instagram", icon: Instagram, color: "text-[#E4405F]" },
+    { value: "LinkedIn", icon: Linkedin, color: "text-[#0A66C2]" },
+    { value: "GitHub", icon: Github, color: "text-[#181717] dark:text-white" },
+    { value: "YouTube", icon: Youtube, color: "text-[#FF0000]" },
+    { value: "Threads", icon: AtSign, color: "text-black dark:text-white" },
+    { value: "Website", icon: Globe, color: "text-blue-500" },
 ];
 
 export const countries = [
