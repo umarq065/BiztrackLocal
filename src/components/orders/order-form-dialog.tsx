@@ -1,11 +1,10 @@
-
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -257,33 +256,47 @@ export function OrderFormDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle>{editingOrder ? 'Edit Order' : 'Add New Order'}</DialogTitle>
-                    <DialogDescription>
-                        Fill in the details below to {editingOrder ? 'update the' : 'create a new'} order.
-                    </DialogDescription>
+            <DialogContent className="sm:max-w-6xl max-h-[95vh] flex flex-col p-0 gap-0 border-0 shadow-2xl bg-background/80 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden">
+                <DialogHeader className="p-6 pb-6 bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white relative overflow-hidden flex-shrink-0">
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+                    <div className="relative z-10">
+                        <DialogTitle className="text-2xl font-bold tracking-tight">
+                            {editingOrder ? 'Edit Order' : 'New Order'}
+                        </DialogTitle>
+                        <DialogDescription className="text-blue-100/80 mt-1 text-base">
+                            {editingOrder ? 'Update the order details below.' : 'Create a new order record in the system.'}
+                        </DialogDescription>
+                    </div>
+                    <DialogClose className="absolute right-6 top-6 z-50 rounded-full bg-white/10 p-2 hover:bg-white/20 transition-colors ring-1 ring-white/10">
+                        <X className="h-5 w-5 text-white" />
+                        <span className="sr-only">Close</span>
+                    </DialogClose>
                 </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1 pr-4">
 
-                            <div className="space-y-4 rounded-md border p-4">
-                                <FormLabel className="text-base font-semibold">Order Details</FormLabel>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-background to-muted/20">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                            {/* Order Details Section (Violet/Indigo Theme) */}
+                            <div className="lg:col-span-12 space-y-4 group">
+                                <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+                                    Order Details
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 border border-indigo-500/10 rounded-xl bg-indigo-500/5 hover:border-indigo-500/20 hover:bg-indigo-500/10 transition-all duration-300">
                                     <FormField
                                         control={form.control}
                                         name="date"
                                         render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Order Date*</FormLabel>
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel className="text-foreground/80">Order Date</FormLabel>
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
                                                             <Button
                                                                 variant={"outline"}
                                                                 className={cn(
-                                                                    "w-full justify-start text-left font-normal",
+                                                                    "h-10 pl-3 text-left font-normal bg-background/50 border-indigo-200/20 focus:border-violet-500 focus:ring-violet-500/20 transition-all",
                                                                     !field.value && "text-muted-foreground"
                                                                 )}
                                                             >
@@ -301,6 +314,9 @@ export function OrderFormDialog({
                                                             mode="single"
                                                             selected={field.value}
                                                             onSelect={field.onChange}
+                                                            disabled={(date) =>
+                                                                date > new Date() || date < new Date("1900-01-01")
+                                                            }
                                                             initialFocus
                                                         />
                                                     </PopoverContent>
@@ -314,12 +330,13 @@ export function OrderFormDialog({
                                         name="id"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Order ID*</FormLabel>
+                                                <FormLabel className="text-foreground/80">Order ID</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="Manually enter order ID"
+                                                        placeholder="ORD-..."
                                                         {...field}
                                                         onChange={handleOrderIdChange}
+                                                        className="h-10 bg-background/50 border-indigo-200/20 focus:border-violet-500 focus:ring-violet-500/20 transition-all"
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
@@ -327,214 +344,261 @@ export function OrderFormDialog({
                                         )}
                                     />
                                 </div>
-                                <FormField
-                                    control={form.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Amount*</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" step="0.01" placeholder="e.g., 499.99" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
                             </div>
 
-                            <div className="space-y-4 rounded-md border p-4">
-                                <FormLabel className="text-base font-semibold">Client & Source</FormLabel>
-                                <FormField
-                                    control={form.control}
-                                    name="username"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Username*</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g., olivia.m" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Client & Source Section (Indigo/Violet Theme) */}
+                            <div className="lg:col-span-8 space-y-4 group">
+                                <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-violet-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                    Client & Source
+                                </h3>
+                                <div className="p-5 border border-indigo-500/10 rounded-xl bg-indigo-500/5 hover:border-indigo-500/20 hover:bg-indigo-500/10 transition-all duration-300 space-y-6">
                                     <FormField
                                         control={form.control}
-                                        name="source"
+                                        name="username"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Source*</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select an income source" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {incomeSources.map(source => (
-                                                            <SelectItem key={source.id} value={source.name}>{source.name}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="gig"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Gig*</FormLabel>
-                                                <Select
-                                                    onValueChange={field.onChange}
-                                                    value={field.value}
-                                                    disabled={!selectedSource || availableGigs.length === 0}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder={!selectedSource ? "Select a source first" : "Select a gig"} />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {availableGigs.map(gig => (
-                                                            <SelectItem key={gig.id} value={gig.name}>{gig.name}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 rounded-md border p-4">
-                                <FormLabel className="text-base font-semibold">Status & Rating</FormLabel>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="status"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Order Status*</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a status" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="In Progress">In Progress</SelectItem>
-                                                        <SelectItem value="Completed">Completed</SelectItem>
-                                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="rating"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Rating (0.0 - 5.0)</FormLabel>
+                                                <FormLabel className="text-foreground/80">Client Username</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        type="number"
-                                                        step="0.1"
-                                                        placeholder="e.g., 4.2"
+                                                        placeholder="@username"
                                                         {...field}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            field.onChange(value === '' ? null : parseFloat(value));
-                                                        }}
-                                                        value={field.value ?? ''}
+                                                        className="h-10 bg-background/50 border-indigo-200/20 focus:border-violet-500 focus:ring-violet-500/20 transition-all"
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-                                </div>
-                                {orderStatus === 'Cancelled' && (
-                                    <div className="space-y-4 pt-4">
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <FormField
                                             control={form.control}
-                                            name="cancellationReasons"
-                                            render={() => (
+                                            name="source"
+                                            render={({ field }) => (
                                                 <FormItem>
-                                                    <div className="mb-4">
-                                                        <FormLabel className="text-base">Reason for Cancellation</FormLabel>
-                                                        <FormDescription>
-                                                            Select any applicable reasons.
-                                                        </FormDescription>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        {cancellationReasonsList.map((reason) => (
-                                                            <FormField
-                                                                key={reason}
-                                                                control={form.control}
-                                                                name="cancellationReasons"
-                                                                render={({ field }) => {
-                                                                    return (
-                                                                        <FormItem
-                                                                            key={reason}
-                                                                            className="flex flex-row items-start space-x-3 space-y-0"
-                                                                        >
-                                                                            <FormControl>
-                                                                                <Checkbox
-                                                                                    checked={field.value?.includes(reason)}
-                                                                                    onCheckedChange={(checked) => {
-                                                                                        return checked
-                                                                                            ? field.onChange([...(field.value || []), reason])
-                                                                                            : field.onChange(
-                                                                                                field.value?.filter(
-                                                                                                    (value) => value !== reason
-                                                                                                )
-                                                                                            )
-                                                                                    }}
-                                                                                />
-                                                                            </FormControl>
-                                                                            <FormLabel className="font-normal">
-                                                                                {reason}
-                                                                            </FormLabel>
-                                                                        </FormItem>
-                                                                    )
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
+                                                    <FormLabel className="text-foreground/80">Platform</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-10 bg-background/50 border-indigo-200/20 focus:ring-violet-500/20 hover:border-violet-500/30 transition-colors">
+                                                                <SelectValue placeholder="Select Platform" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {incomeSources.map(source => (
+                                                                <SelectItem key={source.id} value={source.name}>{source.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="customCancellationReason"
+                                            name="gig"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Other Reason</FormLabel>
-                                                    <FormControl>
-                                                        <Textarea placeholder="If other, please specify reason for cancellation..." {...field} value={field.value ?? ''} />
-                                                    </FormControl>
+                                                    <FormLabel className="text-foreground/80">Gig Type</FormLabel>
+                                                    <Select
+                                                        onValueChange={field.onChange}
+                                                        value={field.value}
+                                                        disabled={!selectedSource || availableGigs.length === 0}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-10 bg-background/50 border-indigo-200/20 focus:ring-violet-500/20 hover:border-violet-500/30 transition-colors">
+                                                                <SelectValue placeholder={!selectedSource ? "Select platform first" : "Select gig"} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {availableGigs.map(gig => (
+                                                                <SelectItem key={gig.id} value={gig.name}>{gig.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     </div>
-                                )}
+                                </div>
+                            </div>
+
+                            {/* Status & Financials (Emerald/Teal Theme) */}
+                            <div className="lg:col-span-4 space-y-4 group">
+                                <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-teal-500">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Status & Value
+                                </h3>
+                                <div className="p-5 border border-emerald-500/10 rounded-xl bg-emerald-500/5 hover:border-emerald-500/20 hover:bg-emerald-500/10 transition-all duration-300 h-full flex flex-col space-y-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="amount"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-foreground/80">Order Value ($)</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-bold">$</span>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            placeholder="0.00"
+                                                            {...field}
+                                                            className="pl-7 h-10 bg-background/50 border-emerald-200/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all font-mono font-bold"
+                                                        />
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="status"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-foreground/80">Current Status</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className={cn(
+                                                            "h-10 border-emerald-200/20 transition-all",
+                                                            field.value === 'In Progress' && "text-amber-500",
+                                                            field.value === 'Completed' && "text-emerald-500",
+                                                            field.value === 'Cancelled' && "text-red-500"
+                                                        )}>
+                                                            <SelectValue placeholder="Select status" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="In Progress" className="text-amber-500">In Progress</SelectItem>
+                                                        <SelectItem value="Completed" className="text-emerald-500">Completed</SelectItem>
+                                                        <SelectItem value="Cancelled" className="text-red-500">Cancelled</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="rating"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-foreground/80">Rating (0-5)</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input
+                                                            type="number"
+                                                            step="0.1"
+                                                            max="5"
+                                                            placeholder="-"
+                                                            {...field}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                field.onChange(value === '' ? null : parseFloat(value));
+                                                            }}
+                                                            value={field.value ?? ''}
+                                                            className="h-10 bg-background/50 border-emerald-200/20 focus:border-emerald-500 focus:ring-emerald-500/20 transition-all text-center font-bold"
+                                                        />
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500/50">★</div>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        {/* Cancellation Section (Conditional) */}
+                        {orderStatus === 'Cancelled' && (
+                            <div className="mt-6 p-5 rounded-xl bg-red-500/5 border border-red-500/10 animate-in fade-in slide-in-from-top-4">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                                    <h3 className="text-sm font-medium text-red-500 uppercase tracking-widest">Cancellation Details</h3>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="cancellationReasons"
+                                        render={() => (
+                                            <FormItem>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {cancellationReasonsList.map((reason) => (
+                                                        <FormField
+                                                            key={reason}
+                                                            control={form.control}
+                                                            name="cancellationReasons"
+                                                            render={({ field }) => (
+                                                                <FormItem
+                                                                    key={reason}
+                                                                    className="flex flex-row items-center space-x-3 space-y-0 p-3 rounded-lg bg-background/40 border border-red-500/10 hover:bg-red-500/5 transition-colors cursor-pointer"
+                                                                >
+                                                                    <FormControl>
+                                                                        <Checkbox
+                                                                            checked={field.value?.includes(reason)}
+                                                                            onCheckedChange={(checked) => {
+                                                                                return checked
+                                                                                    ? field.onChange([...(field.value || []), reason])
+                                                                                    : field.onChange(
+                                                                                        field.value?.filter(
+                                                                                            (value) => value !== reason
+                                                                                        )
+                                                                                    )
+                                                                            }}
+                                                                            className="border-red-200/50 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormLabel className="font-normal text-sm cursor-pointer flex-1 text-foreground/80">
+                                                                        {reason}
+                                                                    </FormLabel>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="customCancellationReason"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Other Reason</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder="Specify reason..."
+                                                        {...field}
+                                                        value={field.value ?? ''}
+                                                        className="bg-background/40 border-red-500/10 focus:border-red-500/50 focus:ring-red-500/20 min-h-[80px]"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <DialogFooter className="mt-8 pt-6 border-t border-white/10 flex items-center justify-end gap-3">
                             <DialogClose asChild>
-                                <Button type="button" variant="secondary">Cancel</Button>
+                                <Button type="button" variant="ghost" className="hover:bg-white/10">Cancel</Button>
                             </DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                            >
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {editingOrder ? 'Save Changes' : 'Add Order'}
+                                {editingOrder ? 'Save Changes' : 'Create Order'}
                             </Button>
                         </DialogFooter>
                     </form>
