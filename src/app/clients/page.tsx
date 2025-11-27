@@ -345,7 +345,11 @@ const ClientsPageComponent = () => {
                     client.username.toLowerCase().includes(lowercasedQuery) ||
                     (client.notes || '').toLowerCase().includes(lowercasedQuery) ||
                     (client.tags || []).some(tag => tag.toLowerCase().includes(lowercasedQuery)) ||
-                    (client.socialLinks || []).some(link => link.url.toLowerCase().includes(lowercasedQuery) || link.platform.toLowerCase().includes(lowercasedQuery))
+                    (client.socialLinks || []).some(link => link.url.toLowerCase().includes(lowercasedQuery) || link.platform.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.emails || []).some(e => e.value.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.phoneNumbers || []).some(p => p.value.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.addresses || []).some(a => a.value.toLowerCase().includes(lowercasedQuery)) ||
+                    (client.country || '').toLowerCase().includes(lowercasedQuery)
                 );
             }
         }
@@ -413,6 +417,7 @@ const ClientsPageComponent = () => {
                 columnVisibility={columnVisibility}
                 selectedClients={selectedClients}
                 onSelectionChange={setSelectedClients}
+                searchQuery={localSearch}
             />
         )
     }

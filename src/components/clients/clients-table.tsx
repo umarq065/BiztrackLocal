@@ -25,16 +25,17 @@ interface ClientsTableProps {
     columnVisibility: Record<string, boolean>;
     selectedClients: Record<string, boolean>;
     onSelectionChange: (selection: Record<string, boolean>) => void;
+    searchQuery?: string;
 }
 
-const SocialIcon = ({ platform }: { platform: string }) => {
+const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean }) => {
     const platformConfig = socialPlatforms.find(p => p.value === platform);
-    if (!platformConfig) return <Globe className="h-5 w-5 text-muted-foreground" />;
+    if (!platformConfig) return <Globe className={cn("h-5 w-5", isMatch ? "text-primary animate-pulse" : "text-muted-foreground")} />;
     const Icon = platformConfig.icon;
-    return <Icon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />;
+    return <Icon className={cn("h-5 w-5 transition-colors", isMatch ? "text-primary animate-pulse scale-110" : "text-muted-foreground hover:text-foreground")} />;
 };
 
-const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility, selectedClients, onSelectionChange }: ClientsTableProps) => {
+const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility, selectedClients, onSelectionChange, searchQuery = "" }: ClientsTableProps) => {
 
     const handleSelectAll = (checked: boolean) => {
         const newSelection: Record<string, boolean> = {};
@@ -43,7 +44,7 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
         }
         onSelectionChange(newSelection);
     };
-    
+
     const handleRowSelect = (clientId: string, checked: boolean) => {
         const newSelection = { ...selectedClients };
         if (checked) {
@@ -120,107 +121,151 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                             <TableBody>
                                 {clients.length > 0 ? (clients.map((client) => {
                                     const status = getClientStatus(client.lastOrder);
+                                    const lowerQuery = searchQuery.toLowerCase();
+
+                                    // Check for matches
+                                    const matchesNotes = searchQuery && (client.notes || '').toLowerCase().includes(lowerQuery);
+                                    const matchesEmail = searchQuery && (client.emails || []).find(e => e.value.toLowerCase().includes(lowerQuery));
+                                    const matchesPhone = searchQuery && (client.phoneNumbers || []).find(p => p.value.toLowerCase().includes(lowerQuery));
+                                    const matchesAddress = searchQuery && (client.addresses || []).find(a => a.value.toLowerCase().includes(lowerQuery));
+                                    const matchesCountry = searchQuery && (client.country || '').toLowerCase().includes(lowerQuery);
+
                                     return (
-                                    <TableRow 
-                                        key={client.id}
-                                        className="cursor-pointer"
-                                        data-state={selectedClients[client.id] && 'selected'}
-                                    >
-                                        <TableCell onClick={(e) => e.stopPropagation()}>
-                                            <Checkbox
-                                                checked={!!selectedClients[client.id]}
-                                                onCheckedChange={(checked) => handleRowSelect(client.id, !!checked)}
-                                                aria-label={`Select client ${client.name || client.username}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                           <NProgressLink href={`/clients/${client.username}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-10 w-10">
-                                                        <AvatarImage src={client.avatarUrl || `https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
-                                                        <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium hover:underline">{client.name || client.username}</span>
-                                                            {client.isVip && (
-                                                                <Tooltip>
-                                                                    <TooltipTrigger>
-                                                                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent><p>VIP Client</p></TooltipContent>
-                                                                </Tooltip>
+                                        <TableRow
+                                            key={client.id}
+                                            className="cursor-pointer"
+                                            data-state={selectedClients[client.id] && 'selected'}
+                                        >
+                                            <TableCell onClick={(e) => e.stopPropagation()}>
+                                                <Checkbox
+                                                    checked={!!selectedClients[client.id]}
+                                                    onCheckedChange={(checked) => handleRowSelect(client.id, !!checked)}
+                                                    aria-label={`Select client ${client.name || client.username}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <NProgressLink href={`/clients/${client.username}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-10 w-10">
+                                                            <AvatarImage src={client.avatarUrl || `https://placehold.co/100x100.png?text=${(client.name || client.username).charAt(0)}`} alt="Avatar" data-ai-hint="avatar person" />
+                                                            <AvatarFallback>{(client.name || client.username).charAt(0).toUpperCase()}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium hover:underline">{client.name || client.username}</span>
+                                                                {client.isVip && (
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger>
+                                                                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent><p>VIP Client</p></TooltipContent>
+                                                                    </Tooltip>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground">@{client.username}</div>
+
+                                                            {/* Search Match Indicators */}
+                                                            {searchQuery && (
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {matchesNotes && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto border-yellow-500/50 text-yellow-600 bg-yellow-500/10">
+                                                                            Matches Notes
+                                                                        </Badge>
+                                                                    )}
+                                                                    {matchesEmail && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto border-blue-500/50 text-blue-600 bg-blue-500/10">
+                                                                            Email: {matchesEmail.value}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {matchesPhone && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto border-green-500/50 text-green-600 bg-green-500/10">
+                                                                            Phone: {matchesPhone.value}
+                                                                        </Badge>
+                                                                    )}
+                                                                    {matchesAddress && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto border-purple-500/50 text-purple-600 bg-purple-500/10">
+                                                                            Address: {matchesAddress.value.substring(0, 15)}...
+                                                                        </Badge>
+                                                                    )}
+                                                                    {matchesCountry && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-auto border-orange-500/50 text-orange-600 bg-orange-500/10">
+                                                                            Country: {client.country}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
-                                                        <div className="text-sm text-muted-foreground">@{client.username}</div>
                                                     </div>
+                                                </NProgressLink>
+                                            </TableCell>
+                                            {columnVisibility.status && <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn("h-2.5 w-2.5 rounded-full", status.color)} />
+                                                    <span>{status.text}</span>
                                                 </div>
-                                            </NProgressLink>
-                                        </TableCell>
-                                        {columnVisibility.status && <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn("h-2.5 w-2.5 rounded-full", status.color)} />
-                                                <span>{status.text}</span>
-                                            </div>
-                                        </TableCell>}
-                                        {columnVisibility.clientType && <TableCell>
-                                            <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>{client.clientType}</Badge>
-                                        </TableCell>}
-                                        {columnVisibility.source && <TableCell>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="inline-block max-w-[120px] truncate">
-                                                        {client.source}
-                                                    </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{client.source}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TableCell>}
-                                        {columnVisibility.totalEarning && <TableCell className="text-right">${client.totalEarning.toLocaleString()}</TableCell>}
-                                        {columnVisibility.totalOrders && <TableCell className="text-right">{client.totalOrders}</TableCell>}
-                                        {columnVisibility.clientSince && <TableCell>{client.clientSince}</TableCell>}
-                                        {columnVisibility.lastOrder && <TableCell>{client.lastOrder}</TableCell>}
-                                        {columnVisibility.social && <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                {client.socialLinks?.map((link, i) => (
-                                                    <Tooltip key={i}>
-                                                        <TooltipTrigger asChild>
-                                                            <a href={link.url} target="_blank" rel="noreferrer noopener" aria-label={link.platform} onClick={(e) => e.stopPropagation()}>
-                                                                <SocialIcon platform={link.platform} />
-                                                            </a>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{link.platform}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                ))}
-                                            </div>
-                                        </TableCell>}
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">Toggle menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(client); }}>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(client); }}>
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                    )}
+                                            </TableCell>}
+                                            {columnVisibility.clientType && <TableCell>
+                                                <Badge variant={client.clientType === 'New' ? 'secondary' : 'default'}>{client.clientType}</Badge>
+                                            </TableCell>}
+                                            {columnVisibility.source && <TableCell>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className="inline-block max-w-[120px] truncate">
+                                                            {client.source}
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{client.source}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TableCell>}
+                                            {columnVisibility.totalEarning && <TableCell className="text-right">${client.totalEarning.toLocaleString()}</TableCell>}
+                                            {columnVisibility.totalOrders && <TableCell className="text-right">{client.totalOrders}</TableCell>}
+                                            {columnVisibility.clientSince && <TableCell>{client.clientSince}</TableCell>}
+                                            {columnVisibility.lastOrder && <TableCell>{client.lastOrder}</TableCell>}
+                                            {columnVisibility.social && <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    {client.socialLinks?.map((link, i) => {
+                                                        const isMatch = searchQuery && (link.url.toLowerCase().includes(searchQuery.toLowerCase()) || link.platform.toLowerCase().includes(searchQuery.toLowerCase()));
+                                                        return (
+                                                            <Tooltip key={i}>
+                                                                <TooltipTrigger asChild>
+                                                                    <a href={link.url} target="_blank" rel="noreferrer noopener" aria-label={link.platform} onClick={(e) => e.stopPropagation()}>
+                                                                        <SocialIcon platform={link.platform} isMatch={!!isMatch} />
+                                                                    </a>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{link.platform}{isMatch ? " (Match)" : ""}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </TableCell>}
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">Toggle menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(client); }}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(client); }}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                }
                                 )) : (
                                     <TableRow>
                                         <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 3} className="h-24 text-center">
