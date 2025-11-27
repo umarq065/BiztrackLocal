@@ -128,7 +128,10 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                     // Check for matches
                                     const matchesNotes = searchQuery && (client.notes || '').toLowerCase().includes(lowerQuery);
                                     const matchesEmail = searchQuery && (client.emails || []).find(e => e.value.toLowerCase().includes(lowerQuery));
-                                    const matchesPhone = searchQuery && (client.phoneNumbers || []).find(p => normalizePhone(p.value).includes(normalizePhone(lowerQuery)));
+                                    const matchesPhone = searchQuery && (client.phoneNumbers || []).find(p => {
+                                        const normalizedQuery = normalizePhone(lowerQuery);
+                                        return normalizedQuery && normalizePhone(p.value).includes(normalizedQuery);
+                                    });
                                     const matchesAddress = searchQuery && (client.addresses || []).find(a => a.value.toLowerCase().includes(lowerQuery));
                                     const matchesCountry = searchQuery && (client.country || '').toLowerCase().includes(lowerQuery);
 

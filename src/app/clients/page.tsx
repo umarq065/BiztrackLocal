@@ -349,7 +349,10 @@ const ClientsPageComponent = () => {
                     (client.tags || []).some(tag => tag.toLowerCase().includes(lowercasedQuery)) ||
                     (client.socialLinks || []).some(link => link.url.toLowerCase().includes(lowercasedQuery) || link.platform.toLowerCase().includes(lowercasedQuery)) ||
                     (client.emails || []).some(e => e.value.toLowerCase().includes(lowercasedQuery)) ||
-                    (client.phoneNumbers || []).some(p => normalizePhone(p.value).includes(normalizePhone(lowercasedQuery))) ||
+                    (client.phoneNumbers || []).some(p => {
+                        const normalizedQuery = normalizePhone(lowercasedQuery);
+                        return normalizedQuery && normalizePhone(p.value).includes(normalizedQuery);
+                    }) ||
                     (client.addresses || []).some(a => a.value.toLowerCase().includes(lowercasedQuery)) ||
                     (client.country || '').toLowerCase().includes(lowercasedQuery)
                 );

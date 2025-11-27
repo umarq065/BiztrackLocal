@@ -179,6 +179,91 @@ export async function getClientByUsername(username: string): Promise<Client | nu
   } as Client;
 }
 
+/**
+ * Retrieves a single client by their ID, with aggregated order data.
+ * @param clientId - The ID of the client to fetch.
+ * @returns The client object with calculated stats, or null if not found.
+ */
+export async function getClientById(clientId: string): Promise<Client | null> {
+  const clientsCollection = await getClientsCollection();
+
+  if (!ObjectId.isValid(clientId)) {
+    return null;
+  }
+
+  const aggregationPipeline = [
+    { '$match': { '_id': new ObjectId(clientId) } },
+    { '$limit': 1 },
+    {
+      '$lookup': {
+        'from': 'orders',
+        'localField': 'username',
+        'foreignField': 'clientUsername',
+        'as': 'orders'
+      }
+    },
+    {
+      '$addFields': {
+        'totalOrders': { '$size': '$orders' },
+        'totalEarning': { '$sum': '$orders.amount' },
+        'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
+        'clientSince': {
+          '$ifNull': [
+            '$clientSince',
+            { '$dateToString': { 'format': '%Y-%m-%d', 'date': '$_id' } }
+          ]
+        }
+      }
+    },
+    {
+      '$addFields': {
+        'clientType': {
+          '$cond': {
+            'if': { '$gt': ['$totalOrders', 1] },
+            'then': 'Repeat',
+            'else': 'New'
+          }
+        }
+      }
+    },
+    {
+      '$project': {
+        '_id': 1,
+        'username': 1,
+        'name': 1,
+        'email': 1,
+        'avatarUrl': 1,
+        'source': 1,
+        'socialLinks': 1,
+        'notes': 1,
+        'tags': 1,
+        'isVip': 1,
+        'clientSince': 1,
+        'totalOrders': 1,
+        'totalEarning': 1,
+        'clientType': 1,
+        'lastOrder': 1,
+        'emails': 1,
+        'phoneNumbers': 1,
+        'addresses': 1,
+        'country': 1,
+      }
+    }
+  ];
+
+  const results = await clientsCollection.aggregate(aggregationPipeline).toArray();
+
+  if (results.length === 0) {
+    return null;
+  }
+
+  const client = results[0];
+  return {
+    ...client,
+    id: client._id.toString(),
+  } as Client;
+}
+
 
 /**
  * Adds a new client to the database.

@@ -1,6 +1,6 @@
 
 import { z } from "zod";
-import { Facebook, Linkedin, Github, Globe, Instagram, Youtube, X } from "lucide-react";
+import { Facebook, Linkedin, Github, Globe, Instagram, Youtube, X, AtSign } from "lucide-react";
 import { differenceInMonths } from "date-fns";
 import type { ObjectId } from 'mongodb';
 
@@ -73,6 +73,7 @@ export const socialPlatforms = [
     { value: "LinkedIn", icon: Linkedin },
     { value: "GitHub", icon: Github },
     { value: "YouTube", icon: Youtube },
+    { value: "Threads", icon: AtSign },
     { value: "Website", icon: Globe },
 ];
 
