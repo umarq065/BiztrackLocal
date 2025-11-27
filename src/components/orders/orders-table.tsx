@@ -3,7 +3,7 @@
 
 import { memo } from "react";
 import { format } from "date-fns";
-import { MoreHorizontal, Star, Edit, Trash2, ArrowUpDown } from "lucide-react";
+import { MoreHorizontal, Star, Edit, Trash2, ArrowUpDown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Table,
@@ -87,20 +87,20 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                             aria-label="Select all"
                         />
                     </TableHead>
+                    <TableHead>Client Username</TableHead>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead className="text-right">
+                        <Button variant="ghost" onClick={() => requestSort('amount')} className="justify-end w-full -mr-4">
+                            Price {getSortIndicator('amount')}
+                        </Button>
+                    </TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('date')} className="-ml-4">
                             Date {getSortIndicator('date')}
                         </Button>
                     </TableHead>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Client Username</TableHead>
-                    <TableHead className="text-right">
-                        <Button variant="ghost" onClick={() => requestSort('amount')} className="justify-end w-full -mr-4">
-                            Amount {getSortIndicator('amount')}
-                        </Button>
-                    </TableHead>
                     <TableHead>Source</TableHead>
-                    <TableHead>Gig</TableHead>
+                    <TableHead>Gig Name</TableHead>
                     <TableHead>
                         <Button variant="ghost" onClick={() => requestSort('rating')} className="-ml-4">
                             Rating {getSortIndicator('rating')}
@@ -125,24 +125,33 @@ const OrdersTableComponent = ({ orders, onEdit, onDelete, requestSort, sortConfi
                                     aria-label={`Select order ${order.id}`}
                                 />
                             </TableCell>
-                            <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
-                            <TableCell className="font-medium">
-                                <a
-                                    href={`https://www.fiverr.com/orders/${order.id}/activities`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:underline text-primary"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    {order.id}
-                                </a>
-                            </TableCell>
                             <TableCell>
                                 <NProgressLink href={`/clients/${order.clientUsername}`} className="font-medium hover:underline">
                                     {order.clientUsername}
                                 </NProgressLink>
                             </TableCell>
+                            <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                    <a
+                                        href={`https://www.fiverr.com/orders/${order.id}/activities`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:underline text-primary"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {order.id}
+                                    </a>
+                                    <NProgressLink
+                                        href={`/orders/${order.id}`}
+                                        className="text-muted-foreground hover:text-primary transition-colors p-1 hover:bg-muted rounded-full"
+                                        title="View Order Details"
+                                    >
+                                        <ArrowRight className="h-5 w-5" />
+                                    </NProgressLink>
+                                </div>
+                            </TableCell>
                             <TableCell className="text-right">${typeof order.amount === 'number' ? order.amount.toFixed(2) : '0.00'}</TableCell>
+                            <TableCell>{format(order.dateObj, 'PPP')}</TableCell>
                             <TableCell>
                                 <TooltipProvider>
                                     <Tooltip>

@@ -98,10 +98,13 @@ export function OrderDetailsView({ initialOrder, incomeSources }: OrderDetailsVi
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="icon" asChild className="rounded-full w-10 h-10 bg-white/10 hover:bg-white/20 text-white ring-1 ring-white/20 transition-all hover:scale-105">
-                                <Link href="/orders">
-                                    <ArrowLeft className="w-5 h-5" />
-                                </Link>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.back()}
+                                className="rounded-full w-10 h-10 bg-white/10 hover:bg-white/20 text-white ring-1 ring-white/20 transition-all hover:scale-105"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
                             </Button>
                             <div>
                                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white drop-shadow-sm">Order Details</h1>

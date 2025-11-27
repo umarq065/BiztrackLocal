@@ -441,61 +441,7 @@ export function OrdersDashboard() {
                 <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
             </div>
 
-            {/* Metrics Summary */}
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="relative overflow-hidden border-border/50 dark:border-blue-500/20 dark:bg-blue-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-blue-500/10 group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
-                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-blue-200 uppercase tracking-wider">Total Orders</CardTitle>
-                        <div className="h-5 w-5 rounded-md bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
-                            <ShoppingCart className="h-2.5 w-2.5" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="relative z-10 p-3 pt-0">
-                        <div className="text-lg font-bold text-foreground dark:text-white">{orders.length}</div>
-                        <p className="text-[9px] text-muted-foreground dark:text-blue-300/60">All time orders</p>
-                    </CardContent>
-                </Card>
-                <Card className="relative overflow-hidden border-border/50 dark:border-amber-500/20 dark:bg-amber-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-amber-500/10 group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
-                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-amber-200 uppercase tracking-wider">Pending</CardTitle>
-                        <div className="h-5 w-5 rounded-md bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20">
-                            <Loader2 className="h-2.5 w-2.5" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="relative z-10 p-3 pt-0">
-                        <div className="text-lg font-bold text-foreground dark:text-white">{inProgressOrders.length}</div>
-                        <p className="text-[9px] text-muted-foreground dark:text-amber-300/60">Orders in progress</p>
-                    </CardContent>
-                </Card>
-                <Card className="relative overflow-hidden border-border/50 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-emerald-500/10 group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
-                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-emerald-200 uppercase tracking-wider">Completed</CardTitle>
-                        <div className="h-5 w-5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
-                            <FileUp className="h-2.5 w-2.5" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="relative z-10 p-3 pt-0">
-                        <div className="text-lg font-bold text-foreground dark:text-white">{completedOrders.length}</div>
-                        <p className="text-[9px] text-muted-foreground dark:text-emerald-300/60">Successfully delivered</p>
-                    </CardContent>
-                </Card>
-                <Card className="relative overflow-hidden border-border/50 dark:border-red-500/20 dark:bg-red-500/5 dark:backdrop-blur-sm shadow-sm hover:shadow-md transition-all hover:bg-accent/50 dark:hover:bg-red-500/10 group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0.5 p-3 relative z-10">
-                        <CardTitle className="text-[10px] font-medium text-muted-foreground dark:text-red-200 uppercase tracking-wider">Cancelled</CardTitle>
-                        <div className="h-5 w-5 rounded-md bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 ring-1 ring-red-500/20">
-                            <Trash2 className="h-2.5 w-2.5" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="relative z-10 p-3 pt-0">
-                        <div className="text-lg font-bold text-foreground dark:text-white">{cancelledOrders.length}</div>
-                        <p className="text-[9px] text-muted-foreground dark:text-red-300/60">Orders cancelled</p>
-                    </CardContent>
-                </Card>
-            </div>
+
 
             {/* Filters and Actions Bar */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border/50 dark:border-white/10 bg-card/50 dark:bg-white/5 dark:backdrop-blur-sm p-2 shadow-sm">
@@ -540,16 +486,16 @@ export function OrdersDashboard() {
                             <div className="border-b border-border/50 dark:border-white/10 px-6 py-3 bg-muted/10 dark:bg-white/5">
                                 <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-muted/50 dark:bg-black/20 p-1 h-9">
                                     <TabsTrigger value="in-progress" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
-                                        In Progress
+                                        In Progress ({inProgressOrders.length})
                                     </TabsTrigger>
                                     <TabsTrigger value="completed" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
-                                        Completed
+                                        Completed ({completedOrders.length})
                                     </TabsTrigger>
                                     <TabsTrigger value="cancelled" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
-                                        Cancelled
+                                        Cancelled ({cancelledOrders.length})
                                     </TabsTrigger>
                                     <TabsTrigger value="all" className="data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 data-[state=active]:text-foreground dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all text-xs">
-                                        All Orders
+                                        All Orders ({orders.length})
                                     </TabsTrigger>
                                 </TabsList>
                             </div>
