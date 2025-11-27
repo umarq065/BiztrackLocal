@@ -61,6 +61,25 @@ export async function checkOrderExists(orderId: string): Promise<boolean> {
     return count > 0;
 }
 
+/**
+ * Retrieves a single order by its ID.
+ * @param orderId - The ID of the order to retrieve.
+ * @returns A promise that resolves to the order object or null if not found.
+ */
+export async function getOrderById(orderId: string): Promise<Order | null> {
+    const ordersCollection = await getOrdersCollection();
+    const order = await ordersCollection.findOne({ id: orderId });
+
+    if (!order) {
+        return null;
+    }
+
+    return {
+        ...order,
+        id: order.id || order._id.toString(),
+    } as Order;
+}
+
 
 /**
  * Adds a new order to the database.
