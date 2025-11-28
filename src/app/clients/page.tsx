@@ -24,7 +24,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import type { Client } from "@/lib/data/clients-data";
+import { type Client, getClientStatus } from "@/lib/data/clients-data";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
 import { ClientsTable } from "@/components/clients/clients-table";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
@@ -288,10 +288,49 @@ const ClientsPageComponent = () => {
         return <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />;
     };
 
+    const [columnFilters, setColumnFilters] = useState<Record<string, Set<string>>>({
+        status: new Set(),
+        clientType: new Set(),
+        source: new Set(),
+    });
+
+    // ... existing useEffects ...
+
+    // Derive options for filters
+    const filterOptions = useMemo(() => {
+        const statuses = new Set<string>();
+        const types = new Set<string>();
+        const sources = new Set<string>();
+
+        clients.forEach(client => {
+            statuses.add(getClientStatus(client.lastOrder).text);
+            if (client.clientType) types.add(client.clientType);
+            if (client.source) sources.add(client.source);
+        });
+
+        return {
+            status: Array.from(statuses).map(s => ({ label: s, value: s })),
+            clientType: Array.from(types).map(t => ({ label: t, value: t })),
+            source: Array.from(sources).map(s => ({ label: s, value: s })),
+        };
+    }, [clients]);
+
     const filteredClients = useMemo(() => {
         let clientsToFilter = [...clients];
 
+        // Apply Column Filters
+        if (columnFilters.status.size > 0) {
+            clientsToFilter = clientsToFilter.filter(client => columnFilters.status.has(getClientStatus(client.lastOrder).text));
+        }
+        if (columnFilters.clientType.size > 0) {
+            clientsToFilter = clientsToFilter.filter(client => columnFilters.clientType.has(client.clientType));
+        }
+        if (columnFilters.source.size > 0) {
+            clientsToFilter = clientsToFilter.filter(client => columnFilters.source.has(client.source));
+        }
+
         if (aiFilters) {
+            // ... existing AI filter logic ...
             clientsToFilter = clientsToFilter.filter(client => {
                 if (aiFilters.nameOrUsername && !`${client.name || ''} ${client.username}`.toLowerCase().includes(aiFilters.nameOrUsername.toLowerCase())) {
                     return false;
@@ -324,6 +363,7 @@ const ClientsPageComponent = () => {
                 return true;
             });
         } else {
+            // ... existing manual filter logic ...
             if (fromDate || toDate) {
                 clientsToFilter = clientsToFilter.filter(client => {
                     if (client.lastOrder === 'N/A') return false;
@@ -360,7 +400,7 @@ const ClientsPageComponent = () => {
         }
 
         return clientsToFilter;
-    }, [clients, fromDate, toDate, searchQuery, aiFilters]);
+    }, [clients, fromDate, toDate, searchQuery, aiFilters, columnFilters]);
 
 
     const sortedClients = useMemo(() => {
@@ -423,6 +463,9 @@ const ClientsPageComponent = () => {
                 selectedClients={selectedClients}
                 onSelectionChange={setSelectedClients}
                 searchQuery={localSearch}
+                columnFilters={columnFilters}
+                onColumnFilterChange={setColumnFilters}
+                filterOptions={filterOptions}
             />
         )
     }

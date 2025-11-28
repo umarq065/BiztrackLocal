@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import NProgressLink from "../layout/nprogress-link";
 import { Checkbox } from "../ui/checkbox";
 
+import { ColumnFilter } from "./column-filter";
+
 interface ClientsTableProps {
     clients: Client[];
     requestSort: (key: keyof Client) => void;
@@ -26,6 +28,13 @@ interface ClientsTableProps {
     selectedClients: Record<string, boolean>;
     onSelectionChange: (selection: Record<string, boolean>) => void;
     searchQuery?: string;
+    columnFilters: Record<string, Set<string>>;
+    onColumnFilterChange: (filters: Record<string, Set<string>>) => void;
+    filterOptions: {
+        status: { label: string; value: string }[];
+        clientType: { label: string; value: string }[];
+        source: { label: string; value: string }[];
+    };
 }
 
 const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean }) => {
@@ -37,7 +46,20 @@ const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
-const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit, onDelete, columnVisibility, selectedClients, onSelectionChange, searchQuery = "" }: ClientsTableProps) => {
+const ClientsTableComponent = ({
+    clients,
+    requestSort,
+    getSortIndicator,
+    onEdit,
+    onDelete,
+    columnVisibility,
+    selectedClients,
+    onSelectionChange,
+    searchQuery = "",
+    columnFilters,
+    onColumnFilterChange,
+    filterOptions
+}: ClientsTableProps) => {
 
     const handleSelectAll = (checked: boolean) => {
         const newSelection: Record<string, boolean> = {};
@@ -55,6 +77,13 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
             delete newSelection[clientId];
         }
         onSelectionChange(newSelection);
+    };
+
+    const handleFilterChange = (column: string, values: Set<string>) => {
+        onColumnFilterChange({
+            ...columnFilters,
+            [column]: values
+        });
     };
 
     const isAllSelected = clients.length > 0 && clients.every(client => selectedClients[client.id]);
@@ -85,16 +114,29 @@ const ClientsTableComponent = ({ clients, requestSort, getSortIndicator, onEdit,
                                             Client {getSortIndicator('name')}
                                         </Button>
                                     </TableHead>
-                                    {columnVisibility.status && <TableHead>Status</TableHead>}
+                                    {columnVisibility.status && <TableHead>
+                                        <ColumnFilter
+                                            title="Status"
+                                            options={filterOptions.status}
+                                            selectedValues={columnFilters.status}
+                                            onSelect={(values) => handleFilterChange('status', values)}
+                                        />
+                                    </TableHead>}
                                     {columnVisibility.clientType && <TableHead>
-                                        <Button variant="ghost" onClick={() => requestSort('clientType')}>
-                                            Type {getSortIndicator('clientType')}
-                                        </Button>
+                                        <ColumnFilter
+                                            title="Type"
+                                            options={filterOptions.clientType}
+                                            selectedValues={columnFilters.clientType}
+                                            onSelect={(values) => handleFilterChange('clientType', values)}
+                                        />
                                     </TableHead>}
                                     {columnVisibility.source && <TableHead>
-                                        <Button variant="ghost" onClick={() => requestSort('source')}>
-                                            Source {getSortIndicator('source')}
-                                        </Button>
+                                        <ColumnFilter
+                                            title="Source"
+                                            options={filterOptions.source}
+                                            selectedValues={columnFilters.source}
+                                            onSelect={(values) => handleFilterChange('source', values)}
+                                        />
                                     </TableHead>}
                                     {columnVisibility.totalEarning && <TableHead className="text-right">
                                         <Button variant="ghost" onClick={() => requestSort('totalEarning')}>
