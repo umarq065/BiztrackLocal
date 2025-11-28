@@ -37,7 +37,7 @@ import type { IncomeSource } from "@/lib/data/incomes-data";
 import { MonthYearPicker } from "@/components/clients/month-year-picker";
 
 const INITIAL_LOAD_COUNT = 50;
-const LOAD_MORE_COUNT = 200;
+const LOAD_MORE_COUNT = 500;
 
 const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 

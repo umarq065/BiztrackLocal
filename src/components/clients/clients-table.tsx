@@ -93,7 +93,11 @@ const ClientsTableComponent = ({
         <Card>
             <CardHeader>
                 <CardTitle>Client List</CardTitle>
-                <CardDescription>A sortable and customizable list of all your clients.</CardDescription>
+                <CardDescription>
+                    A sortable and customizable list of all your clients.
+                    <br />
+                    Showing {clients.length} results
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <TooltipProvider>
@@ -138,7 +142,7 @@ const ClientsTableComponent = ({
                                             onSelect={(values) => handleFilterChange('source', values)}
                                         />
                                     </TableHead>}
-                                    {columnVisibility.totalEarning && <TableHead className="text-right">
+                                    {columnVisibility.totalEarning && <TableHead className="text-right w-[100px]">
                                         <Button variant="ghost" onClick={() => requestSort('totalEarning')}>
                                             Earning {getSortIndicator('totalEarning')}
                                         </Button>
@@ -266,7 +270,7 @@ const ClientsTableComponent = ({
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TableCell>}
-                                            {columnVisibility.totalEarning && <TableCell className="text-right">${client.totalEarning.toLocaleString()}</TableCell>}
+                                            {columnVisibility.totalEarning && <TableCell className="text-right w-[100px]">${Math.floor(client.totalEarning).toLocaleString()}</TableCell>}
                                             {columnVisibility.totalOrders && <TableCell className="text-right">{client.totalOrders}</TableCell>}
                                             {columnVisibility.clientSince && <TableCell>{client.clientSince}</TableCell>}
                                             {columnVisibility.lastOrder && <TableCell>{client.lastOrder}</TableCell>}
