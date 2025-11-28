@@ -473,6 +473,13 @@ const ClientsPageComponent = () => {
     const numSelected = Object.values(selectedClients).filter(Boolean).length;
     const visibleClients = useMemo(() => sortedClients.slice(0, visibleCount), [sortedClients, visibleCount]);
 
+    const totals = useMemo(() => {
+        return filteredClients.reduce((acc, client) => ({
+            earnings: acc.earnings + client.totalEarning,
+            orders: acc.orders + client.totalOrders
+        }), { earnings: 0, orders: 0 });
+    }, [filteredClients]);
+
     const renderContent = () => {
         if (isLoading) {
             return (
@@ -499,6 +506,9 @@ const ClientsPageComponent = () => {
                 dateFilters={dateFilters}
                 onDateFilterChange={(key, range) => setDateFilters(prev => ({ ...prev, [key]: range }))}
                 filterOptions={filterOptions}
+                totalEarnings={totals.earnings}
+                totalOrders={totals.orders}
+                filteredCount={filteredClients.length}
             />
         )
     }

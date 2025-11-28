@@ -36,8 +36,19 @@ export async function getClients(): Promise<Client[]> {
       // Stage 2: Add fields to calculate totals and last order date
       {
         '$addFields': {
-          'totalOrders': { '$size': '$orders' },
-          'totalEarning': { '$sum': '$orders.amount' },
+          'validOrders': {
+            '$filter': {
+              'input': '$orders',
+              'as': 'order',
+              'cond': { '$ne': ['$$order.status', 'Cancelled'] }
+            }
+          }
+        }
+      },
+      {
+        '$addFields': {
+          'totalOrders': { '$size': '$validOrders' },
+          'totalEarning': { '$sum': '$validOrders.amount' },
           'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
           'clientSince': {
             '$ifNull': [
@@ -119,8 +130,19 @@ export async function getClientByUsername(username: string): Promise<Client | nu
     },
     {
       '$addFields': {
-        'totalOrders': { '$size': '$orders' },
-        'totalEarning': { '$sum': '$orders.amount' },
+        'validOrders': {
+          '$filter': {
+            'input': '$orders',
+            'as': 'order',
+            'cond': { '$ne': ['$$order.status', 'Cancelled'] }
+          }
+        }
+      }
+    },
+    {
+      '$addFields': {
+        'totalOrders': { '$size': '$validOrders' },
+        'totalEarning': { '$sum': '$validOrders.amount' },
         'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
         'clientSince': {
           '$ifNull': [
@@ -204,8 +226,19 @@ export async function getClientById(clientId: string): Promise<Client | null> {
     },
     {
       '$addFields': {
-        'totalOrders': { '$size': '$orders' },
-        'totalEarning': { '$sum': '$orders.amount' },
+        'validOrders': {
+          '$filter': {
+            'input': '$orders',
+            'as': 'order',
+            'cond': { '$ne': ['$$order.status', 'Cancelled'] }
+          }
+        }
+      }
+    },
+    {
+      '$addFields': {
+        'totalOrders': { '$size': '$validOrders' },
+        'totalEarning': { '$sum': '$validOrders.amount' },
         'lastOrder': { '$ifNull': [{ '$max': '$orders.date' }, 'N/A'] },
         'clientSince': {
           '$ifNull': [

@@ -43,6 +43,9 @@ interface ClientsTableProps {
         clientType: { label: string; value: string }[];
         source: { label: string; value: string }[];
     };
+    totalEarnings: number;
+    totalOrders: number;
+    filteredCount: number;
 }
 
 const SocialIcon = ({ platform, isMatch }: { platform: string, isMatch?: boolean }) => {
@@ -68,7 +71,10 @@ const ClientsTableComponent = ({
     onColumnFilterChange,
     dateFilters,
     onDateFilterChange,
-    filterOptions
+    filterOptions,
+    totalEarnings,
+    totalOrders,
+    filteredCount
 }: ClientsTableProps) => {
 
     const handleSelectAll = (checked: boolean) => {
@@ -106,7 +112,13 @@ const ClientsTableComponent = ({
                 <CardDescription>
                     A sortable and customizable list of all your clients.
                     <br />
-                    Showing {clients.length} results
+                    <div className="flex gap-4 mt-1 font-medium text-foreground/80">
+                        <span>Showing {filteredCount} results</span>
+                        <span>•</span>
+                        <span>Total Earnings: ${Math.floor(totalEarnings).toLocaleString()}</span>
+                        <span>•</span>
+                        <span>Total Orders: {totalOrders.toLocaleString()}</span>
+                    </div>
                 </CardDescription>
             </CardHeader>
             <CardContent>
