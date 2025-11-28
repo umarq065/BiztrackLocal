@@ -18,6 +18,9 @@ import { Checkbox } from "../ui/checkbox";
 
 import { ColumnFilter } from "./column-filter";
 
+import { DateRange } from "react-day-picker";
+import { DateRangeFilter } from "./date-range-filter";
+
 interface ClientsTableProps {
     clients: Client[];
     requestSort: (key: keyof Client) => void;
@@ -30,6 +33,11 @@ interface ClientsTableProps {
     searchQuery?: string;
     columnFilters: Record<string, Set<string>>;
     onColumnFilterChange: (filters: Record<string, Set<string>>) => void;
+    dateFilters: {
+        clientSince: DateRange | undefined;
+        lastOrder: DateRange | undefined;
+    };
+    onDateFilterChange: (key: 'clientSince' | 'lastOrder', range: DateRange | undefined) => void;
     filterOptions: {
         status: { label: string; value: string }[];
         clientType: { label: string; value: string }[];
@@ -58,6 +66,8 @@ const ClientsTableComponent = ({
     searchQuery = "",
     columnFilters,
     onColumnFilterChange,
+    dateFilters,
+    onDateFilterChange,
     filterOptions
 }: ClientsTableProps) => {
 
@@ -153,14 +163,26 @@ const ClientsTableComponent = ({
                                         </Button>
                                     </TableHead>}
                                     {columnVisibility.clientSince && <TableHead>
-                                        <Button variant="ghost" onClick={() => requestSort('clientSince')}>
-                                            Client Since {getSortIndicator('clientSince')}
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" onClick={() => requestSort('clientSince')}>
+                                                Client Since {getSortIndicator('clientSince')}
+                                            </Button>
+                                            <DateRangeFilter
+                                                date={dateFilters?.clientSince}
+                                                setDate={(range) => onDateFilterChange('clientSince', range)}
+                                            />
+                                        </div>
                                     </TableHead>}
                                     {columnVisibility.lastOrder && <TableHead>
-                                        <Button variant="ghost" onClick={() => requestSort('lastOrder')}>
-                                            Last Order {getSortIndicator('lastOrder')}
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" onClick={() => requestSort('lastOrder')}>
+                                                Last Order {getSortIndicator('lastOrder')}
+                                            </Button>
+                                            <DateRangeFilter
+                                                date={dateFilters?.lastOrder}
+                                                setDate={(range) => onDateFilterChange('lastOrder', range)}
+                                            />
+                                        </div>
                                     </TableHead>}
                                     {columnVisibility.social && <TableHead className="w-24">Social</TableHead>}
                                     <TableHead className="text-right w-24">Actions</TableHead>

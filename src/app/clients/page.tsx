@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { type Client, getClientStatus } from "@/lib/data/clients-data";
+import { DateRange } from "react-day-picker";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
 import { ClientsTable } from "@/components/clients/clients-table";
 import { EditClientDialog } from "@/components/clients/edit-client-dialog";
@@ -296,6 +297,16 @@ const ClientsPageComponent = () => {
 
     // ... existing useEffects ...
 
+    const [dateFilters, setDateFilters] = useState<{
+        clientSince: DateRange | undefined;
+        lastOrder: DateRange | undefined;
+    }>({
+        clientSince: undefined,
+        lastOrder: undefined,
+    });
+
+    // ... existing useEffects ...
+
     // Derive options for filters
     const filterOptions = useMemo(() => {
         const statuses = new Set<string>();
@@ -327,6 +338,26 @@ const ClientsPageComponent = () => {
         }
         if (columnFilters.source.size > 0) {
             clientsToFilter = clientsToFilter.filter(client => columnFilters.source.has(client.source));
+        }
+
+        // Apply Date Filters
+        if (dateFilters.clientSince?.from || dateFilters.clientSince?.to) {
+            clientsToFilter = clientsToFilter.filter(client => {
+                if (client.clientSince === 'N/A') return false;
+                const clientDate = new Date(client.clientSince.replace(/-/g, '/'));
+                if (dateFilters.clientSince?.from && clientDate < dateFilters.clientSince.from) return false;
+                if (dateFilters.clientSince?.to && clientDate > dateFilters.clientSince.to) return false;
+                return true;
+            });
+        }
+        if (dateFilters.lastOrder?.from || dateFilters.lastOrder?.to) {
+            clientsToFilter = clientsToFilter.filter(client => {
+                if (client.lastOrder === 'N/A') return false;
+                const clientDate = new Date(client.lastOrder.replace(/-/g, '/'));
+                if (dateFilters.lastOrder?.from && clientDate < dateFilters.lastOrder.from) return false;
+                if (dateFilters.lastOrder?.to && clientDate > dateFilters.lastOrder.to) return false;
+                return true;
+            });
         }
 
         if (aiFilters) {
@@ -400,7 +431,7 @@ const ClientsPageComponent = () => {
         }
 
         return clientsToFilter;
-    }, [clients, fromDate, toDate, searchQuery, aiFilters, columnFilters]);
+    }, [clients, fromDate, toDate, searchQuery, aiFilters, columnFilters, dateFilters]);
 
 
     const sortedClients = useMemo(() => {
@@ -465,6 +496,8 @@ const ClientsPageComponent = () => {
                 searchQuery={localSearch}
                 columnFilters={columnFilters}
                 onColumnFilterChange={setColumnFilters}
+                dateFilters={dateFilters}
+                onDateFilterChange={(key, range) => setDateFilters(prev => ({ ...prev, [key]: range }))}
                 filterOptions={filterOptions}
             />
         )
