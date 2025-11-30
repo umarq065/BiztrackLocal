@@ -8,9 +8,10 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/compone
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { BarChart2, LineChartIcon, BookText } from 'lucide-react';
-import { format, startOfWeek, startOfMonth, getQuarter, getYear, parseISO, eachDayOfInterval, endOfWeek, endOfMonth, endOfQuarter, endOfYear } from "date-fns";
+import { format, startOfWeek, startOfMonth, startOfQuarter, startOfYear, getQuarter, getYear, parseISO, eachDayOfInterval, endOfWeek, endOfMonth, endOfQuarter, endOfYear, isWithinInterval } from "date-fns";
 import { type RevenueDataPoint } from '@/lib/services/analyticsService';
 import { Separator } from '../ui/separator';
+import type { DateRange } from "react-day-picker";
 
 const chartConfig = {
     growthRate: { label: "Revenue Growth (%)", color: "hsl(var(--chart-1))" },
@@ -29,67 +30,67 @@ const calculateGrowth = (current?: number, previous?: number) => {
 };
 
 const CustomDotWithNote = (props: any) => {
-  const { cx, cy, payload } = props;
-  if (payload.note && payload.note.length > 0) {
-    return (
-      <Dot
-        cx={cx}
-        cy={cy}
-        r={5}
-        fill="hsl(var(--primary))"
-        stroke="hsl(var(--background))"
-        strokeWidth={2}
-      />
-    );
-  }
-  return null;
+    const { cx, cy, payload } = props;
+    if (payload.note && payload.note.length > 0) {
+        return (
+            <Dot
+                cx={cx}
+                cy={cy}
+                r={5}
+                fill="hsl(var(--primary))"
+                stroke="hsl(var(--background))"
+                strokeWidth={2}
+            />
+        );
+    }
+    return null;
 };
 
 const CustomTooltipWithNotes = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const notes = payload[0].payload.note;
-    return (
-      <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
-        <p className="font-medium">{label}</p>
-         {payload.map((pld: any) => {
-            const { payload: itemPayload } = pld;
-            const revenue = itemPayload?.value as number | undefined;
-            const prevRevenue = itemPayload?.previousValue as number | undefined;
-            
-            return (
-                <div key={pld.dataKey} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                        <span className="mr-2 h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: pld.color || pld.stroke || pld.fill }} />
-                        <span>{chartConfig[pld.dataKey as keyof typeof chartConfig]?.label}:</span>
-                    </div>
-                    <span className="ml-4 font-mono font-medium">{`${Number(pld.value).toFixed(2)}%`}</span>
-                </div>
-            )
-         })}
-         <p className="text-xs text-muted-foreground">{`(Current: $${payload[0].payload.value?.toFixed(0)}, Prev: $${payload[0].payload.previousValue?.toFixed(0)})`}</p>
+    if (active && payload && payload.length) {
+        const notes = payload[0].payload.note;
+        return (
+            <div className="z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md max-w-sm">
+                <p className="font-medium">{label}</p>
+                {payload.map((pld: any) => {
+                    const { payload: itemPayload } = pld;
+                    const revenue = itemPayload?.value as number | undefined;
+                    const prevRevenue = itemPayload?.previousValue as number | undefined;
 
-         {notes && notes.length > 0 && (
-          <>
-            <Separator className="my-2" />
-            {notes.map((note: any, index: number) => (
-              <div key={index} className="flex items-start gap-2 text-muted-foreground mt-1">
-                  <BookText className="size-4 shrink-0 mt-0.5 text-primary" />
-                  <div className="flex flex-col">
-                    <p className="font-semibold text-foreground">{note.title}</p>
-                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
-                  </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    );
-  }
-  return null;
+                    return (
+                        <div key={pld.dataKey} className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <span className="mr-2 h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: pld.color || pld.stroke || pld.fill }} />
+                                <span>{chartConfig[pld.dataKey as keyof typeof chartConfig]?.label}:</span>
+                            </div>
+                            <span className="ml-4 font-mono font-medium">{`${Number(pld.value).toFixed(2)}%`}</span>
+                        </div>
+                    )
+                })}
+                <p className="text-xs text-muted-foreground">{`(Current: $${payload[0].payload.value?.toFixed(0)}, Prev: $${payload[0].payload.previousValue?.toFixed(0)})`}</p>
+
+                {notes && notes.length > 0 && (
+                    <>
+                        <Separator className="my-2" />
+                        {notes.map((note: any, index: number) => (
+                            <div key={index} className="flex items-start gap-2 text-muted-foreground mt-1">
+                                <BookText className="size-4 shrink-0 mt-0.5 text-primary" />
+                                <div className="flex flex-col">
+                                    <p className="font-semibold text-foreground">{note.title}</p>
+                                    <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        );
+    }
+    return null;
 };
 
 
-export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: string; value: number, note?: any[]}[] }) {
+export default function GrowthMetricsChart({ timeSeries, dateRange }: { timeSeries: { date: string; value: number, note?: any[] }[], dateRange?: DateRange }) {
     const [chartType, setChartType] = useState<'bar' | 'line'>('line');
     const [chartView, setChartView] = useState<ChartView>('monthly');
 
@@ -102,7 +103,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
         const dates = Array.from(dataByDate.keys()).map(d => parseISO(`${d}T00:00:00`));
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
         const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-        
+
         let intervalDates: Date[] = [];
         let getIntervalKey: (date: Date) => string;
         let getIntervalRange: (date: Date) => { start: Date, end: Date };
@@ -111,36 +112,36 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
             case 'daily':
                 intervalDates = eachDayOfInterval({ start: minDate, end: maxDate });
                 getIntervalKey = (date) => format(date, 'yyyy-MM-dd');
-                getIntervalRange = (date) => ({start: date, end: date});
+                getIntervalRange = (date) => ({ start: date, end: date });
                 break;
             case 'weekly':
                 intervalDates = eachDayOfInterval({ start: startOfWeek(minDate, { weekStartsOn: 1 }), end: endOfWeek(maxDate, { weekStartsOn: 1 }) });
                 getIntervalKey = (date) => format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-                getIntervalRange = (date) => ({start: startOfWeek(date, { weekStartsOn: 1 }), end: endOfWeek(date, { weekStartsOn: 1 })});
+                getIntervalRange = (date) => ({ start: startOfWeek(date, { weekStartsOn: 1 }), end: endOfWeek(date, { weekStartsOn: 1 }) });
                 break;
             case 'monthly':
                 intervalDates = eachDayOfInterval({ start: startOfMonth(minDate), end: endOfMonth(maxDate) });
                 getIntervalKey = (date) => format(startOfMonth(date), 'yyyy-MM-dd');
-                getIntervalRange = (date) => ({start: startOfMonth(date), end: endOfMonth(date)});
+                getIntervalRange = (date) => ({ start: startOfMonth(date), end: endOfMonth(date) });
                 break;
             case 'quarterly':
-                 intervalDates = eachDayOfInterval({ start: startOfQuarter(minDate), end: endOfQuarter(maxDate) });
-                 getIntervalKey = (date) => `${getYear(date)}-Q${getQuarter(date)}`;
-                 getIntervalRange = (date) => ({start: startOfQuarter(date), end: endOfQuarter(date)});
+                intervalDates = eachDayOfInterval({ start: startOfQuarter(minDate), end: endOfQuarter(maxDate) });
+                getIntervalKey = (date) => `${getYear(date)}-Q${getQuarter(date)}`;
+                getIntervalRange = (date) => ({ start: startOfQuarter(date), end: endOfQuarter(date) });
                 break;
             case 'yearly':
                 intervalDates = eachDayOfInterval({ start: startOfYear(minDate), end: endOfYear(maxDate) });
                 getIntervalKey = (date) => getYear(date).toString();
-                getIntervalRange = (date) => ({start: startOfYear(date), end: endOfYear(date)});
+                getIntervalRange = (date) => ({ start: startOfYear(date), end: endOfYear(date) });
                 break;
         }
 
-        const aggregatedMap = new Map<string, { value: number; notes: any[] }>();
+        const aggregatedMap = new Map<string, { value: number; notes: any[]; range: { start: Date, end: Date } }>();
 
         intervalDates.forEach(date => {
             const key = getIntervalKey(date);
             if (!aggregatedMap.has(key)) {
-                aggregatedMap.set(key, { value: 0, notes: [] });
+                aggregatedMap.set(key, { value: 0, notes: [], range: getIntervalRange(date) });
             }
         });
 
@@ -167,7 +168,7 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 return new Date(a.date).getTime() - new Date(b.date).getTime()
             });
 
-        return sortedAggregatedData.map((item, index) => {
+        const fullCalculatedData = sortedAggregatedData.map((item, index) => {
             const previousItem = index > 0 ? sortedAggregatedData[index - 1] : { value: undefined };
             return {
                 date: item.date,
@@ -175,10 +176,20 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                 previousValue: previousItem?.value,
                 growthRate: calculateGrowth(item.value, previousItem?.value),
                 note: item.notes,
+                range: item.range
             };
         });
 
-    }, [timeSeries, chartView]);
+        // Filter based on dateRange
+        if (dateRange?.from && dateRange?.to) {
+            return fullCalculatedData.filter(item => {
+                return (item.range.end >= dateRange.from! && item.range.start <= dateRange.to!);
+            });
+        }
+
+        return fullCalculatedData;
+
+    }, [timeSeries, chartView, dateRange]);
 
     const tickFormatter = (value: string) => {
         try {
@@ -194,9 +205,9 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
             return value;
         }
     };
-    
+
     const Chart = chartType === 'bar' ? BarChart : LineChart;
-    const ChartComponent = chartType === 'bar' ? Bar : Line;
+    const ChartComponent = (chartType === 'bar' ? Bar : Line) as any;
 
     return (
         <Card>
@@ -206,8 +217,8 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                         <CardTitle>Revenue Growth Trend</CardTitle>
                         <CardDescription>Percentage growth of revenue compared to the previous interval.</CardDescription>
                     </div>
-                     <div className="flex items-center gap-4">
-                         <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
                             <Button variant={chartType === 'bar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setChartType('bar')}>
                                 <BarChart2 className="h-4 w-4" />
                             </Button>
@@ -239,10 +250,10 @@ export default function GrowthMetricsChart({ timeSeries }: { timeSeries: {date: 
                         <Tooltip content={<CustomTooltipWithNotes />} />
                         <Legend />
                         <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                         <ChartComponent 
-                            dataKey="growthRate" 
-                            fill="var(--color-growthRate)" 
-                            stroke="var(--color-growthRate)" 
+                        <ChartComponent
+                            dataKey="growthRate"
+                            fill="var(--color-growthRate)"
+                            stroke="var(--color-growthRate)"
                             radius={chartType === 'bar' ? 4 : undefined}
                             dot={chartType === 'line' ? <CustomDotWithNote /> : undefined}
                         />

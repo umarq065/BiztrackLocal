@@ -644,7 +644,7 @@ export async function getGrowthMetrics(from: string, to: string, sources?: strin
         clientGrowth: { value: P1_metrics.clientsAtStart > 0 ? (P2_metrics.newClients / P1_metrics.clientsAtStart) * 100 : P2_metrics.newClients > 0 ? 100 : 0, previousValue: P0_metrics.clientsAtStart > 0 ? (P1_metrics.newClients / P0_metrics.clientsAtStart) * 100 : P1_metrics.newClients > 0 ? 100 : 0 },
         timeSeries: {
             currentPeriod: generateTimeSeries(P2_from, P2_to),
-            previousPeriod: [], // Not needed for sequential growth chart
+            previousPeriod: generateTimeSeries(P1_from, P1_to),
         }
     };
 }
