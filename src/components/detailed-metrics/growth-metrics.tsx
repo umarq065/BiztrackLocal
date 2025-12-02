@@ -149,7 +149,11 @@ export function GrowthMetrics({ date, selectedSources, previousPeriodLabel }: Gr
           </Suspense>
           <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
             <NetProfitGrowthChart
-              timeSeries={currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.netProfit, note: d.note }))}
+              timeSeries={[
+                ...(growthMetricsData?.timeSeries?.previousPeriod || []).map(d => ({ date: d.date, value: d.netProfit, note: d.note })),
+                ...currentPeriodTimeSeries.map(d => ({ date: d.date, value: d.netProfit, note: d.note }))
+              ]}
+              dateRange={date}
             />
           </Suspense>
           <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
