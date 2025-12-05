@@ -105,6 +105,12 @@ export default {
         sm: '0 1px 2px var(--tw-shadow-color)',
         DEFAULT: '0 2px 4px var(--tw-shadow-color)',
         lg: '0 8px 16px var(--tw-shadow-color)',
+        glow: '0 0 10px var(--tw-shadow-color), 0 0 20px var(--tw-shadow-color)',
+        'glow-lg': '0 0 20px var(--tw-shadow-color), 0 0 40px var(--tw-shadow-color)',
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'futuristic-grid': "linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
       },
     },
   },
