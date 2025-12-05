@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { IncomeSource, Gig } from "@/lib/data/incomes-data";
 import { MergeGigsDialog } from "./dialogs/merge-gigs-dialog";
+import { ImportGigDataButton } from "./import-gig-data-button";
 import { useToast } from "@/hooks/use-toast";
 
 interface IncomeSourceAccordionProps {
@@ -68,7 +69,7 @@ export function IncomeSourceAccordion({
     setMergingSourceId(null);
     setSelectedGigs({});
   };
-  
+
   const handleInitiateMerge = () => {
     const selectedCount = Object.values(selectedGigs).filter(Boolean).length;
     if (selectedCount < 2) {
@@ -81,11 +82,11 @@ export function IncomeSourceAccordion({
     }
     setIsMergeDialogOpen(true);
   };
-  
+
   const handleSelectAllGigs = (gigs: Gig[]) => (checked: boolean) => {
     const newSelectedGigs = { ...selectedGigs };
     gigs.forEach(gig => {
-        newSelectedGigs[gig.id] = checked;
+      newSelectedGigs[gig.id] = checked;
     });
     setSelectedGigs(newSelectedGigs);
   };
@@ -100,25 +101,25 @@ export function IncomeSourceAccordion({
             className="rounded-md border"
           >
             <div className="flex items-center pr-4">
-                <AccordionTrigger className="flex-grow px-4">
+              <AccordionTrigger className="flex-grow px-4">
                 <div className="flex items-center gap-4">
-                    <span className="font-semibold text-lg">{source.name}</span>
-                    <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
+                  <span className="font-semibold text-lg">{source.name}</span>
+                  <Badge variant="secondary">{source.gigs.length} Gigs</Badge>
                 </div>
-                </AccordionTrigger>
-                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                    <Button variant="outline" size="sm" asChild>
-                        <NProgressLink href={`/incomes/${source.id}`}>
-                            Analytics
-                        </NProgressLink>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => onEditSource(source)}>
-                        Edit
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => onDeleteSource(source)}>
-                        Delete Source
-                    </Button>
-                </div>
+              </AccordionTrigger>
+              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                <Button variant="outline" size="sm" asChild>
+                  <NProgressLink href={`/incomes/${source.id}`}>
+                    Analytics
+                  </NProgressLink>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => onEditSource(source)}>
+                  Edit
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => onDeleteSource(source)}>
+                  Delete Source
+                </Button>
+              </div>
             </div>
             <AccordionContent className="px-4">
               <div className="flex justify-end gap-2 mb-4">
@@ -137,109 +138,118 @@ export function IncomeSourceAccordion({
                     Merge Gigs
                   </Button>
                 )}
-                 <Button variant="secondary" onClick={() => onAddSourceData(source)}>
-                    Add Messages Data
+                <Button variant="secondary" onClick={() => onAddSourceData(source)}>
+                  Add Messages Data
                 </Button>
-                 <Button variant="outline" onClick={() => onAddGig(source.id)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Gig
+                <Button variant="outline" onClick={() => onAddGig(source.id)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Gig
                 </Button>
               </div>
               <TooltipProvider>
                 <Table>
-                    <TableHeader>
+                  <TableHeader>
                     <TableRow>
-                        {mergingSourceId === source.id && (
+                      {mergingSourceId === source.id && (
                         <TableHead className="w-12">
-                            <Checkbox
+                          <Checkbox
                             onCheckedChange={(checked) => handleSelectAllGigs(source.gigs)(!!checked)}
                             checked={
-                                source.gigs.length > 0 && source.gigs.every((gig) => selectedGigs[gig.id])
+                              source.gigs.length > 0 && source.gigs.every((gig) => selectedGigs[gig.id])
                             }
                             aria-label="Select all gigs for this source"
-                            />
+                          />
                         </TableHead>
-                        )}
-                        <TableHead>Gig Name</TableHead>
-                        <TableHead>Date Added</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                      )}
+                      <TableHead>Gig Name</TableHead>
+                      <TableHead>Date Added</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  </TableHeader>
+                  <TableBody>
                     {source.gigs.map((gig) => (
-                        <TableRow key={gig.id}>
+                      <TableRow key={gig.id}>
                         {mergingSourceId === source.id && (
-                            <TableCell>
-                                <Checkbox
-                                    onCheckedChange={(checked) => {
-                                        setSelectedGigs(prev => ({...prev, [gig.id]: !!checked}));
-                                    }}
-                                    checked={!!selectedGigs[gig.id]}
-                                    aria-label={`Select gig ${gig.name}`}
-                                />
-                            </TableCell>
+                          <TableCell>
+                            <Checkbox
+                              onCheckedChange={(checked) => {
+                                setSelectedGigs(prev => ({ ...prev, [gig.id]: !!checked }));
+                              }}
+                              checked={!!selectedGigs[gig.id]}
+                              aria-label={`Select gig ${gig.name}`}
+                            />
+                          </TableCell>
                         )}
                         <TableCell className="font-medium">
-                            <NProgressLink href={`/gigs/${gig.id}`} className="hover:underline">
-                                {gig.name}
-                            </NProgressLink>
+                          <NProgressLink href={`/gigs/${gig.id}`} className="hover:underline">
+                            {gig.name}
+                          </NProgressLink>
                         </TableCell>
                         <TableCell>
-                            {format(new Date(gig.date), "PPP")}
+                          {format(new Date(gig.date), "PPP")}
                         </TableCell>
                         <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onAddGigData(source, gig)}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onAddGigData(source, gig)}
                             >
-                                Add Metrics
+                              Add Metrics
                             </Button>
+                            <ImportGigDataButton
+                              sourceId={source.id}
+                              gigId={gig.id}
+                              onSuccess={() => {
+                                // Trigger a refresh or just let the user know via toast (already handled in component)
+                                // Ideally we should update the local state to reflect changes if we were showing metrics here,
+                                // but we are just showing the list.
+                              }}
+                            />
                             <Tooltip>
-                                <TooltipTrigger asChild>
+                              <TooltipTrigger asChild>
                                 <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => onEditGig(source.id, gig)}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => onEditGig(source.id, gig)}
                                 >
-                                    <Pencil className="h-4 w-4" />
-                                    <span className="sr-only">Edit Gig</span>
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="sr-only">Edit Gig</span>
                                 </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
+                              </TooltipTrigger>
+                              <TooltipContent>
                                 <p>Edit Gig</p>
-                                </TooltipContent>
+                              </TooltipContent>
                             </Tooltip>
                             <Tooltip>
-                                <TooltipTrigger asChild>
+                              <TooltipTrigger asChild>
                                 <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={() => onDeleteGig(source.id, gig)}
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => onDeleteGig(source.id, gig)}
                                 >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Delete Gig</span>
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete Gig</span>
                                 </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
+                              </TooltipTrigger>
+                              <TooltipContent>
                                 <p>Delete Gig</p>
-                                </TooltipContent>
+                              </TooltipContent>
                             </Tooltip>
-                            </div>
+                          </div>
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     ))}
-                    </TableBody>
+                  </TableBody>
                 </Table>
               </TooltipProvider>
             </AccordionContent>
           </AccordionItem>
         ))}
       </Accordion>
-      
+
       {mergingSourceId && (
         <MergeGigsDialog
           open={isMergeDialogOpen}
