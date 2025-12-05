@@ -72,6 +72,7 @@ export interface TimeSeriesDataPoint {
     prevRevenue: number;
     prevMessages: number;
     prevCtr: number;
+    note?: Pick<BusinessNote, 'title' | 'content' | 'date'>[];
 }
 
 export interface Totals {
@@ -341,6 +342,18 @@ async function processAnalytics(
     const messagesMap = new Map(currentMessages.map(m => [m._id, m]));
     const prevMessagesMap = new Map(previousMessages.map(m => [m._id, m]));
 
+    const businessNotesCollection = await getBusinessNotesCollection();
+    const notes = await businessNotesCollection.find({
+        date: { $gte: from, $lte: to }
+    }).toArray();
+
+    const notesByDate: Record<string, { title: string; content: string; date: Date; }[]> = {};
+    notes.forEach(note => {
+        const dateKey = format(note.date as Date, 'yyyy-MM-dd');
+        if (!notesByDate[dateKey]) notesByDate[dateKey] = [];
+        notesByDate[dateKey].push({ title: note.title, content: note.content, date: note.date as Date });
+    });
+
     // Combine all data into a time series
     const timeSeries = dateArray.map((date, i) => {
         const prevDate = prevDateArray[i];
@@ -366,6 +379,7 @@ async function processAnalytics(
             prevRevenue: prevOrderData.revenue,
             prevMessages: prevMessageData.messages,
             prevCtr: prevPerfData.impressions > 0 ? (prevPerfData.clicks / prevPerfData.impressions) * 100 : 0,
+            note: notesByDate[date] || []
         };
     });
 
