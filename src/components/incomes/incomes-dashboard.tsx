@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, memo, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle } from "lucide-react";
 import NProgressLink from "@/components/layout/nprogress-link";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import { AddGigDataDialog } from "./dialogs/add-gig-data-dialog";
 import { MergeGigsDialog } from "./dialogs/merge-gigs-dialog";
 import { DeleteGigDialog } from "./dialogs/delete-gig-dialog";
 import { EditSourceDialog } from "./dialogs/edit-source-dialog";
+import { ImportGigDataDialog } from "./dialogs/import-gig-data-dialog";
 
 export function IncomesDashboard() {
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -62,6 +63,8 @@ export function IncomesDashboard() {
 
   const [sourceToDelete, setSourceToDelete] = useState<IncomeSource | null>(null);
   const [isDeletingSource, setIsDeletingSource] = useState(false);
+
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const fetchIncomeSources = async () => {
     setIsLoading(true);
@@ -195,10 +198,18 @@ export function IncomesDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setIsAddSourceDialogOpen(true)}
-            className="bg-primary/20 hover:bg-primary/40 text-primary-foreground border border-primary/50 backdrop-blur-sm shadow-glow transition-all duration-300"
+            variant="outline"
+            onClick={() => setIsImportDialogOpen(true)}
+            className="border-primary/50 text-primary hover:bg-primary/10 backdrop-blur-sm shadow-glow transition-all duration-300"
           >
-            <span className="mr-2 text-xl">+</span> Add New Source
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => setIsAddSourceDialogOpen(true)}
+            size="lg"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-primary/50 transition-all duration-300 font-semibold"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" /> Add New Source
           </Button>
         </div>
       </div>
@@ -302,6 +313,13 @@ export function IncomesDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImportGigDataDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        incomeSources={incomeSources}
+        onSuccess={fetchIncomeSources}
+      />
     </main>
   );
 }

@@ -29,10 +29,9 @@ import {
     TooltipTrigger,
     TooltipProvider,
 } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 import type { IncomeSource, Gig } from "@/lib/data/incomes-data";
-import { ImportGigDataButton } from "./import-gig-data-button";
 import { MergeGigsDialog } from "./dialogs/merge-gigs-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -149,94 +148,82 @@ export function IncomeSourceCard({
                         </div>
                     </div>
 
-                    <ScrollArea className="h-[300px] pr-4 -mr-4">
-                        <div className="space-y-2 pb-2">
-                            {source.gigs.length > 0 ? (
-                                source.gigs.map(gig => (
-                                    <div key={gig.id} className="group/gig relative flex flex-col gap-2 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/5 hover:border-white/10">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <Checkbox
-                                                    checked={!!selectedGigs[gig.id]}
-                                                    onCheckedChange={(checked) => setSelectedGigs(prev => ({ ...prev, [gig.id]: !!checked }))}
-                                                    className="h-4 w-4 border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                />
-                                                <div className="flex flex-col overflow-hidden">
-                                                    <NProgressLink href={`/gigs/${gig.id}`} className="text-sm font-medium truncate hover:text-primary transition-colors">
-                                                        {gig.name}
-                                                    </NProgressLink>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {format(new Date(gig.date), "MMM d, yyyy")}
-                                                    </span>
-                                                </div>
+                    <div className="space-y-2 pb-2">
+                        {source.gigs.length > 0 ? (
+                            source.gigs.map(gig => (
+                                <div key={gig.id} className="group/gig relative flex flex-col gap-2 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/5 hover:border-white/10">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <Checkbox
+                                                checked={!!selectedGigs[gig.id]}
+                                                onCheckedChange={(checked) => setSelectedGigs(prev => ({ ...prev, [gig.id]: !!checked }))}
+                                                className="h-4 w-4 border-white/20 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                            />
+                                            <div className="flex flex-col overflow-hidden">
+                                                <NProgressLink href={`/gigs/${gig.id}`} className="text-sm font-medium truncate hover:text-primary transition-colors">
+                                                    {gig.name}
+                                                </NProgressLink>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {format(new Date(gig.date), "MMM d, yyyy")}
+                                                </span>
                                             </div>
                                         </div>
 
-                                        {/* Action Buttons Row */}
-                                        <div className="flex items-center justify-between gap-1 pt-2 border-t border-white/5 mt-1">
+                                        {/* Action Buttons - Right Aligned */}
+                                        <div className="flex items-center gap-1 opacity-0 group-hover/gig:opacity-100 transition-opacity">
                                             <TooltipProvider>
-                                                <div className="flex items-center gap-1">
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 hover:bg-primary/20 hover:text-primary"
-                                                                onClick={() => onAddGigData(source, gig)}
-                                                            >
-                                                                <TrendingUp className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="bottom">Add Metrics</TooltipContent>
-                                                    </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 hover:bg-primary/20 hover:text-primary"
+                                                            onClick={() => onAddGigData(source, gig)}
+                                                        >
+                                                            <TrendingUp className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom">Add Metrics</TooltipContent>
+                                                </Tooltip>
 
-                                                    <ImportGigDataButton
-                                                        sourceId={source.id}
-                                                        gigId={gig.id}
-                                                        variant="icon"
-                                                    />
-                                                </div>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 hover:bg-primary/20 hover:text-primary"
+                                                            onClick={() => onEditGig(source.id, gig)}
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom">Edit Gig</TooltipContent>
+                                                </Tooltip>
 
-                                                <div className="flex items-center gap-1">
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 hover:bg-white/20"
-                                                                onClick={() => onEditGig(source.id, gig)}
-                                                            >
-                                                                <Pencil className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="bottom">Edit Gig</TooltipContent>
-                                                    </Tooltip>
-
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive"
-                                                                onClick={() => onDeleteGig(source.id, gig)}
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="bottom">Delete Gig</TooltipContent>
-                                                    </Tooltip>
-                                                </div>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive"
+                                                            onClick={() => onDeleteGig(source.id, gig)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom">Delete Gig</TooltipContent>
+                                                </Tooltip>
                                             </TooltipProvider>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="text-sm text-muted-foreground italic py-8 text-center border border-dashed border-white/10 rounded-lg">
-                                    No gigs yet. <br /> Click "+" to add one.
                                 </div>
-                            )}
-                        </div>
-                    </ScrollArea>
+                            ))
+                        ) : (
+                            <div className="text-sm text-muted-foreground italic py-8 text-center border border-dashed border-white/10 rounded-lg">
+                                No gigs yet. <br /> Click "+" to add one.
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Footer Actions */}
